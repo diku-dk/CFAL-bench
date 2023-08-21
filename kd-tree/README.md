@@ -1,5 +1,13 @@
 ## K-d Tree Construction
 
+A Haskell high-level specification in the nested parallel style is
+included in folder Haskell. A GPU implementation needs to flatten
+the irregular parallelism.
+
+If this is accepted as a benchmark Cosmin volunteers to quickly
+add a Cuda and a Futhark (prototype) implementation, that documents
+various implementation strategies and tradeoffs. 
+
 ```
 Input
   (height : int)         the height of the k-d tree
