@@ -10,7 +10,7 @@ Result
   (med_vals : [q]float)  the median value of the split dimension
                          corresponding to each internal node
                          in the k-d tree (q = 2^{height} - 1)
-  (leaves : [n][d]float) the flat-array constaining the reordered
+  (leaves : [n][d]float) the flat-array containing the reordered
                          reference points.   Semantically `leaves`
                          is an array containing 2^{height} subarrays
                          of variant lenghts, but such that the subarray
