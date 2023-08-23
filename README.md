@@ -27,7 +27,6 @@ In order to suggest a new benchmark, please do perform the following steps:
 | BM name | description | naive implementation | inclusion in CFAL | Accelerate | APL | DaCe | Futhark | SaC
 | ------- | ---- | ---- |  ---- |  ---- |  ---- |  ---- |  ---- |  ---- | 
 | FFT     | done |      |       |       |       |       |       |       |
-| ------- | ---- | ---- |  ---- |  ---- |  ---- |  ---- |  ---- |  ---- | 
 | MG      | done |      |       |       |       |       |       |       |
 
 
