@@ -16,7 +16,7 @@ Here M^k is a recursive function dependent on k. For full spec see the
 The most important part performance-wise is explained in
 ```Performance characterstics```.
 
-## Relevancy
+## Relevance
 
 Multigrid is part of [NAS parallel benchmarks](https://www.nas.nasa.gov/software/npb.html)
 and [Berkely Dwarfs](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2006/EECS-2006-183.pdf).
@@ -36,8 +36,12 @@ double[n,n,n] relax(double[n,n,n] input, weights[3, 3, 3])
                  | iv < [n,n,n] };
 }
 ```
-The relaxation steps are intersparsed with coarsening and refinement steps
+The relaxation steps are interspersed with coarsening and refinement steps
 allowing for different approaches towards managing the memory involved.
+This opens up many avenues for handling the memory eg whether to perform 
+the coarser grids in place of the finer ones or whether to copy them out.
+How the different languages handle this, how this can or cannot be influenced by the
+programmer might be interesting here!
 
 We have a reasonable number of flops per element, but the locality of reference
 is relatively poor. There is not really much we can do to improve temporal locality, so
