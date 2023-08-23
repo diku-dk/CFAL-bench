@@ -1,6 +1,7 @@
 ## Rodinia's LUD implementation
 
 Linear-algebra kernel emphasizing the tiling optimization. It also exhibits some segmented-reduce parallelism.
+The rationale would be to evaluate what performance can functional/data-flow languages offer on polyhedral-like code.
 
 Of note:
 

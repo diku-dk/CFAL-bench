@@ -1,6 +1,6 @@
 ##  Turbulent Kinetic Energy (TKE) routine in Veros 
 
-Veros is an ocean modelling framework [1].
+Veros is aframework for ocean modelling:
 
 [1] D. Häfner, R. L. Jacobsen, C. Eden, M. R. B. Kristensen, M. Jochum, R. Nuterman, and B. Vinter, “Veros v0.1 – a fast and versatile ocean simulator in pure python,” Geoscientific Model Development, vol. 11, no. 8, pp. 3299–3312, 2018, [link](https://gmd.copernicus.org/articles/11/3299/2018/)
 
