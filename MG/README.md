@@ -32,7 +32,6 @@ can be expressed as
 ```
 double[n,n,n] relax(double[n,n,n] input, weights[3, 3, 3])
 {
-    /* Real function has periodic boundary conditions */
     return { iv -> sum ({jv -> weights[jv] * rotate (1-jv, input)[iv]})
                  | iv < [n,n,n] };
 }
