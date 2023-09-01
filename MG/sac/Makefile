@@ -1,4 +1,4 @@
-C = sac2c_d -maxwlur 27 -check c
+C = sac2c_d -maxwlur 27 #-check c
 FLAGS = -Xc -Ofast
 
 all: bin/MG

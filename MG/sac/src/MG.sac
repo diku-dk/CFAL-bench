@@ -85,6 +85,8 @@ double[., ., .] residual(double[., ., .] v, double[., ., .] u)
 
 double[., ., .] M(double[., ., .] r)
 {
+  printf("Call m with shape [%d, %d, %d]\n",
+          shape(r)[0], shape(r)[1], shape(r)[2]);
   r = P(r);
   r = {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
   z = M(r);
@@ -99,6 +101,8 @@ double[., ., .] M(double[., ., .] r)
 
 double[., ., .] M(double[2, 2, 2] r)
 {
+  printf("Call m with shape [%d, %d, %d]\n",
+          shape(r)[0], shape(r)[1], shape(r)[2]);
   return S(r);
 }
 
