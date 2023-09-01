@@ -1,6 +1,6 @@
 /* FIXME Takes more than 10GB of memory to compile. Memory-leak? */
 
-#define CLASS_S
+#define CLASS_A
 
 #ifdef CLASS_S
 #define N 32
@@ -42,6 +42,7 @@ use Init: all;
 use StdIO: all;
 use Math: all;
 use Array: all;
+use Benchmarking: all;
 
 #define A(z) relax(z, gen_weights([-8d / 3d, 0d, 1d / 6d, 1d / 12d]))
 #define P(z) relax(z, gen_weights([1d / 2d, 1d / 4d, 1d / 8d, 1d / 16d]))
@@ -55,11 +56,18 @@ use Array: all;
   #define S(z) Sb(z)
 #endif
 
-inline
 double[.,.,.] relax(double[.,.,.] x, double[3, 3, 3] weights)
 {
+  /* Takes 10GB memory to compile */
   return {iv -> sum({jv -> weights[jv] * rotate(1 - jv, x)[iv]})
              | iv < shape(x)};
+  /* Does not compile */
+//  return {iv -> sum(weights *
+//                  tile([3, 3, 3], [0, 0, 0], rotate([1, 1, 1] - iv, x)))
+//              | iv < shape(x)};
+  /* Compiles reasonably fast, but executes very slowly */
+//  return {iv -> sum({jv -> weights[jv] * rotate(1 - iv, x)[jv]})
+//             | iv < shape(x)};
 }
 
 inline
@@ -117,10 +125,22 @@ double L2(double[., ., .] r)
 
 int main()
 {
+  i_init = getInterval("init", 1);
+  i_mg = getInterval("mg", 2);
+
+  start(i_init);
   u = {iv -> 0d | iv < [N, N, N]};
   v = init(N);
+  end(i_init);
+  time, unit = returnResultUnit(i_init);
+  printf("Initialisation took %f %s.\n", time, unit);
 
+  start(i_mg);
   v, u, r = MG(v, u);
+  end(i_mg);
+  time, unit = returnResultUnit(i_init);
+  printf("%f Mflops/%s\n",
+      58d * tod(ITER) * tod(N) * tod(N) * tod(N) * 1e-6 / tod(time), unit);
 
   printf("Error: %lf\n", L2(r) - ref);
   return 0;

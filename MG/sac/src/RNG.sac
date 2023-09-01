@@ -47,7 +47,9 @@ double rlcg(ulong seed, int k)
   t = a;
 
   /* Multiplication of ulong is done mod 2^64 and (a mod 2^64) mod 2^46 =
-     a mod 2^46, so we do not need the NPB hacks. */
+     a mod 2^46, so we do not need the NPB hacks. Is very slow, if we had
+     bitwise operations, we could write b = (b * t) % (1 << 46) and let
+     the C compiler compile this down to a bitwise and. */
   while (k != 0) {
     if (k % 2 == 1) {
       b = _mod_SxS_(_mul_SxS_(b, t), pow(2ul, 46));
@@ -63,7 +65,7 @@ double rlcg(ulong seed, int k)
 #ifdef DEBUG
 int main()
 {
-  n = 1000;
+  n = 256 * 256 * 256;
   seed = 314159265ul;
 
   rng = create_randlc(_tod_S_(seed), pow(5d, 13));
