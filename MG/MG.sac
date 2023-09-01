@@ -1,0 +1,127 @@
+/* Class S */
+
+#define N 32
+#define ITER 4
+
+use StdIO: all;
+use Math: all;
+use Array: all;
+
+double[.,.,.] relax(double[.,.,.] x, double[3, 3, 3] weights)
+{
+  return {iv -> sum({jv -> weights[jv] * rotate(iv - 1, x)[jv]})
+             | iv < shape(x)};
+}
+
+inline
+double[., ., .] gen_weights(double[4] cs)
+{
+  return {iv -> cs[sum(abs(iv - [1, 1, 1]))] | iv < [3, 3, 3]};
+}
+
+double[., ., .] A(double[., ., .] z)
+{
+  weights = gen_weights([-8d / 3d, 0d, 1d / 6d, 1d / 12d]);
+  return relax(z, weights);
+}
+
+double[., ., .] P(double[., ., .] z)
+{
+  weights = gen_weights([1d / 2d, 1d / 4d, 1d / 8d, 1d / 16d]);
+  return relax(z, weights);
+}
+
+double[., ., .] Q(double[., ., .] z)
+{
+  weights = gen_weights([1d, 1d / 2d, 1d / 4d, 1d / 8d]);
+  return relax(z, weights);
+}
+
+double[., ., .] Q(double[., ., .] z)
+{
+  weights = gen_weights([1d, 1d / 2d, 1d / 4d, 1d / 8d]);
+  return relax(z, weights);
+}
+
+double[., ., .] S(double[., ., .] z)
+{
+  weights = gen_weights([-3d / 8d, 1d / 32d, -1d / 64d, 0d]);
+  return relax(z, weights);
+}
+
+double[., ., .] residual(double[., ., .] v, double[., ., .] u)
+{
+  return v - A(u);
+}
+
+double[., ., .] M(double[., ., .] r)
+{
+  r = P(r);
+  r = {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
+  z = M(r);
+  z = {iv -> z[(iv - 1) / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2];
+       iv -> 0d              | [0, 0, 0] <= iv < 2 * shape(z) step [2, 2, 2]};
+  z = Q(z);
+  r = r - A(z);
+  z = z + S(r);
+
+  return z;
+}
+
+double[., ., .] M(double[2, 2, 2] r)
+{
+  return S(r);
+}
+
+double[., ., .], double[., ., .], double[., ., .] MG(double[., ., .] v, double[., ., .] u)
+{
+  r = residual(v, u);
+  u += M(r);
+
+  for (i = 1; i < ITER; i++) {
+    r = residual(v, u);
+    u += M(r);
+  }
+
+  return (v, u, r);
+}
+
+double L2(double[., ., .] r)
+{
+  return sqrt(sum(r) / prod(tod(shape(r))));
+}
+
+int main()
+{
+  ref = 0.5307707005734e-4;
+  u = {iv -> 0d | iv < [N, N, N]};
+  v = {iv -> 0d | iv < [N, N, N]};
+
+  /* Initialisation for class A, where are the init values for S? */
+//  v[211, 154, 98] = -1d;
+//  v[102, 138, 112] = -1d;
+//  v[101, 156, 59] = -1d;
+//  v[17, 205, 32] = -1d;
+//  v[92, 63, 205] = -1d;
+//  v[199, 7, 203] = -1d;
+//  v[250, 170, 157] = -1d;
+//  v[82, 184, 255] = -1d;
+//  v[154, 162, 36] = -1d;
+//  v[223, 42, 240] = -1d;
+//
+//  v[57, 120, 167] = 1d;
+//  v[5, 118, 175] = 1d;
+//  v[176, 246, 164] = 1d;
+//  v[45, 194, 234] = 1d;
+//  v[212, 7, 248] = 1d;
+//  v[115, 123, 207] = 1d;
+//  v[202, 83, 209] = 1d;
+//  v[203, 18, 198] = 1d;
+//  v[243, 172, 14] = 1d;
+//  v[54, 209, 40] = 1d;
+
+  v, u, r = MG(v, u);
+
+  printf("Error: %lf\n", L2(r) - ref);
+  return 0;
+}
