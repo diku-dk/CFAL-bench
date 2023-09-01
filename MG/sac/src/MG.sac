@@ -1,0 +1,152 @@
+#define CLASS_S
+
+#ifdef CLASS_S
+#define N 32
+#define ITER 4
+#define Sa
+#endif
+
+#ifdef CLASS_W
+#define N 128
+#define ITER 4
+#define Sa
+#endif
+
+#ifdef CLASS_A
+#define N 256
+#define ITER 4
+#define Sa
+#endif
+
+#ifdef CLASS_B
+#define N 256
+#define ITER 20
+#endif
+
+#ifdef CLASS_C
+#define N 512
+#define ITER 20
+#endif
+
+#ifdef CLASS_D
+#define N 1024
+#define ITER 50
+#endif
+
+use Init: all;
+use StdIO: all;
+use Math: all;
+use Array: all;
+
+double[.,.,.] relax(double[.,.,.] x, double[3, 3, 3] weights)
+{
+  return {iv -> sum({jv -> weights[jv] * rotate(1 - jv, x)[iv]})
+             | iv < shape(x)};
+}
+
+inline
+double[., ., .] gen_weights(double[4] cs)
+{
+  return {iv -> cs[sum(abs(iv - [1, 1, 1]))] | iv < [3, 3, 3]};
+}
+
+double[., ., .] A(double[., ., .] z)
+{
+  weights = gen_weights([-8d / 3d, 0d, 1d / 6d, 1d / 12d]);
+  return relax(z, weights);
+}
+
+double[., ., .] P(double[., ., .] z)
+{
+  weights = gen_weights([1d / 2d, 1d / 4d, 1d / 8d, 1d / 16d]);
+  return relax(z, weights);
+}
+
+double[., ., .] Q(double[., ., .] z)
+{
+  weights = gen_weights([1d, 1d / 2d, 1d / 4d, 1d / 8d]);
+  return relax(z, weights);
+}
+
+double[., ., .] S(double[., ., .] z)
+{
+#ifdef Sa
+  weights = gen_weights([-3d / 8d, 1d / 32d, -1d / 64d, 0d]);
+#else
+  weights = gen_weights([-3d / 17d, 1d / 33d, -1d / 61d, 0d]);
+#endif
+  return relax(z, weights);
+}
+
+double[., ., .] residual(double[., ., .] v, double[., ., .] u)
+{
+  return v - A(u);
+}
+
+double[., ., .] M(double[., ., .] r)
+{
+  r = P(r);
+  r = {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
+  z = M(r);
+  z = {iv -> z[(iv - 1) / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2];
+       iv -> 0d              | [0, 0, 0] <= iv < 2 * shape(z) step [2, 2, 2]};
+  z = Q(z);
+  r = r - A(z);
+  z = z + S(r);
+
+  return z;
+}
+
+double[., ., .] M(double[2, 2, 2] r)
+{
+  return S(r);
+}
+
+double[., ., .], double[., ., .], double[., ., .]
+MG(double[., ., .] v, double[., ., .] u)
+{
+  r = residual(v, u);
+  u += M(r);
+
+  for (i = 1; i < ITER; i++) {
+    r = residual(v, u);
+    u += M(r);
+  }
+
+  return (v, u, r);
+}
+
+double L2(double[., ., .] r)
+{
+  return sqrt(sum(r) / prod(tod(shape(r))));
+}
+
+int main()
+{
+#ifdef CLASS_S
+  ref = 0.5307707005734e-4;
+#endif
+#ifdef CLASS_W
+  ref = 0.6467329375339e-5;
+#endif
+#ifdef CLASS_A
+  ref = 0.2433365309069e-5;
+#endif
+#ifdef CLASS_B
+  ref = 0.1800564401355e-5;
+#endif
+#ifdef CLASS_C
+  ref = 0.5706732285740e-6;
+#endif
+#ifdef CLASS_D
+  ref = 0.1583275060440e-9;
+#endif
+
+  u = {iv -> 0d | iv < [N, N, N]};
+  v = init(N);
+
+  v, u, r = MG(v, u);
+
+  printf("Error: %lf\n", L2(r) - ref);
+  return 0;
+}

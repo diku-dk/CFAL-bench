@@ -1,6 +1,6 @@
 /* TODO give ulong some love in the compiler and Stdlib */
 
-#define DEBUG
+//#define DEBUG
 
 #ifndef DEBUG
 module RNG;
