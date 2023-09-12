@@ -1,5 +1,3 @@
-/* FIXME Takes more than 10GB of memory to compile. Memory-leak? */
-
 #define CLASS_A
 
 #ifdef CLASS_S
@@ -41,14 +39,8 @@
 use Init: all;
 use StdIO: all;
 use Math: all;
-use Array: all;
+use Array: all except {rotate};
 use Benchmarking: all;
-
-#define A(z) relax(z, gen_weights([-8d / 3d, 0d, 1d / 6d, 1d / 12d]))
-#define P(z) relax(z, gen_weights([1d / 2d, 1d / 4d, 1d / 8d, 1d / 16d]))
-#define Q(z) relax(z, gen_weights([1d, 1d / 2d, 1d / 4d, 1d / 8d]))
-#define Sa(z) relax(z, gen_weights([-3d / 8d, 1d / 32d, -1d / 64d, 0d]))
-#define Sb(z) relax(z, gen_weights([-3d / 17d, 1d / 33d, -1d / 61d, 0d]))
 
 #if defined(CLASS_S) || defined(CLASS_W) || defined(CLASS_A)
   #define S(z) Sa(z)
@@ -56,69 +48,116 @@ use Benchmarking: all;
   #define S(z) Sb(z)
 #endif
 
-double[.,.,.] relax(double[.,.,.] x, double[3, 3, 3] weights)
+inline
+double[*] rotate (int[.] off, double[*] a)
 {
-  /* Takes 10GB memory to compile */
-  return {iv -> sum({jv -> weights[jv] * rotate(1 - jv, x)[iv]})
-             | iv < shape(x)};
-  /* Does not compile */
-//  return {iv -> sum(weights *
-//                  tile([3, 3, 3], [0, 0, 0], rotate([1, 1, 1] - iv, x)))
-//              | iv < shape(x)};
-  /* Compiles reasonably fast, but executes very slowly */
-//  return {iv -> sum({jv -> weights[jv] * rotate(1 - iv, x)[jv]})
-//             | iv < shape(x)};
+  return {iv -> a[mod (iv-off, shape(a)) ] | iv < shape(a) };
 }
 
 inline
-double[., ., .] gen_weights(double[4] cs)
+double[.,.,.] relax (double[.,.,.] x, double[3, 3, 3] weights)
+{
+  return {iv -> sum ({jv -> weights[jv] * rotate (1 - jv, x)[iv]})
+             | iv < shape(x)};
+}
+
+inline
+double[.,.,.] gen_weights(double[4] cs)
 {
   return {iv -> cs[sum(abs(iv - [1, 1, 1]))] | iv < [3, 3, 3]};
 }
 
-double[., ., .] residual(double[., ., .] v, double[., ., .] u)
+inline
+double[*] coarse2fine (double[*] z)
 {
-  return v - A(u);
+  printf("Call c2f with shape [%d, %d, %d]\n",
+          shape(z)[0], shape(z)[1], shape(z)[2]);
+  res = {iv -> z[(iv - 1) / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2] };
+  printf("Call c2f with shape [%d, %d, %d] done\n",
+          shape(z)[0], shape(z)[1], shape(z)[2]);
+  return res;
 }
 
-double[., ., .] M(double[., ., .] r)
+inline
+double[*] fine2coarse(double[*] r)
+{
+  return {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
+}
+
+inline
+double[.,.,.] A (double[.,.,.] a)
+{
+  return relax (a, gen_weights([-8d/3d , 0d    , 1d/6d  , 1d/12d]));
+}
+
+inline
+double[.,.,.] P (double[.,.,.] a)
+{
+  return fine2coarse (relax (a, gen_weights([1d/2d  , 1d/4d , 1d/8d  , 1d/16d])));
+}
+
+inline
+double[.,.,.] Q (double[.,.,.] a)
+{
+  return relax (coarse2fine (a), gen_weights([1d     , 1d/2d , 1d/4d  , 1d/8d ]));
+}
+
+inline
+double[.,.,.] Sa (double[.,.,.] a)
+{
+  return relax (a, gen_weights([-3d/8d , 1d/32d, -1d/64d, 0d    ]));
+}
+
+inline
+double[.,.,.] Sb (double[.,.,.] a)
+{
+  return relax (a, gen_weights([-3d/17d, 1d/33d, -1d/61d, 0d    ]));
+}
+
+specialize double[1024,1024,1024] M (double[1024,1024,1024] r);
+specialize double[512,512,512] M (double[512,512,512] r);
+specialize double[256,256,256] M (double[256,256,256] r);
+specialize double[128,128,128] M (double[128,128,128] r);
+specialize double[64,64,64] M (double[64,64,64] r);
+specialize double[32,32,32] M (double[32,32,32] r);
+specialize double[16,16,16] M (double[16,16,16] r);
+specialize double[8,8,8]    M (double[8,8,8] r);
+//specialize double[4,4,4]  M (double[4,4,4] r);
+double[.,.,.] M (double[.,.,.] r)
 {
   printf("Call m with shape [%d, %d, %d]\n",
           shape(r)[0], shape(r)[1], shape(r)[2]);
-  r = P(r);
-  r = {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
-  z = M(r);
-  z = {iv -> z[(iv - 1) / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2];
-       iv -> 0d              | [0, 0, 0] <= iv < 2 * shape(z) step [2, 2, 2]};
-  z = Q(z);
-  r = r - A(z);
-  z = z + S(r);
+  rs = P (r);
+  zs = M (rs);
+  z = Q (zs);
+  r = r - A (z);
+  z = z + S (r);
+
+  printf("Call m with shape [%d, %d, %d] done\n",
+          shape(r)[0], shape(r)[1], shape(r)[2]);
 
   return z;
 }
 
-double[., ., .] M(double[2, 2, 2] r)
+double[4,4,4] M (double[4,4,4] r)
 {
   printf("Call m with shape [%d, %d, %d]\n",
           shape(r)[0], shape(r)[1], shape(r)[2]);
-  return S(r);
+  return S (r);
 }
 
-double[., ., .], double[., ., .], double[., ., .]
-MG(double[., ., .] v, double[., ., .] u)
+double MG (double[N,N,N] v, double[N,N,N] u)
 {
-  r = residual(v, u);
-  u += M(r);
-
   for (i = 1; i < ITER; i++) {
-    r = residual(v, u);
-    u += M(r);
+    r = v - A (u);
+    u = u + M(r);
   }
 
-  return (v, u, r);
+  return L2 (v- A(u));
 }
 
-double L2(double[., ., .] r)
+inline
+double L2 (double[.,.,.] r)
 {
   return sqrt(sum(r) / prod(tod(shape(r))));
 }
@@ -136,12 +175,12 @@ int main()
   printf("Initialisation took %f %s.\n", time, unit);
 
   start(i_mg);
-  v, u, r = MG(v, u);
+  r = MG (v, u);
   end(i_mg);
   time, unit = returnResultUnit(i_init);
   printf("%f Mflops/%s\n",
       58d * tod(ITER) * tod(N) * tod(N) * tod(N) * 1e-6 / tod(time), unit);
 
-  printf("Error: %lf\n", L2(r) - ref);
+  printf("Error: %lf\n", abs(r - ref));
   return 0;
 }
