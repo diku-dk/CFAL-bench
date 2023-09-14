@@ -9,7 +9,9 @@ def replicate_3d (n: i64) (v: real) : [n][n][n]real =
   
 def map2_3d f = map2 (map2 (map2 f))
 
+-- ToDos:
 -- Not done; only the relaxation for now.
+-- consider working with the 3d array in flat form
 
 def unroll_tabulate_3d n m l f =
   #[unroll]
