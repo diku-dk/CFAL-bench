@@ -58,24 +58,8 @@ def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 def Mbase [n] (r : [n][n][n]real) : [n][n][n]real =
   Sa r -- or Sb r; which one?
 
--- def double[.,.,.] M (double[.,.,.] r)
--- {
---   printf("Call m with shape [%d, %d, %d]\n",
---           shape(r)[0], shape(r)[1], shape(r)[2]);
---   rs = P (r);
---   zs = M (rs);
---   z = Q (zs);
---   r = r - A (z);
---   z = z + S (r);
---
---   printf("Call m with shape [%d, %d, %d] done\n",
---           shape(r)[0], shape(r)[1], shape(r)[2]);
---
---   return z;
--- }
-
 def M [n] (r: [n][n][n]real) : [n][n][n]real =
-  -- compute the flat size of rs
+  -- compute the flat size of rss
   let (count, rs_flat_len, m0) = 
     loop (count, len, m) = (0, 0, n/2) while m > 4 do
       (count+1, len + m*m*m, m/2)
@@ -84,12 +68,14 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
   let rss = replicate rs_flat_len 0
   -- fill in rss
   let nd2 = n / 2
-  let rss[0: (n/2)*(n/2)*(n/2)] = P (r :> [nd2*2][nd2*2][nd2*2]real) |> map flatten |> flatten
+  let rss[0: nd2*nd2*nd2] = 
+          P (r :> [nd2*2][nd2*2][nd2*2]real) 
+       |> map flatten |> flatten
   let (off, m4, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
-      let r  = (rss[off: off + m*m*m] :> [m*(m*m)]real)
-            |> unflatten |> map unflatten -- (n/2) (n/2) (n/2)
+      let r  = (rss[off: off + m*m*m] :> [(m*m)*m]real)
+            |> unflatten |> unflatten -- (n/2) (n/2) (n/2)
       let m' = m / 2
       let off' = off + m*m*m
       let r' = P (r :> [m'*2][m'*2][m'*2]real) |> map flatten |> flatten
@@ -98,10 +84,10 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       in  (off', m', rss)
   
   -- base case of M
-  let r4 = (rss[off: off + m4*m4*m4] :> [m4*(m4*m4)]real)
-        |> unflatten |> map unflatten
+  let r4 = (rss[off: off + m4*m4*m4] :> [(m4*m4)*m4]real)
+        |> unflatten |> unflatten
   let z4 = Mbase r4
---  let z = z4
+
   -- loop back
   let (_, _, z) =
     loop (end, m, z) = (off, m4, z4)
@@ -109,8 +95,8 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let m2 = m*2
       let z' = (Q z) :> [m2][m2][m2]real
       let beg = end - 8*m*m*m
-      let r  = (rss[beg : end] :> [m2*(m2*m2)]real)
-            |> unflatten |> map unflatten
+      let r  = (rss[beg : end] :> [(m2*m2)*m2]real)
+            |> unflatten |> unflatten
       let r' = map2_3d (-) r (A z')
       let z''= map2_3d (+) z' (Sa r')  -- or Sb?
       in  (beg, m2, z'')
@@ -138,7 +124,7 @@ def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
 
 -- ==
 -- entry: main
--- random input { 4i64 [256][256][256]f64}
+-- random input { 4i64 [128][128][128]f64}
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
   replicate_3d n 0 |> mg iter v
