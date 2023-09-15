@@ -1,37 +1,13 @@
-/* TODO give ulong some love in the compiler and Stdlib */
-
-//#define DEBUG
-
-#ifndef DEBUG
 module RNG;
-export {rlcg};
-#endif
+export {LCG};
 
 use Array: all;
 use StdIO: all;
 use RandLC: all;
 
-double div(double[.] a)
-{
-    return with {
-      ([0] <= iv < shape(a)): a[iv];
-    }: fold(/, 1d);
-}
-
-double pow(double a, int b)
-{
-  return (b >= 0) ? prod(genarray([b], a)) : div(genarray([-b], a));
-}
-
 ulong pow(ulong a, int b)
 {
-  result = 1ul;
-
-  for (i = 0; i < b; i++) {
-    result = _mul_SxS_(result, a);
-  }
-
-  return result;
+  return prod(genarray([b], a));
 }
 
 /* Directly calculates the kth number of LCG
@@ -39,7 +15,7 @@ ulong pow(ulong a, int b)
    and multiplies it by 2^{-46}. Time complexity: O(log k).
    I assume ulong is a 64-bit unsigned integer satisfying the arithmetic of
    the C standard! */
-double rlcg(ulong seed, int k)
+double LCG(ulong seed, int k)
 {
   a = pow(5ul, 13);
 
@@ -52,33 +28,12 @@ double rlcg(ulong seed, int k)
      the C compiler compile this down to a bitwise and. */
   while (k != 0) {
     if (k % 2 == 1) {
-      b = _mod_SxS_(_mul_SxS_(b, t), pow(2ul, 46));
+      b = (b * t) % pow(2ul, 46);
     }
-    t = _mod_SxS_(_mul_SxS_(t, t), pow(2ul, 46));
+    t = (t * t) % pow(2ul, 46);
     k /= 2;
   }
 
   /* Conversion of b is exact as IEEE754 has 52 bits of mantissa. */
-  return _tod_S_(b) * pow(2d, -46);
+  return tod(b) * prod(genarray([46], 0.5));
 }
-
-#ifdef DEBUG
-int main()
-{
-  n = 256 * 256 * 256;
-  seed = 314159265ul;
-
-  rng = create_randlc(_tod_S_(seed), pow(5d, 13));
-  stdlib = genarray([n], 0d);
-  for (k = 0; k < n; k++) {
-    stdlib[k] = randlc(rng);
-  }
-  delete_randlc(rng);
-
-  direct = {[k] -> rlcg(seed, k + 1) | [k] < [n]};
-
-  printf("Stdlib %s direct\n", all(direct == stdlib) ? "==" : "!=");
-
-  return 0;
-}
-#endif

@@ -1,0 +1,138 @@
+/* Copy of Init.sac, but with a main function that has tests, and some
+ * print statements in Init. */
+
+use RNG: all;
+use StdIO: all;
+use Array: all;
+
+double[.] swap(double[.] list, int i, int j)
+{
+  tmp = list[i];
+  list[i] = list[j];
+  list[j] = tmp;
+  return list;
+}
+
+int, double[.] partition(double[.] list, int left, int right, int pivot)
+{
+  pivotValue = list[pivot];
+  list = swap(list, pivot, right);
+  storeIndex = left;
+
+  for (i = left; i < right; i++) {
+    if (list[i] < pivotValue) {
+      list = swap(list, storeIndex, i);
+      storeIndex++;
+    }
+  }
+
+  list = swap(list, right, storeIndex);
+  return (storeIndex, list);
+}
+
+double, double[.] quickselect(double[.] list, int left, int right, int k)
+{
+  if (left == right) {
+    result = list[left];
+  } else {
+    pivot, list = partition(list, left, right, (left + right) / 2);
+    if (k == pivot) {
+      result = list[k];
+    } else if (k < pivot) {
+      result, list = quickselect(list, left, pivot, k);
+    } else {
+      result, list = quickselect(list, pivot + 1, right, k);
+    }
+  }
+
+  return (result, list);
+}
+
+/* Returns the indices of the k largest numbers */
+int[.] largest(double[.] x, int k)
+{
+  n = shape(x)[0];
+  value, y = quickselect(x, 0, n - 1, n - k);
+
+  result = genarray([k], -1);
+  j = 0;
+  for (i = 0; i < n; i++) {
+    if (x[i] >= value) {
+      result[j] = i;
+      j++;
+    }
+  }
+
+  return result;
+}
+
+/* Returns the indices of the k smallest numbers */
+int[.] smallest(double[.] x, int k)
+{
+  n = shape(x)[0];
+  value, y = quickselect(x, 0, n - 1, k - 1);
+
+  result = genarray([k], -1);
+  j = 0;
+  for (i = 0; i < n; i++) {
+    if (x[i] <= value) {
+      result[j] = i;
+      j++;
+    }
+  }
+
+  return result;
+}
+
+int[3] col_maj(int k, int[3] shape)
+{
+  n0 = shape[0];
+  n1 = shape[1];
+  n2 = shape[2];
+  /* k = k0 + k1 * n0 + k2 * n0 * n1 */
+  return [k % n0, (k % (n0 * n1)) / n0, k / (n0 * n1)];
+}
+
+int[., .] col_maj(int[.] ks, int[3] shape)
+{
+  return {iv -> col_maj(ks[iv], shape)};
+}
+
+double[., ., .] init(int n)
+{
+  shape = [n, n, n];
+  result = genarray(shape, 0d);
+
+  random_values = {[k] -> LCG(314159265ul, k + 1) | [k] < [n * n * n]};
+  ones = col_maj(largest(random_values, 10), shape);
+  minusones = col_maj(smallest(random_values, 10), shape);
+
+  /* Off by one in every dimension. I guess they assume ghost cells? */
+  printf("Ones (1-based indexing):\n");
+  print(ones + 1);
+  printf("Minus ones (1-based indexing):\n");
+  print(minusones + 1);
+
+  for (i = 0; i < 10; i++) {
+    result[ones[i]] = 1d;
+    result[minusones[i]] = -1d;
+  }
+
+  return result;
+}
+
+int main()
+{
+  x = [1d, 12d, 4d, 9d, -1d, 11d];
+
+  print(smallest(x, 2));
+  print(largest(x, 2));
+
+  printf("Column major test:\n");
+  x = {[k] -> col_maj(k, [3, 3, 3]) | [k] < [27]};
+  print(x);
+
+  v = init(256);
+
+  return 0;
+}

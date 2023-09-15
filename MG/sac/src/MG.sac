@@ -36,7 +36,7 @@
 #define ref 0.1583275060440e-9
 #endif
 
-use Init: all;
+use Input: all;
 use StdIO: all;
 use Math: all;
 use Array: all except {rotate};
