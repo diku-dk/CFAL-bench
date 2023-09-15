@@ -63,14 +63,12 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
   let rss = replicate rs_flat_len 0
   -- fill in rss
   let nd2 = n / 2
-  let rss[0: nd2*nd2*nd2] =
-          P (r :> [nd2*2][nd2*2][nd2*2]real)
-       |> flatten_3d
+  let rss[0: nd2*nd2*nd2] = P (r :> [nd2*2][nd2*2][nd2*2]real) |> flatten_3d
   let (off, m4, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
-      let r  = (rss[off: off + m*m*m] :> [(m*m)*m]real)
-            |> unflatten_3d -- (n/2) (n/2) (n/2)
+    let r  = rss[off: off + m*m*m]
+             |> sized (m*m*m) |> unflatten_3d -- (n/2) (n/2) (n/2)
       let m' = m / 2
       let off' = off + m*m*m
       let r' = P (r :> [m'*2][m'*2][m'*2]real) |> flatten_3d
@@ -78,8 +76,8 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       in  (off', m', rss)
 
   -- base case of M
-  let r4 = (rss[off: off + m4*m4*m4] :> [(m4*m4)*m4]real)
-        |> unflatten |> unflatten
+  let r4 = rss[off: off + m4*m4*m4]
+           |> sized (m4*m4*m4) |> unflatten |> unflatten
   let z4 = Mbase r4
 
   -- loop back
@@ -89,8 +87,7 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let m2 = m*2
       let z' = (Q z) :> [m2][m2][m2]real
       let beg = end - 8*m*m*m
-      let r  = (rss[beg : end] :> [(m2*m2)*m2]real)
-            |> unflatten |> unflatten
+      let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = map2_3d (-) r (A z')
       let z''= map2_3d (+) z' (Sa r')  -- or Sb?
       in  (beg, m2, z'')
@@ -102,7 +99,7 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
 
 
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  let s = flatten (flatten xsss) |> sum
+  let s = flatten_3d xsss |> sum
   in  s / (int2Real (n*m*q)) |> sqrt
 
 def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
