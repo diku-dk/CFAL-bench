@@ -35,5 +35,5 @@ double LCG(ulong seed, int k)
   }
 
   /* Conversion of b is exact as IEEE754 has 52 bits of mantissa. */
-  return tod(b) * prod(genarray([46], 0.5));
+  return tod(b) * Math::pow(2d, -46d);
 }
