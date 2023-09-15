@@ -1,9 +1,5 @@
-//#define DEBUG
-
-#ifndef DEBUG
-module Init;
-export {init};
-#endif
+/* Copy of Init.sac, but with a main function that has tests, and some
+ * print statements in Init. */
 
 use RNG: all;
 use StdIO: all;
@@ -107,17 +103,15 @@ double[., ., .] init(int n)
   shape = [n, n, n];
   result = genarray(shape, 0d);
 
-  random_values = {[k] -> rlcg(314159265ul, k + 1) | [k] < [n * n * n]};
+  random_values = {[k] -> LCG(314159265ul, k + 1) | [k] < [n * n * n]};
   ones = col_maj(largest(random_values, 10), shape);
   minusones = col_maj(smallest(random_values, 10), shape);
 
-#ifdef DEBUG
   /* Off by one in every dimension. I guess they assume ghost cells? */
   printf("Ones (1-based indexing):\n");
   print(ones + 1);
   printf("Minus ones (1-based indexing):\n");
   print(minusones + 1);
-#endif
 
   for (i = 0; i < 10; i++) {
     result[ones[i]] = 1d;
@@ -127,7 +121,6 @@ double[., ., .] init(int n)
   return result;
 }
 
-#ifdef DEBUG
 int main()
 {
   x = [1d, 12d, 4d, 9d, -1d, 11d];
@@ -143,4 +136,3 @@ int main()
 
   return 0;
 }
-#endif

@@ -1,0 +1,29 @@
+use RNG: all;
+
+use Array: all;
+use StdIO: all;
+use RandLC: all;
+
+double pow(double a, int b)
+{
+  return prod(genarray([b], a));
+}
+
+int main()
+{
+  n = 256 * 256 * 256;
+  seed = 314159265ul;
+
+  rng = create_randlc(tod(seed), pow(5d, 13));
+  stdlib = genarray([n], 0d);
+  for (k = 0; k < n; k++) {
+    stdlib[k] = randlc(rng);
+  }
+  delete_randlc(rng);
+
+  direct = {[k] -> LCG(seed, k + 1) | [k] < [n]};
+
+  printf("Stdlib %s direct\n", all(direct == stdlib) ? "==" : "!=");
+
+  return 0;
+}
