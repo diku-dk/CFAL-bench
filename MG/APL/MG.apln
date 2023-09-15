@@ -23,15 +23,21 @@ seed←314159265
 rlcg←{⎕FR←1287 ⋄ a←5*13 ⋄ b←⍺ ⋄ m←2*46 ⋄ z←(2*¯46)×{b∘←m|a×b}¨⍳⍵ ⋄ ⎕FR←645 ⋄ 1×z}
 
 Run←{
-	⎕←'Initializing data..'
+	⎕←'Initializing data...'
 	v←{(10⌿¯1 1)@(⊂[0](3⍴256)⊤(10↑r),¯10↑r←⍋seed rlcg DS*3)⊢(3⍴DS)⍴0}⍬
 	u←DS DS DS⍴0
+	
 	⎕←'Warming up...'
 	r←u+k M v-A st u
+	
 	⎕←'Running MG...'
+	start←24 60 60 1000⊥¯4↑⎕TS
 	r←v MG u
-	⎕←'MG time elapsed: ',⍕¯1
-	r
+	end←24 60 60 1000⊥¯4↑⎕TS
+	
+	⎕←'MG time elapsed: ',(⍕(end-start)÷1000),'secs'
+	⎕←'L2 Norm: ',⍕r
+	1:shy←r
 }
 
 :EndNamespace
