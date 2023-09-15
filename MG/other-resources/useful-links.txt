@@ -1,0 +1,7 @@
+https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9756706
+
+https://github.com/danidomenico/NPB-PYTHON
+
+https://github.com/GMAP/NPB-GPU/tree/master/CUDA
+
+https://www.nas.nasa.gov/software/npb_problem_sizes.html
