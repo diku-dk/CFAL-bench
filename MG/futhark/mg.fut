@@ -18,7 +18,7 @@ def unroll_tabulate_3d n m l f =
 def hood_3d [n] 't (arr: [n][n][n]t) i j l : [3][3][3]t =
   unroll_tabulate_3d 3 3 3 (\a b c -> #[unsafe] arr[(i+a-1)%n,(j+b-1)%n,(l+c-1)%n])
 
-entry relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
+def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
   let f i j l =
     let hood = hood_3d input i j l
     in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
