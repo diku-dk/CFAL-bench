@@ -25,7 +25,7 @@ def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
   in tabulate_3d n n n f
 
 def gen_weights (cs: [4]real) : [3][3][3]real =
-  tabulate_3d 3 3 3 (\i j l -> cs[i64.abs(i-1)+i64.abs(j-1)+i64.abs(l-1)])
+  unroll_tabulate_3d 3 3 3 (\i j l -> cs[i64.abs(i-1)+i64.abs(j-1)+i64.abs(l-1)])
 
 def dup = replicate 2 >-> transpose >-> flatten
 
