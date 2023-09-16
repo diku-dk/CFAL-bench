@@ -29,12 +29,8 @@ def gen_weights (cs: [4]real) : [3][3][3]real =
 
 def dup = replicate 2 >-> transpose >-> flatten
 
--- FIXME: is this right?
 def coarse2fine z =
-  z
-  |> map (map dup)
-  |> map dup
-  |> dup
+  z |> map (map dup) |> map dup |> dup
 
 def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
   r[0::2,0::2,0::2] :> [n][m][k]t
@@ -72,12 +68,12 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let m' = m / 2
       let off' = off + m*m*m
       let r' = P (r :> [m'*2][m'*2][m'*2]real) |> flatten_3d
-      let rss[off': off' + m'*m'*m'] = copy r' -- why is copy needed here?
+      let rss[off': off' + m'*m'*m'] = copy r'
       in  (off', m', rss)
 
   -- base case of M
   let r4 = rss[off: off + m4*m4*m4]
-           |> sized (m4*m4*m4) |> unflatten |> unflatten
+           |> sized (m4*m4*m4) |> unflatten_3d
   let z4 = Mbase r4
 
   -- loop back
