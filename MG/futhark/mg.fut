@@ -111,7 +111,38 @@ def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
 
 -- ==
 -- entry: main
--- random input { 4i64 [128][128][128]f64}
+-- random input { 4i64 [256][256][256]f64}
+
+entry mk_input n =
+  let f i j k : f64 =
+    if any (==(i,j,k)) [(211,154,98),
+                        (102,138,112),
+                        (101,156,59),
+                        (17,205,32),
+                        (92,63,205),
+                        (199,7,203),
+                        (250,170,157),
+                        (82,184,255),
+                        (154,162,36),
+                        (223,42,240)]
+    then -1
+    else if any (==(i,j,k)) [(57,120,167),
+                             (5,118,175),
+                             (176,246,164),
+                             (45,194,234),
+                             (212,7,248),
+                             (115,123,207),
+                             (202,83,209),
+                             (203,18,198),
+                             (243,172,14),
+                             (54,209,40)]
+    then 1
+    else 0
+  in tabulate_3d n n n f
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
   replicate_3d n 0 |> mg iter v
+
+-- ==
+-- entry: main
+-- script input { (4, mk_input 256i64) }
