@@ -109,10 +109,6 @@ def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
       in  map2_3d (+) u r'
   in A u |> map2_3d (-) v |> L2
 
--- ==
--- entry: main
--- random input { 4i64 [256][256][256]f64}
-
 entry mk_input n =
   let f i j k : f64 =
     if any (==(i,j,k)) [(211,154,98),
@@ -145,4 +141,4 @@ entry main [n] (iter: i64) (v: [n][n][n]real) : real =
 
 -- ==
 -- entry: main
--- script input { (4, mk_input 256i64) }
+-- script input { (4i64, mk_input 256i64) }
