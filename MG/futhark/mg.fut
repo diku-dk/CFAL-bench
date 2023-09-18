@@ -27,10 +27,13 @@ def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
 def gen_weights (cs: [4]real) : [3][3][3]real =
   unroll_tabulate_3d 3 3 3 (\i j l -> cs[i64.abs(i-1)+i64.abs(j-1)+i64.abs(l-1)])
 
-def dup = replicate 2 >-> transpose >-> flatten
-
-def coarse2fine z =
-  z |> map (map dup) |> map dup |> dup
+def coarse2fine [n] (z: [n][n][n]f64) =
+  tabulate_3d (2*n) (2*n) (2*n)
+              (\i j k ->
+                 #[unsafe]
+                 if (i %% 2) + (j %% 2) + (k %% 2) == 0
+                 then z[i//2,j//2,k//2]
+                 else 0)
 
 def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
   r[0::2,0::2,0::2] :> [n][m][k]t
@@ -95,10 +98,9 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   let z''= map2_3d (+) z' (relax r' S)
   in  z''
 
-
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  let s = flatten_3d xsss |> sum
-  in  s / (int2Real (n*m*q)) |> sqrt
+  let s = flatten_3d xsss |> f64.sum
+  in  s / (int2Real (n*m*q)) |> f64.sqrt
 
 def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
   let u =
