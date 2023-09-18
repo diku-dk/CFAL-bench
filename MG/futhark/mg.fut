@@ -47,7 +47,7 @@ def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
 -- base case for M, n = 4
 def Mbase [n] (r : [n][n][n]real) : [n][n][n]real =
-  Sa r -- or Sb r; which one?
+  Sb r
 
 def M [n] (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
@@ -139,6 +139,7 @@ entry mk_input n =
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
   replicate_3d n 0 |> mg iter v
 
+-- Reference value: 0.180056440132e-5
 -- ==
 -- entry: main
 -- script input { (4i64, mk_input 256i64) }
