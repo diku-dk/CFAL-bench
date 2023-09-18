@@ -18,23 +18,22 @@ def unroll_tabulate_3d n m l f =
 def hood_3d [n] 't (arr: [n][n][n]t) i j l : [3][3][3]t =
   unroll_tabulate_3d 3 3 3 (\a b c -> #[unsafe] arr[(i+a-1)%n,(j+b-1)%n,(l+c-1)%n])
 
-entry relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
+def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
   let f i j l =
     let hood = hood_3d input i j l
     in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
   in tabulate_3d n n n f
 
 def gen_weights (cs: [4]real) : [3][3][3]real =
-  tabulate_3d 3 3 3 (\i j l -> cs[i64.abs(i-1)+i64.abs(j-1)+i64.abs(l-1)])
+  unroll_tabulate_3d 3 3 3 (\i j l -> cs[i64.abs(i-1)+i64.abs(j-1)+i64.abs(l-1)])
 
-def dup = replicate 2 >-> transpose >-> flatten
-
--- FIXME: is this right?
-def coarse2fine z =
-  z
-  |> map (map dup)
-  |> map dup
-  |> dup
+def coarse2fine [n] (z: [n][n][n]f64) =
+  tabulate_3d (2*n) (2*n) (2*n)
+              (\i j k ->
+                 #[unsafe]
+                 if (i %% 2) + (j %% 2) + (k %% 2) == 0
+                 then z[i//2,j//2,k//2]
+                 else 0)
 
 def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
   r[0::2,0::2,0::2] :> [n][m][k]t
@@ -43,17 +42,19 @@ def P a = fine2coarse (relax a (gen_weights [1/2, 1/4, 1/8, 1/16]))
 
 def Q a = relax (coarse2fine a) (gen_weights [1,1/2,1/4,1/8])
 
-def Sa a = relax a (gen_weights [-3/8, 1/32, -1/64, 0])
+type S = [3][3][3]f64
 
-def Sb a = relax a (gen_weights [-3/17, 1/33, -1/61, 0])
+def Sa : S = gen_weights [-3/8, 1/32, -1/64, 0]
+
+def Sb : S = gen_weights [-3/17, 1/33, -1/61, 0]
 
 def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
 -- base case for M, n = 4
-def Mbase [n] (r : [n][n][n]real) : [n][n][n]real =
-  Sa r -- or Sb r; which one?
+def Mbase (S: S) (r : [4][4][4]real) : [4][4][4]real =
+  relax r S
 
-def M [n] (r: [n][n][n]real) : [n][n][n]real =
+def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
   let (count, rs_flat_len, m0) =
     loop (count, len, m) = (0, 0, n/2) while m > 4 do
@@ -72,13 +73,13 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let m' = m / 2
       let off' = off + m*m*m
       let r' = P (r :> [m'*2][m'*2][m'*2]real) |> flatten_3d
-      let rss[off': off' + m'*m'*m'] = copy r' -- why is copy needed here?
+      let rss[off': off' + m'*m'*m'] = copy r'
       in  (off', m', rss)
 
   -- base case of M
   let r4 = rss[off: off + m4*m4*m4]
-           |> sized (m4*m4*m4) |> unflatten |> unflatten
-  let z4 = Mbase r4
+           |> sized (4*4*4) |> unflatten_3d
+  let z4 = Mbase S r4
 
   -- loop back
   let (_, _, z) =
@@ -89,33 +90,60 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = map2_3d (-) r (A z')
-      let z''= map2_3d (+) z' (Sa r')  -- or Sb?
+      let z''= map2_3d (+) z' (relax r' S)
       in  (beg, m2, z'')
   -- treat the first case
   let z' = (Q z) :> [n][n][n]real
   let r' = map2_3d (-) r (A z')
-  let z''= map2_3d (+) z' (Sa r')  -- or Sb?
+  let z''= map2_3d (+) z' (relax r' S)
   in  z''
 
-
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  let s = flatten_3d xsss |> sum
-  in  s / (int2Real (n*m*q)) |> sqrt
+  f64.sqrt (f64.sum (flatten_3d xsss) / int2Real (n*m*q))
 
-def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
+def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
   let u =
     loop u for _i < iter-1 do
       -- let r = v - A (u);
       let u' = A u
       let r  = map2_3d (-) v u'
       -- let u = u + M(r);
-      let r' = M r
+      let r' = M S r
       in  map2_3d (+) u r'
   in A u |> map2_3d (-) v |> L2
 
--- ==
--- entry: main
--- random input { 4i64 [128][128][128]f64}
+entry mk_input n =
+  let f i j k : f64 =
+    if any (==(i,j,k)) [(211,154,98),
+                        (102,138,112),
+                        (101,156,59),
+                        (17,205,32),
+                        (92,63,205),
+                        (199,7,203),
+                        (250,170,157),
+                        (82,184,255),
+                        (154,162,36),
+                        (223,42,240)]
+    then -1
+    else if any (==(i,j,k)) [(57,120,167),
+                             (5,118,175),
+                             (176,246,164),
+                             (45,194,234),
+                             (212,7,248),
+                             (115,123,207),
+                             (202,83,209),
+                             (203,18,198),
+                             (243,172,14),
+                             (54,209,40)]
+    then 1
+    else 0
+  in tabulate_3d n n n f
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
-  replicate_3d n 0 |> mg iter v
+  let S = if iter == 4 then Sa else Sb
+  in replicate_3d n 0 |> mg iter S v
+
+-- Reference value: 0.180056440132e-5
+-- ==
+-- entry: main
+-- script input { (4i64, mk_input 256i64) }
