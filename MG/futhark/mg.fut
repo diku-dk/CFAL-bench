@@ -99,8 +99,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   in  z''
 
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  let s = flatten_3d xsss |> f64.sum
-  in  s / (int2Real (n*m*q)) |> f64.sqrt
+  f64.sqrt (f64.sum (flatten_3d xsss) / int2Real (n*m*q))
 
 def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
   let u =
