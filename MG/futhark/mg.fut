@@ -39,17 +39,19 @@ def P a = fine2coarse (relax a (gen_weights [1/2, 1/4, 1/8, 1/16]))
 
 def Q a = relax (coarse2fine a) (gen_weights [1,1/2,1/4,1/8])
 
-def Sa a = relax a (gen_weights [-3/8, 1/32, -1/64, 0])
+type S = [3][3][3]f64
 
-def Sb a = relax a (gen_weights [-3/17, 1/33, -1/61, 0])
+def Sa : S = gen_weights [-3/8, 1/32, -1/64, 0]
+
+def Sb : S = gen_weights [-3/17, 1/33, -1/61, 0]
 
 def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
 -- base case for M, n = 4
-def Mbase [n] (r : [n][n][n]real) : [n][n][n]real =
-  Sb r
+def Mbase (S: S) (r : [4][4][4]real) : [4][4][4]real =
+  relax r S
 
-def M [n] (r: [n][n][n]real) : [n][n][n]real =
+def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
   let (count, rs_flat_len, m0) =
     loop (count, len, m) = (0, 0, n/2) while m > 4 do
@@ -73,8 +75,8 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
 
   -- base case of M
   let r4 = rss[off: off + m4*m4*m4]
-           |> sized (m4*m4*m4) |> unflatten_3d
-  let z4 = Mbase r4
+           |> sized (4*4*4) |> unflatten_3d
+  let z4 = Mbase S r4
 
   -- loop back
   let (_, _, z) =
@@ -85,12 +87,12 @@ def M [n] (r: [n][n][n]real) : [n][n][n]real =
       let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = map2_3d (-) r (A z')
-      let z''= map2_3d (+) z' (Sa r')  -- or Sb?
+      let z''= map2_3d (+) z' (relax r' S)
       in  (beg, m2, z'')
   -- treat the first case
   let z' = (Q z) :> [n][n][n]real
   let r' = map2_3d (-) r (A z')
-  let z''= map2_3d (+) z' (Sa r')  -- or Sb?
+  let z''= map2_3d (+) z' (relax r' S)
   in  z''
 
 
@@ -98,14 +100,14 @@ def L2 [n][m][q] (xsss: [n][m][q]real) : real =
   let s = flatten_3d xsss |> sum
   in  s / (int2Real (n*m*q)) |> sqrt
 
-def mg [n] (iter: i64) (v: [n][n][n]real) (u: [n][n][n]real) =
+def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
   let u =
     loop u for _i < iter-1 do
       -- let r = v - A (u);
       let u' = A u
       let r  = map2_3d (-) v u'
       -- let u = u + M(r);
-      let r' = M r
+      let r' = M S r
       in  map2_3d (+) u r'
   in A u |> map2_3d (-) v |> L2
 
@@ -137,7 +139,8 @@ entry mk_input n =
   in tabulate_3d n n n f
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
-  replicate_3d n 0 |> mg iter v
+  let S = if iter == 4 then Sa else Sb
+  in replicate_3d n 0 |> mg iter S v
 
 -- Reference value: 0.180056440132e-5
 -- ==
