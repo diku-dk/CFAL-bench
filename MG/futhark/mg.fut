@@ -50,14 +50,10 @@ def Sb : S = gen_weights [-3/17, 1/33, -1/61, 0]
 
 def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
--- base case for M, n = 4
-def Mbase (S: S) (r : [4][4][4]real) : [4][4][4]real =
-  relax r S
-
 def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
   let (count, rs_flat_len, m0) =
-    loop (count, len, m) = (0, 0, n/2) while m > 4 do
+    loop (count, len, m) = (0, 0, n/2) while m > 1 do
       (count+1, len + m*m*m, m/2)
   let rs_flat_len = rs_flat_len + m0 * m0 * m0
   -- allocate buffer size
@@ -65,7 +61,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- fill in rss
   let nd2 = n / 2
   let rss[0: nd2*nd2*nd2] = P (r :> [nd2*2][nd2*2][nd2*2]real) |> flatten_3d
-  let (off, m4, rss) =
+  let (off, m1, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
     let r  = rss[off: off + m*m*m]
@@ -77,13 +73,13 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       in  (off', m', rss)
 
   -- base case of M
-  let r4 = rss[off: off + m4*m4*m4]
-           |> sized (4*4*4) |> unflatten_3d
-  let z4 = Mbase S r4
+  let r1 = rss[off: off + m1*m1*m1]
+           |> sized (1*1*1) |> unflatten_3d
+  let z1 = relax r1 S
 
   -- loop back
   let (_, _, z) =
-    loop (end, m, z) = (off, m4, z4)
+    loop (end, m, z) = (off, m1, z1)
     for _k < count do
       let m2 = m*2
       let z' = (Q z) :> [m2][m2][m2]real
@@ -143,7 +139,11 @@ entry main [n] (iter: i64) (v: [n][n][n]real) : real =
   let S = if iter == 4 then Sa else Sb
   in replicate_3d n 0 |> mg iter S v
 
--- Reference value: 0.180056440132e-5
+-- Reference values: 0.2433365309e-5
+--                   0.180056440132e-5
 -- ==
 -- entry: main
--- script input { (4i64, mk_input 256i64) }
+-- "Class A" script input { (4i64, mk_input 256i64) }
+-- output { 0.2433365309e-5 }
+-- "Class B" script input { (20i64, mk_input 256i64) }
+-- output { 0.180056440132e-5 }
