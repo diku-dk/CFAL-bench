@@ -31,12 +31,12 @@ def coarse2fine [n] (z: [n][n][n]f64) =
   tabulate_3d (2*n) (2*n) (2*n)
               (\i j k ->
                  #[unsafe]
-                 if (i %% 2) + (j %% 2) + (k %% 2) == 0
+                 if (i %% 2) + (j %% 2) + (k %% 2) == 3
                  then z[i//2,j//2,k//2]
                  else 0)
 
 def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
-  r[0::2,0::2,0::2] :> [n][m][k]t
+  r[1::2,1::2,1::2] :> [n][m][k]t
 
 def P a = fine2coarse (relax a (gen_weights [1/2, 1/4, 1/8, 1/16]))
 
