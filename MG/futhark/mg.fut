@@ -99,18 +99,18 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   in  z''
 
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  f64.sqrt(f64.sum (map (**2) (flatten_3d xsss)) / (f64.i64 (n*m*q)))
+  f64.sqrt(f64.sum (map (**2) (flatten_3d xsss)) / f64.i64 (n*m*q))
 
 def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
   let u =
-    loop u for _i < iter-1 do
+    loop u for _i < iter do
       -- let r = v - A (u);
       let u' = A u
       let r  = map2_3d (-) v u'
       -- let u = u + M(r);
       let r' = M S r
       in  map2_3d (+) u r'
-  in A u |> map2_3d (-) v |> L2
+  in L2 (map2_3d (-) v (A u))
 
 entry mk_input n =
   let f i j k : f64 =
