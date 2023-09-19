@@ -1,3 +1,3 @@
 #!/bin/sh
 
-LOAD=.\MG.apln dyalog
+LOAD=./MG.apln dyalog

@@ -1,5 +1,7 @@
 :Namespace MG
 
+⎕IO←0
+
 DS←256 ⋄ IT←4 ⋄ k←2⍟DS
 
 CI←+⌿¨|RI←,¯1+⍳3 3 3
