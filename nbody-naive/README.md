@@ -20,5 +20,3 @@ The reported time should include only the simulation, i.e. not reading
 the input, writing the output, or doing other initialisation.
 
 All floating-point arithmetic should be in double precision.
-
-* [nbody.c](nbody.c) - a very naive sequential C implementation.
