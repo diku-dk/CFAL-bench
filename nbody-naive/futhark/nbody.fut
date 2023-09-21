@@ -3,21 +3,26 @@ import "physics"
 def calc_accels [n] (bodies: [n]pointmass): [n]acceleration =
   let move (body: pointmass) =
     let accels = map (accel epsilon body) bodies
-    in reduce_comm (vec3.+) {x=0f64, y=0f64, z=0f64} accels
+    in reduce_comm (vec3.+) {x=0, y=0, z=0} accels
   in map move bodies
 
-def advance [n] (time_step: f64) (bodies: [n]body): [n]body =
-  map2 (advance_body time_step) bodies
+def step [n] (dt: f64) (bodies: [n]body): [n]body =
+  map2 (advance_body dt) bodies
        (calc_accels (map pointmass bodies))
+
+def nbody [n] (k: i32) (dt: f64) (bodies: [n]body): [n]body =
+  iterate k (step dt) bodies
+
+-- Everything below is boilerplate.
 
 entry main [n] (k: i32) (dt: f64) (positions: [n][3]f64) (masses: [n]f64) =
   let mk position mass =
-    {position={x=position[0],y=position[1],z=position[2]},
+    {position={x=position[0], y=position[1], z=position[2]},
      mass,
-     velocity={x=0,y=0,z=0}}
+     velocity={x=0, y=0, z=0}}
   let unmk p = [p.position.x, p.position.y, p.position.z]
   in map2 mk positions masses
-     |> iterate k (advance dt)
+     |> nbody k dt
      |> map unmk
 
 entry mk_positions (n: i64) =
