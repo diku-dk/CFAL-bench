@@ -162,6 +162,8 @@ runOnGPU ( RWScalars& ro_scal, NordeaArrays& cpu_arrs, oclNordeaArrays& ocl_arrs
             run_GPUkernels_one_time_iteration ( cqCommandQueue[dev_id], kernels );
     } // END TIME LOOP!
 
+    clFinish(cqCommandQueue[dev_id]);
+
     gettimeofday(&t_end, NULL);
     timeval_subtract(&t_diff, &t_end, &t_start);
     elapsed = t_diff.tv_sec*1e6+t_diff.tv_usec;
