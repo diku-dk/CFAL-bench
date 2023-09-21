@@ -35,3 +35,14 @@ map
           tridiag
 ```
 
+## Baseline: added the FinPar implementations
+
+One can compile and run the OpenCL version with:
+
+```
+$ cd baseline-FinPar/AllParOpenCLMP
+$ make gpu
+$ make run_small
+$ make run_medium
+$ make run_large
+``` 

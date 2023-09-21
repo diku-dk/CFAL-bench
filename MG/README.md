@@ -61,3 +61,17 @@ Conciser and annotated implementation
 ## TODO
 
 Provide a simple yet complete reference implementation.
+
+## Cuda Baseline Implementation Was Added!
+
+Cuda baseline implementation is from [NPB-GPU](https://github.com/GMAP/NPB-GPU/tree/master/CUDA)
+
+Compile and run with:
+
+```
+$ cd baseline-NPB-GPU/
+$ make mg CLASS=B
+$ ./bin/mg.B
+```
+
+For the first time, you may have to create the `bin` directory inside `baseline-NPB-GPU`, i.e., `$ mkdir bin`
