@@ -12,6 +12,8 @@ type body = {position: position,
              mass: mass,
              velocity: velocity}
 
+def epsilon : f64 = 1e-9
+
 def pointmass ({position, mass, velocity=_}: body) : pointmass =
   {position, mass}
 
