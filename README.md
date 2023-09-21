@@ -24,9 +24,11 @@ In order to suggest a new benchmark, please do perform the following steps:
 
 ## Benchmark Status
 
-| BM name | description | naive implementation | inclusion in CFAL | Accelerate | APL | DaCe | Futhark | SaC
-| ------- | ---- | ---- |  ---- |  ---- |  ---- |  ---- |  ---- |  ---- | 
-| FFT     | done |      |       |       |       |       |       |       |
-| MG      | done |      |       |       |       |       |       |       |
+| BM name     | description | seq/par baselines| inclusion in CFAL   | Accelerate | APL  | DaCe   | Futhark | SaC   |
+| ------------| ----        | ----             |  ----               |  ----      | ---- | ----   |  ----   |  ---- | 
+| MG          | done        | GPU, Fortran, SAC| VERY LIKELY         |            | YES  | Almost | YES     | YES   |
+| nbody-naive | done        |                  | under consideration |            |      |        |         |       |
+| Fin-LocVolC | done        | GPU,OMP,Haskell  | under consideration |            |      |        | YES     |       |
+| FFT         | done        |                  |                     |            |      |        |         |       |
 
 
