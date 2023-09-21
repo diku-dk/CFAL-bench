@@ -60,7 +60,7 @@ def relaxFF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n][n][n]real =
 
 
 def gen_weights (cs: [4]real) : [3][3][3]real =
-  unroll_tabulate_3d 3 3 3 (\i j l -> cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
+  unroll_tabulate_3d 3 3 3 (\i j l -> #[unsafe] cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
 
 def coarse2fine [n] (z: [n][n][n]f64) =
   tabulate_3d' (2*n) (2*n) (2*n)
