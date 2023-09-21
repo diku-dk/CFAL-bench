@@ -53,7 +53,7 @@ def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
   let (count, rs_flat_len, m0) =
-    loop (count, len, m) = (0, 0, n/2) while m > 1 do
+    loop (count, len, m) = (0, 0, n/2) while m > 2 do
       (count+1, len + m*m*m, m/2)
   let rs_flat_len = rs_flat_len + m0 * m0 * m0
   -- allocate buffer size
@@ -61,7 +61,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- fill in rss
   let nd2 = n / 2
   let rss[0: nd2*nd2*nd2] = P (r :> [nd2*2][nd2*2][nd2*2]real) |> flatten_3d
-  let (off, m1, rss) =
+  let (off, m2, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
     let r  = rss[off: off + m*m*m]
@@ -73,13 +73,13 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       in  (off', m', rss)
 
   -- base case of M
-  let r1 = rss[off: off + m1*m1*m1]
-           |> sized (1*1*1) |> unflatten_3d
+  let r1 = rss[off: off + m2*m2*m2]
+           |> sized (2*2*2) |> unflatten_3d
   let z1 = relax r1 S
 
   -- loop back
   let (_, _, z) =
-    loop (end, m, z) = (off, m1, z1)
+    loop (end, m, z) = (off, m2, z1)
     for _k < count do
       let m2 = m*2
       let z' = (Q z) :> [m2][m2][m2]real
