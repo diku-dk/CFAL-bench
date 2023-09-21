@@ -41,17 +41,23 @@ def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
 
 def hood_3dF [n] 't (arr: [n*n*n]t) i j l : [3][3][3]t =
   unroll_tabulate_3d 3 3 3
-    (\a b c -> -- let (a,b,c,n) = (i32.i64 a, i32.i64 b, i32.i64 c, i32.i64 n)
-               let n = i32.i64 n
+    (\a b c -> let n = i32.i64 n
                let ijl_rot = ( (i+a-1) & (n-1), (j+b-1) & (n-1), (l+c-1) & (n-1) )
                in  #[unsafe] arr[flatenInd ijl_rot n n] )
 
 def relaxF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n*n*n]real =
-  let f ijl =
-    let (i,j,l) = unflatInd ijl (i32.i64 n) (i32.i64 n)
+   let f ijl =
+     let (i,j,l) = unflatInd ijl (i32.i64 n) (i32.i64 n)
+     let hood = hood_3dF input i j l
+     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+   in map f (iota (n*n*n))
+
+def relaxFF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n][n][n]real =
+  let f i j l =
     let hood = hood_3dF input i j l
     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-  in map f (iota (n*n*n))
+  in (tabulate_3d' n n n f)
+
 
 def gen_weights (cs: [4]real) : [3][3][3]real =
   unroll_tabulate_3d 3 3 3 (\i j l -> cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
@@ -68,6 +74,11 @@ def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
   r[1::2,1::2,1::2] :> [n][m][k]t
   -- tabulate_3d' n m k (\i j k -> #[unsafe]r[i*2+1, j*2+1, k*2+1]) 
 
+def fine2coarseFF [n][m][k] 't (r: [(n*2)][(m*2)][(k*2)]t) : *[n*m*k]t =
+  tabulate_3d' n m k 
+    (\ i j l -> #[unsafe] r[i*2+1, j*2+1, l*2+1] ) |> flatten_3d
+  -- r[1::2,1::2,1::2] :> [n][m][k]t
+  
 def fine2coarseF [n][m][k] 't (r: [(n*2)*(m*2)*(k*2)]t) : *[n*m*k]t =
   map (\ ijl ->
         let (m,k)    = (i32.i64 m, i32.i64 k)
