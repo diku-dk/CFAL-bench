@@ -4,11 +4,13 @@
 
 Local Volatility Calibration is implemented in the working directories: 
 
-  ./LocVolCalib/OrigCpp        -- sequential, original C(++) code
-  ./LocVolCalib/COpenMP        -- OpenMP C version of the code
-  ./LocVolCalib/AllParOpenCLMP -- parallelizing the outer two loops in OpenCL and OpenMP
-  ./LocVolCalib/OutParOpenCLMP -- parallelizing the whole loop nest in OpenCL and OpenMP
-  ./LocVolCalib/HaskellLH      -- Haskell version documenting all parallelism.
+* `OrigCpp`        -- sequential, original C(++) code
+
+* `COpenMP`        -- OpenMP C version of the code
+
+* `AllParOpenCLMP` -- parallelizing the outer two loops in OpenCL and OpenMP
+
+* `HaskellLH`      -- Haskell version documenting all parallelism.
 
 #########################################################################
 ### Hardware/software description and Where was the benchmark tested: ###
