@@ -29,12 +29,12 @@ void nbody_step(int n, double dt, struct particle* ps) {
       double dy = ps[j].y - ps[i].y;
       double dz = ps[j].z - ps[i].z;
       double dist_sqr = dx*dx + dy*dy + dz*dz + EPSILON;
-      double inv_dist = 1.0f / sqrtf(dist_sqr);
+      double inv_dist = 1.0 / sqrt(dist_sqr);
       double inv_dist3 = inv_dist * inv_dist * inv_dist;
 
-      fx += dx * inv_dist3;
-      fy += dy * inv_dist3;
-      fz += dz * inv_dist3;
+      fx += dx * ps[j].m * inv_dist3;
+      fy += dy * ps[j].m * inv_dist3;
+      fz += dz * ps[j].m * inv_dist3;
     }
 
     ps[i].vx += dt*fx;
