@@ -12,14 +12,14 @@ type body = {position: position,
              mass: mass,
              velocity: velocity}
 
-def epsilon : f64 = 1e-9
+def EPSILON : f64 = 1e-9
 
 def pointmass ({position, mass, velocity=_}: body) : pointmass =
   {position, mass}
 
-def accel (epsilon: f64) (x: pointmass) (y: pointmass): velocity =
+def accel (x: pointmass) (y: pointmass): velocity =
   let r = vec3.(y.position - x.position)
-  let rsqr = vec3.dot r r + epsilon * epsilon
+  let rsqr = vec3.dot r r + EPSILON
   let invr = 1 / f64.sqrt rsqr
   let invr3 = invr * invr * invr
   let s = y.mass * invr3

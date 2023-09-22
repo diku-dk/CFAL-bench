@@ -2,7 +2,7 @@ import "physics"
 
 def calc_accels [n] (bodies: [n]pointmass): [n]acceleration =
   let move (body: pointmass) =
-    let accels = map (accel epsilon body) bodies
+    let accels = map (accel body) bodies
     in reduce_comm (vec3.+) {x=0, y=0, z=0} accels
   in map move bodies
 
