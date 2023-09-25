@@ -4,7 +4,7 @@ ifeq ($(OS),Darwin)
   # OpenMP is not supported by clang and gcc-4.9 does not work
   # well with OpenCL on Mac, thus, we don't define ENABLE_OPENMP
   CXX        = clang++
-  CXXFLAGS   = -Wall -W -O3
+  CXXFLAGS   = -Wall -W -Ofast -march=native -mtune=native
   LIB        = -framework OpenCL
   INCLUDES   = -I. -I../include
 else
@@ -14,7 +14,7 @@ else
   OPENCL_INCDIR	    ?= $(OPENCL_ROOTDIR)/include
   CXX        = g++
   LIB        = -L$(OPENCL_LIBDIR) -lOpenCL
-  CXXFLAGS   = -DENABLE_OPENMP -fopenmp -O3
+  CXXFLAGS   = -DENABLE_OPENMP -fopenmp -Ofast -march=native -mtune=native
   INCLUDES   = -I$(OPENCL_INCDIR) -I. -I../include
 endif
 
