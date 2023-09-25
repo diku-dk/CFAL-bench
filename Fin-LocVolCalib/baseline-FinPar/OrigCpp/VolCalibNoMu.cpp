@@ -1,3 +1,10 @@
+/* Profiling in seconds on an AMD 4600H:
+ * 2.76 total
+ * 1.88 rollback
+ *  - 1.39 tridiagonal
+ * 0.86 updateParams
+ */
+
 #include <cmath>
 
 #define WITH_FLOATS     0
