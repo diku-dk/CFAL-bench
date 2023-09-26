@@ -79,6 +79,7 @@ def fine2coarseFF [n][m][k] 't (r: [(n*2)][(m*2)][(k*2)]t) : *[n*m*k]t =
     (\ i j l -> #[unsafe] r[i*2+1, j*2+1, l*2+1] ) |> flatten_3d
   -- r[1::2,1::2,1::2] :> [n][m][k]t
   
+  
 def fine2coarseF [n][m][k] 't (r: [(n*2)*(m*2)*(k*2)]t) : *[n*m*k]t =
   map (\ ijl ->
         let (m,k)    = (i32.i64 m, i32.i64 k)
@@ -89,7 +90,20 @@ def fine2coarseF [n][m][k] 't (r: [(n*2)*(m*2)*(k*2)]t) : *[n*m*k]t =
   -- r[0::2,0::2,0::2] :> [n][m][k]t
   
 def P [n] (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
-  fine2coarseF (relaxF a (gen_weights [1/2, 1/4, 1/8, 1/16]))
+  -- fine2coarseF (relaxF a (gen_weights [1/2, 1/4, 1/8, 1/16]))
+  let weights = gen_weights [1/2, 1/4, 1/8, 1/16]
+
+  let f ijl =
+     let (i',j',l') = unflatInd ijl (i32.i64 n) (i32.i64 n)
+     let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
+     let hood = hood_3dF a i j l
+     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+  in map f (iota (n*n*n))
+--  let f i' j' l' =
+--    let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
+--    let hood = hood_3dF a i j l
+--    in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+--  in (tabulate_3d' n n n f) |> flatten_3d
 
 def Q a = relax (coarse2fine a) (gen_weights [1,1/2,1/4,1/8])
 
