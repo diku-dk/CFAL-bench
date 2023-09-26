@@ -116,7 +116,7 @@ def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
   let weights = gen_weights [1,1/2,1/4,1/8]
   let f i j k =
     let hood = hood_3d_ind (i32.i64 (2*n)) (getElm arr) i j k
-    in #[sequential] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+    in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
   in tabulate_3d' (2*n) (2*n) (2*n) f
 
 
