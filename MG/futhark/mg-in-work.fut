@@ -62,13 +62,14 @@ def relaxFF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n][n][n]real =
 def gen_weights (cs: [4]real) : [3][3][3]real =
   unroll_tabulate_3d 3 3 3 (\i j l -> #[unsafe] cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
 
+def getElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
+  #[unsafe]
+  if (i %% 2) + (j %% 2) + (k %% 2) == 3
+  then arr[i//2,j//2,k//2]
+  else 0
+  
 def coarse2fine [n] (z: [n][n][n]f64) =
-  tabulate_3d' (2*n) (2*n) (2*n)
-              (\i j k ->
-                 #[unsafe]
-                 if (i %% 2) + (j %% 2) + (k %% 2) == 3
-                 then z[i//2,j//2,k//2]
-                 else 0)
+  tabulate_3d' (2*n) (2*n) (2*n) (getElm z)
 
 def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
   r[1::2,1::2,1::2] :> [n][m][k]t
@@ -106,6 +107,18 @@ def P [n] (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
 --  in (tabulate_3d' n n n f) |> flatten_3d
 
 def Q a = relax (coarse2fine a) (gen_weights [1,1/2,1/4,1/8])
+
+def hood_3d_ind 't (n: i32) (getElm: i32 -> i32 -> i32 -> t) i j l : [3][3][3]t =
+  let nm1 = n-1 in
+  unroll_tabulate_3d 3 3 3 (\a b c -> getElm ((i+a-1) & nm1) ((j+b-1) & nm1) ((l+c-1) & nm1) )
+
+def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
+  let weights = gen_weights [1,1/2,1/4,1/8]
+  let f i j k =
+    let hood = hood_3d_ind (i32.i64 (2*n)) (getElm arr) i j k
+    in #[sequential] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+  in tabulate_3d' (2*n) (2*n) (2*n) f
+
 
 type S = [3][3][3]f64
 
@@ -157,7 +170,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       let z''= map2_3d (+) z' (relax r' S)
       in  (beg, m2, z'')
   -- treat the first case
-  let z' = (Q z) :> [n][n][n]real
+  let z' = (Qopt z) :> [n][n][n]real
   let r' = map2_3d (-) r (A z')
   let z''= map2_3d (+) z' (relax r' S)
   in  z''
