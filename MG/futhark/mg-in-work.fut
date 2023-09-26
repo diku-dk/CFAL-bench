@@ -217,3 +217,5 @@ entry main [n] (iter: i64) (v: [n][n][n]real) : real =
 -- output { 0.2433365309e-5 }
 -- "Class B" script input { (20i64, mk_input 256i64) }
 -- output { 0.180056440132e-5 }
+-- "Class D" script input { (50i64, mk_input 1024i64) }
+-- output { 0.1583275060440e-9 }
