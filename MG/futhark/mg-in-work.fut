@@ -1,3 +1,5 @@
+import "mg-nas-kers"
+
 type real = f64
 
 def sum  = f64.sum
@@ -8,6 +10,7 @@ def replicate_3d (n: i64) (v: real) : [n][n][n]real =
   replicate n v |> replicate n |> replicate n
 
 def map2_3d f = map2 (map2 (map2 f))
+def map_3d f = map (map (map f))
 
 def tabulate_3d' m n k f = tabulate_3d m n k (\i j k -> f (i32.i64 i) (i32.i64 j) (i32.i64 k))
 
@@ -171,6 +174,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       in  (beg, m2, z'')
   -- treat the first case
   let z' = (Qopt z) :> [n][n][n]real
+  -- let z' = (Qnas z) :> [n][n][n]real
   let r' = map2_3d (-) r (A z')
   let z''= map2_3d (+) z' (relax r' S)
   in  z''
@@ -180,9 +184,10 @@ def L2 [n][m][q] (xsss: [n][m][q]real) : real =
   let s = flatten_3d xsss |> map (\x -> x*x) |> sum
   in  s / (int2Real (n*m*q)) |> sqrt
 
-def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) (u: [n][n][n]real) =
+def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) =
+  let u = M S v
   let u =
-    loop u for _i < iter do
+    loop u for _i < iter-1 do
       -- let r = v - A (u);
       let u' = A u
       let r  = map2_3d (-) v u'
@@ -220,10 +225,11 @@ entry mk_input n =
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
   let S = if iter == 4 then Sa else Sb
-  in replicate_3d n 0 |> mg iter S v
+  in  mg iter S v
 
 -- Reference values: 0.2433365309e-5
---                   0.180056440132e-5
+--                   0.180056440132e-5    0.000001811585741f64
+--                   0.5706732285740e-6
 -- ==
 -- entry: main
 -- "Class A" script input { (4i64, mk_input 256i64) }
