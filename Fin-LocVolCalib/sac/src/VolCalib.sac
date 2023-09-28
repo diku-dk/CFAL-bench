@@ -9,15 +9,10 @@ use Benchmarking: all;
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
  */
-REAL[.], REAL[.] updateParams(REAL[.] X,
-                        REAL[.] Y,
-                        REAL[.] Time,
-                        int g,
-                        REAL beta,
-                        REAL nu)
+REAL[.], REAL[.] updateParams(REAL[.] X, REAL[.] Y, REAL t)
 {
-  VarX1 = {[j] -> exp(2.0 * Y[j] - nu * nu * Time[g])};
-  VarX2 = {[i] -> pow(X[i], 2.0 * beta)};
+  VarX1 = {[j] -> exp(2.0 * Y[j] - NU * NU * t)};
+  VarX2 = {[i] -> pow(X[i], 2.0 * BETA)};
 
   return (VarX1, VarX2);
 }
@@ -25,34 +20,29 @@ REAL[.], REAL[.] updateParams(REAL[.] X,
 /**
  * Initializes indX, indY and X, Y, Time
  */
-int, int, REAL[.], REAL[.], REAL[.] initGrid(int numX,
-                                             int numY,
-                                             int numT,
-                                             REAL s0,
-                                             REAL alpha,
-                                             REAL nu,
-                                             REAL t)
+inline
+int, int, REAL[.], REAL[.], REAL[.] initGrid()
 {
-  Time = {[i] -> t * TO_REAL(i) / TO_REAL(numT - 1) | [i] < [numT]};
-  stdX = 20.0 * alpha * s0 * sqrt(t);
-  dx = stdX / TO_REAL(numX);
-  indX = toi(s0 / dx);
-  X = {[i] -> TO_REAL(i) * dx - TO_REAL(indX) * dx + s0 | [i] < [numX]};
+  Time = {[i] -> T * TO_REAL(i) / TO_REAL(NUM_T - 1) | [i] < [NUM_T]};
+  stdX = 20.0 * ALPHA * S0 * sqrt(T);
+  dx = stdX / TO_REAL(NUM_X);
+  indX = toi(S0 / dx);
+  X = {[i] -> TO_REAL(i) * dx - TO_REAL(indX) * dx + S0 | [i] < [NUM_X]};
 
-  stdY = 10.0 * nu * sqrt(t);
-  dy = stdY / TO_REAL(numY);
-  indY = numY / 2;
+  stdY = 10.0 * NU * sqrt(T);
+  dy = stdY / TO_REAL(NUM_Y);
+  indY = NUM_Y / 2;
 
-  Y = {[i] -> TO_REAL(i) * dy - TO_REAL(indY) * dy + log(alpha)
-            | [i] < [numY]};
+  Y = {[i] -> TO_REAL(i) * dy - TO_REAL(indY) * dy + log(ALPHA)
+            | [i] < [NUM_Y]};
 
   return (indX, indY, X, Y, Time);
 }
 
 /**
  * Initializes Globals:
- *      (i) Dxx when called with numX and X
- *     (ii) Dyy when called with numY and Y
+ *      (i) Dxx when called with X
+ *     (ii) Dyy when called with Y
  */
 REAL[3] initDD(REAL dxl, REAL dxu)
 {
@@ -77,25 +67,12 @@ REAL[., .] initOperator(REAL[.] xx)
   return DD;
 }
 
-REAL[., .] setPayoff(int numX, /* = shape(X)[0] */
-               int numY,
-               REAL strike,
-               REAL[.] X)
+REAL[., .] setPayoff(REAL strike, REAL[.] X)
 {
-  return {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [numX, numY]};
+  return {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 }
 
-/* TODO?: There exist parallel algorithms
-   (https://dl.acm.org/doi/fullHtml/10.1145/3472456.3472484),
-   but we call tridag in parallel as well.
-
-   The parallelism is min(numX, numY) which is enough for CPU, but
-   probably not enough for GPU. */
-inline
-REAL[.] tridag(REAL[.] a,
-               REAL[.] b,
-               REAL[.] c,
-               REAL[.] y )
+inline REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
 {
   n = shape(y)[0];
 
@@ -131,9 +108,8 @@ REAL[.] implicit_x(REAL VarX1, REAL[.] VarX2, REAL[., .] Dxx,
   return tridag(a, b, c, uu);
 }
 
-/* Becomes slower for inlining */
 specialize REAL[NUM_Y] implicit_y(REAL VarY, REAL[NUM_Y, 3] Dyy,
-                              REAL dtInv, REAL[NUM_Y] yy);
+                                  REAL dtInv, REAL[NUM_Y] yy);
 REAL[.] implicit_y(REAL VarY, REAL[., .] Dyy, REAL dtInv, REAL[.] yy)
 {
   a = {[j] -> -0.25 * VarY * Dyy[j, 0]};
@@ -143,50 +119,53 @@ REAL[.] implicit_y(REAL VarY, REAL[., .] Dyy, REAL dtInv, REAL[.] yy)
   return tridag(a, b, c, yy);
 }
 
-specialize REAL[NUM_X, NUM_Y] rollback(int g,
-                    REAL[NUM_T] Time,
+specialize REAL[NUM_X, NUM_Y] rollback(REAL dtInv,
                     REAL[NUM_X, 3] Dxx, REAL[NUM_Y] VarX1, REAL[NUM_X] VarX2,
                     REAL[NUM_Y, 3] Dyy, REAL VarY,
                     REAL[NUM_X, NUM_Y] ResultE);
-REAL[., .] rollback(int g,
-                    REAL[.] Time,
+REAL[., .] rollback(REAL dtInv,
                     REAL[., .] Dxx,
                     REAL[.] VarX1, REAL[.] VarX2,
                     REAL[., .] Dyy, REAL VarY,
                     REAL[., .] ResultE)
 {
-  dtInv = 1.0 / (Time[g + 1] - Time[g]);
-  numX = shape(ResultE)[0];
-  numY = shape(ResultE)[1];
-
   /* explicit x */
+  /*  FIXME letting the compiler infer the bounds on k causes a segfault.
+  U = {[j, i] -> dtInv * ResultE[i, j] + 0.25 *
+                  sum({[k] -> ResultE[i - 1 + k, j] *
+                              VarX1[j] * VarX2[i] * Dxx[i, k]})};
+  */
   U = {[j, i] -> dtInv * ResultE[i, j] + 0.25 *
                   sum({[k] -> ResultE[i - 1 + k, j] *
                               VarX1[j] * VarX2[i] * Dxx[i, k]
                             | [1] <= [k] < [3]})
-               | [0, 0] <= [j, i] < [numY, 1];
+               | [0, 0] <= [j, i] < [NUM_Y, 1];
        [j, i] -> dtInv * ResultE[i, j] + 0.25 *
                   sum({[k] -> ResultE[i - 1 + k, j] *
                               VarX1[j] * VarX2[i] * Dxx[i, k]
                             | [0] <= [k] < [3]})
-               | [0, 1] <= [j, i] < [numY, numX - 1];
+               | [0, 1] <= [j, i] < [NUM_Y, NUM_X - 1];
        [j, i] -> dtInv * ResultE[i, j] + 0.25 *
                   sum({[k] -> ResultE[i - 1 + k, j] *
                               VarX1[j] * VarX2[i] * Dxx[i, k]
                             | [0] <= [k] < [2]})
-               | [0, numX - 1] <= [j, i] < [numY, numX]
+               | [0, NUM_X - 1] <= [j, i] < [NUM_Y, NUM_X]
        };
 
   /* explicit y */
+  /* FIXME letting the compiler infer the bounds on k gives the correct result,
+     but -ecc says a negativity constraint is violated, so this is good luck.
+  V = {[i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[j, k]})};
+  */
   V = {[i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[j, k]
                                 | [1] <= [k] < [3]})
-               | [0, 0] <= [i, j] < [numX, 1];
+               | [0, 0] <= [i, j] < [NUM_X, 1];
        [i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[j, k]
                                  | [0] <= [k] < [3]})
-               | [0, 1] <= [i, j] < [numX, numY - 1];
+               | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
         [i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[j, k]
                                   | [0] <= [k] < [2]})
-               | [0, numY - 1] <= [i, j] < [numX, numY]
+               | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
       };
 
   U = {[j, i] -> U[j, i] + V[i, j]};
@@ -201,29 +180,27 @@ REAL[., .] rollback(int g,
   return ResultE;
 }
 
-REAL value(REAL s0,
-           REAL strike,
-           REAL t,
-           REAL alpha,
-           REAL nu,
-           REAL beta,
-           int numX,
-           int numY,
-           int numT)
+/* indX, indY, X, Y, Time, Dxx, Dyy don't depend on the index value of result,
+   and can be lifted out. VarX1, VarX2 differ along iterations of value, but
+   are independent of the index value of result.
+   */
+specialize REAL value(REAL strike, int indX, int indY,
+           REAL[NUM_X] X, REAL[NUM_Y] Y, REAL[NUM_T] Time,
+           REAL[NUM_X, 3] Dxx, REAL[NUM_Y, 3] Dyy);
+REAL value(REAL strike, int indX, int indY,
+           REAL[.] X, REAL[.] Y, REAL[.] Time,
+           REAL[., .] Dxx, REAL[., .] Dyy)
 {
-  indX, indY, X, Y, Time = initGrid(numX, numY, numT, s0, alpha, nu, t);
+  ResultE = setPayoff(strike, X);
 
-  Dxx = initOperator(X);
-  Dyy = initOperator(Y);
+  for (t = NUM_T - 2; t >= 0; t--) {
+    /* VarX1 does not depend on t, so it should be lifted out of this loop,
+       and then lifted out of the with-loop. */
+    VarX1, VarX2 = updateParams(X, Y, Time[t]);
 
-  ResultE = setPayoff(numX, numY, strike, X);
-
-  for (i = numT - 2; i >= 0; i--) {
-    VarX1, VarX2 = updateParams(X, Y, Time, i, beta, nu);
-
-    ResultE = rollback(i, Time,
+    ResultE = rollback(1.0 / (Time[t + 1] - Time[t]),
                        Dxx, VarX1, VarX2,
-                       Dyy, nu * nu,
+                       Dyy, NU * NU,
                        ResultE);
   }
 
@@ -236,8 +213,14 @@ int main()
 
     itime = getInterval("time", 1);
     start(itime);
-    result = {[i] -> value(S0, TO_REAL(i) / 1000.0, T, ALPHA, NU, BETA,
-                           NUM_X, NUM_Y, NUM_T) | [i] < [OUTER]};
+    indX, indY, X, Y, Time = initGrid();
+
+    Dxx = initOperator(X);
+    Dyy = initOperator(Y);
+
+    result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y, Time,
+                           Dxx, Dyy)
+                   | [i] < [OUTER]};
     end(itime);
     print(result);
 
