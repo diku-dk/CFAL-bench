@@ -133,6 +133,9 @@ def Sb : S = gen_weights [-3/17, 1/33, -1/61, 0]
 -- def Sb a = relax a (gen_weights [-3/17, 1/33, -1/61, 0])
 
 def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
+def mA v a =
+   -- map2_3d (-) v (A a)
+   mAnas [-8/3, 0, 1/6, 1/12] v a
 
 def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
@@ -169,13 +172,12 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       let z' = (Q z) :> [m2][m2][m2]real
       let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
-      let r' = map2_3d (-) r (A z')
+      let r' = mA r z'
       let z''= map2_3d (+) z' (relax r' S)
       in  (beg, m2, z'')
   -- treat the first case
   let z' = (Qopt z) :> [n][n][n]real
-  -- let z' = (Qnas z) :> [n][n][n]real
-  let r' = map2_3d (-) r (A z')
+  let r' = mA r z'
   let z''= map2_3d (+) z' (relax r' S)
   in  z''
 
@@ -188,13 +190,19 @@ def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) =
   let u = M S v
   let u =
     loop u for _i < iter-1 do
-      -- let r = v - A (u);
-      let u' = A u
-      let r  = map2_3d (-) v u'
-      -- let u = u + M(r);
-      let r' = M S r
-      in  map2_3d (+) u r'
-  in L2 (map2_3d (-) v (A u))
+      let r  = mA v u
+      in  M S r |> map2_3d (+) u
+  in L2 (mA v u)
+
+def mg2 [n] (iter: i64) (S: S) (v: [n][n][n]real) =
+  let u = M S v
+  let r = mA v u
+  let (_,r) =
+    loop (u,r) for _i < iter-1 do
+      let u' = M S r |> map2_3d (+) u
+      let r''= mA v u'
+      in  (u', r'')
+  in  L2 r
 
 entry mk_input n =
   let f i j k : f64 =
