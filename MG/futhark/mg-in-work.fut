@@ -126,12 +126,12 @@ def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
 
 def mA v a =
    map2_3d (-) v <|
-   if withNAS then Anas [-8/3, 0, 1/6, 1/12] a
+   if withNAS then relaxNas [-8/3, 0, 1/6, 1/12] a
    else relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
 def S (ws, exp_ws) a =
    -- map2_3d (+) v <|
-   if withNAS then Snas ws a
+   if withNAS then relaxNas ws a
    else relax a exp_ws
 
 type S = ([4]real, [3][3][3]real)
