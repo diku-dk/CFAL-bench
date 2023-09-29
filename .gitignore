@@ -1,0 +1,9 @@
+# DaCe
+.dacecache/
+out.sdfg
+*.out
+results.log
+perf.json
+perf*.csv
+
+
