@@ -6,6 +6,8 @@ def sum  = f64.sum
 def sqrt = f64.sqrt
 def int2Real = f64.i64
 
+let withNAS = true
+
 def replicate_3d (n: i64) (v: real) : [n][n][n]real =
   replicate n v |> replicate n |> replicate n
 
@@ -122,22 +124,20 @@ def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
     in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
   in tabulate_3d' (2*n) (2*n) (2*n) f
 
-
-type S = [3][3][3]f64
-
-def Sa : S = gen_weights [-3/8, 1/32, -1/64, 0]
-
-def Sb : S = gen_weights [-3/17, 1/33, -1/61, 0]
-
--- def Sa a = relax a (gen_weights [-3/8, 1/32, -1/64, 0])
--- def Sb a = relax a (gen_weights [-3/17, 1/33, -1/61, 0])
-
-def A a = relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 def mA v a =
-   -- map2_3d (-) v (A a)
-   mAnas [-8/3, 0, 1/6, 1/12] v a
+   map2_3d (-) v <|
+   if withNAS then Anas [-8/3, 0, 1/6, 1/12] a
+   else relax a (gen_weights [-8/3, 0, 1/6, 1/12])
 
-def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
+def S (ws, exp_ws) a =
+   -- map2_3d (+) v <|
+   if withNAS then Snas ws a
+   else relax a exp_ws
+
+type S = ([4]real, [3][3][3]real)
+
+
+def M [n] (wS: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
   let (count, rs_flat_len, m0) =
     loop (count, len, m) = (0, 0, n/2) while m > 2 do
@@ -162,7 +162,7 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
   -- base case of M
   let r1 = rss[off: off + m2*m2*m2]
            |> sized (2*2*2) |> unflatten_3d
-  let z1 = relax r1 S
+  let z1 = S wS r1
 
   -- loop back
   let (_, _, z) =
@@ -173,33 +173,32 @@ def M [n] (S: S) (r: [n][n][n]real) : [n][n][n]real =
       let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = mA r z'
-      let z''= map2_3d (+) z' (relax r' S)
+      let z''= map2_3d (+) z' (S wS r')
       in  (beg, m2, z'')
   -- treat the first case
   let z' = (Qopt z) :> [n][n][n]real
   let r' = mA r z'
-  let z''= map2_3d (+) z' (relax r' S)
+  let z''= map2_3d (+) z' (S wS r')
   in  z''
 
 def L2 [n][m][q] (xsss: [n][m][q]real) : real =
-  -- sqrt(sum (map (\ x -> x * x) (flatten_3d xsss)) / int2Real (n*m*q))
   let s = flatten_3d xsss |> map (\x -> x*x) |> sum
   in  s / (int2Real (n*m*q)) |> sqrt
 
-def mg [n] (iter: i64) (S: S) (v: [n][n][n]real) =
-  let u = M S v
+def mg [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
+  let u = M wS v
   let u =
     loop u for _i < iter-1 do
       let r  = mA v u
-      in  M S r |> map2_3d (+) u
+      in  M wS r |> map2_3d (+) u
   in L2 (mA v u)
 
-def mg2 [n] (iter: i64) (S: S) (v: [n][n][n]real) =
-  let u = M S v
+def mg2 [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
+  let u = M wS v
   let r = mA v u
   let (_,r) =
     loop (u,r) for _i < iter-1 do
-      let u' = M S r |> map2_3d (+) u
+      let u' = M wS r |> map2_3d (+) u
       let r''= mA v u'
       in  (u', r'')
   in  L2 r
@@ -231,9 +230,16 @@ entry mk_input n =
     else 0
   in tabulate_3d n n n f
 
+-- def Sa -> [-3/8,  1/32, -1/64, 0]
+-- def Sb -> [-3/17, 1/33, -1/61, 0]
+
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
-  let S = if iter == 4 then Sa else Sb
-  in  mg iter S v
+  let (s1: real, s2: real, s3: real) = 
+      if iter == 4 
+      then (-3/8, 1/32, -1/64) 
+      else (-3/17, 1/33, -1/61)
+  let s_weights = [s1, s2, s3, 0]
+  in  mg iter (s_weights, gen_weights s_weights) v
 
 -- Reference values: 0.2433365309e-5
 --                   0.180056440132e-5    0.000001811585741f64
