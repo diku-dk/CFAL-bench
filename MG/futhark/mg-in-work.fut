@@ -3,14 +3,14 @@ import "mg-nas-kers"
 
 let withNAS = true
 
-def get3dElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
+def getElm3d (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
   #[unsafe] arr[i, j, k]
 
 def getElmFlat [n] (arr:[n*n*n]real) (i: i32) (j: i32) (k: i32) : real =
   -- let n = i32.i64 n in #[unsafe] arr[ i*n*n + j*n + k ]
   #[unsafe] arr[ flatenInd (i,j,k) (i32.i64 n) (i32.i64 n) ]
 
-def get2ndElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
+def get8thElm3d (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
   #[unsafe]
   if (i %% 2) + (j %% 2) + (k %% 2) == 3
   then arr[i//2,j//2,k//2]
@@ -42,22 +42,23 @@ def P [n] (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
 --  in map f (iota (n*n*n))
 
 def coarse2fine [n] (z: [n][n][n]real) =
-  tabulate_3d' (2*n) (2*n) (2*n) (get2ndElm z)
+  tabulate_3d' (2*n) (2*n) (2*n) (get8thElm3d z)
 
 def Q [n] (a: [n][n][n]real) =
-  relax (2*n) (2*n) id (get3dElm (coarse2fine a)) (gen_weights [1,1/2,1/4,1/8])
+  relax (2*n) (2*n) id (getElm3d (coarse2fine a)) (gen_weights [1,1/2,1/4,1/8])
 
-def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
-  relax (2*n) (2*n) id (get2ndElm arr) (gen_weights [1,1/2,1/4,1/8])
+def Qopt [n] (a: [n][n][n]real) : [2*n][2*n][2*n]real =
+  if withNAS then relaxNas (2*n) (get8thElm3d a) [1,1/2,1/4,1/8]
+  else relax (2*n) (2*n) id (get8thElm3d a) (gen_weights [1,1/2,1/4,1/8])
 
 def mA [n] (v: [n][n][n]real) (a: [n][n][n]real) =
    map2_3d (-) v <|
-   if withNAS then relaxNas [-8/3, 0, 1/6, 1/12] a
-   else relax n n id (get3dElm a) (gen_weights [-8/3, 0, 1/6, 1/12])
+   if withNAS then relaxNas n (getElm3d a) [-8/3, 0, 1/6, 1/12]
+   else relax n n id (getElm3d a) (gen_weights [-8/3, 0, 1/6, 1/12])
 
 def S [n] (ws, exp_ws) (a: [n][n][n]real) =
-   if withNAS then relaxNas ws a
-   else relax n n id (get3dElm a) exp_ws
+   if withNAS then relaxNas n (getElm3d a) ws
+   else relax n n id (getElm3d a) exp_ws
 
 type S = ([4]real, [3][3][3]real)
 
@@ -158,7 +159,7 @@ entry mk_input n =
 -- def Sb -> [-3/17, 1/33, -1/61, 0]
 
 entry main [n] (iter: i64) (v: [n][n][n]real) : real =
-  let (s1: real, s2: real, s3: real) = 
+  let (s1: real, s2: real, s3: real) =
       if iter == 4 
       then (-3/8, 1/32, -1/64) 
       else (-3/17, 1/33, -1/61)
