@@ -1,141 +1,65 @@
+import "util"
 import "mg-nas-kers"
-
-type real = f64
-
-def sum  = f64.sum
-def sqrt = f64.sqrt
-def int2Real = f64.i64
 
 let withNAS = true
 
-def replicate_3d (n: i64) (v: real) : [n][n][n]real =
-  replicate n v |> replicate n |> replicate n
+def get3dElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
+  #[unsafe] arr[i, j, k]
 
-def map2_3d f = map2 (map2 (map2 f))
-def map_3d f = map (map (map f))
+def getElmFlat [n] (arr:[n*n*n]real) (i: i32) (j: i32) (k: i32) : real =
+  -- let n = i32.i64 n in #[unsafe] arr[ i*n*n + j*n + k ]
+  #[unsafe] arr[ flatenInd (i,j,k) (i32.i64 n) (i32.i64 n) ]
 
-def tabulate_3d' m n k f = tabulate_3d m n k (\i j k -> f (i32.i64 i) (i32.i64 j) (i32.i64 k))
-
-def unflatInd (ijl: i64) (n: i32) (k: i32) : (i32,i32,i32) =
-   let ijl = i32.i64 ijl
-   let nk = n*k
-   let i  = ijl / nk
-   let jl = ijl & (nk-1)
-   let j = jl / k
-   let l = jl & (k-1)
-   in  (i, j, l)
-
-def flatenInd (i: i32, j: i32, l:i32) (n: i32) (k: i32) : i64 =
-  (i64.i32 i) * (i64.i32 (n*k)) + i64.i32 (j*k + l)
-
-def unroll_tabulate_3d n m l f =
-  #[unroll]
-  tabulate n (\a -> #[unroll]
-                    tabulate m (\b -> #[unroll]
-                                      tabulate l (\c -> f (i32.i64 a) (i32.i64 b) (i32.i64 c))))
-
-def hood_3d [n] 't (arr: [n][n][n]t) i j l : [3][3][3]t =
-  let nm1 = (i32.i64 n) - 1 in
-  unroll_tabulate_3d 3 3 3 (\a b c -> #[unsafe] arr[(i+a-1) & nm1, (j+b-1) & nm1, (l+c-1) & nm1])
-
-def relax [n] (input: [n][n][n]real) (weights: [3][3][3]real) : [n][n][n]real =
-  let f i j l =
-    let hood = hood_3d input i j l
-    in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-  in tabulate_3d' n n n f
-
-def hood_3dF [n] 't (arr: [n*n*n]t) i j l : [3][3][3]t =
-  unroll_tabulate_3d 3 3 3
-    (\a b c -> let n = i32.i64 n
-               let ijl_rot = ( (i+a-1) & (n-1), (j+b-1) & (n-1), (l+c-1) & (n-1) )
-               in  #[unsafe] arr[flatenInd ijl_rot n n] )
-
-def relaxF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n*n*n]real =
-   let f ijl =
-     let (i,j,l) = unflatInd ijl (i32.i64 n) (i32.i64 n)
-     let hood = hood_3dF input i j l
-     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-   in map f (iota (n*n*n))
-
-def relaxFF [n] (input: [n*n*n]real) (weights: [3][3][3]real) : [n][n][n]real =
-  let f i j l =
-    let hood = hood_3dF input i j l
-    in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-  in (tabulate_3d' n n n f)
-
-
-def gen_weights (cs: [4]real) : [3][3][3]real =
-  unroll_tabulate_3d 3 3 3 (\i j l -> #[unsafe] cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
-
-def getElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
+def get2ndElm (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
   #[unsafe]
   if (i %% 2) + (j %% 2) + (k %% 2) == 3
   then arr[i//2,j//2,k//2]
   else 0
-  
-def coarse2fine [n] (z: [n][n][n]f64) =
-  tabulate_3d' (2*n) (2*n) (2*n) (getElm z)
 
-def fine2coarse [n][m][k] 't (r: [n*2][m*2][k*2]t) =
-  r[1::2,1::2,1::2] :> [n][m][k]t
-  -- tabulate_3d' n m k (\i j k -> #[unsafe]r[i*2+1, j*2+1, k*2+1]) 
+def hood_3d 't (n: i64) (getElm: i32 -> i32 -> i32 -> t) i j l : [3][3][3]t =
+  let nm1 = (i32.i64 n) - 1
+  in  unroll_tabulate_3d 3 3 3
+        (\a b c -> getElm ((i+a-1) & nm1) ((j+b-1) & nm1) ((l+c-1) & nm1) )
+  
+def relax (n: i64) (n': i64) f (getElm: i32 -> i32 -> i32 -> real) (weights: [3][3][3]real) : *[n][n][n]real =
+  let f i j l =
+    let hood = hood_3d n' getElm (f i) (f j) (f l)
+    in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+  in tabulate_3d' n n n f
 
-def fine2coarseFF [n][m][k] 't (r: [(n*2)][(m*2)][(k*2)]t) : *[n*m*k]t =
-  tabulate_3d' n m k 
-    (\ i j l -> #[unsafe] r[i*2+1, j*2+1, l*2+1] ) |> flatten_3d
-  -- r[1::2,1::2,1::2] :> [n][m][k]t
-  
-  
-def fine2coarseF [n][m][k] 't (r: [(n*2)*(m*2)*(k*2)]t) : *[n*m*k]t =
-  map (\ ijl ->
-        let (m,k)    = (i32.i64 m, i32.i64 k)
-        let (i,j,l)  = unflatInd ijl m k 
-        let flat_ind = flatenInd (i*2+1, j*2+1, l*2+1) (m*2) (k*2)
-        in  #[unsafe] r[flat_ind]
-      ) (iota (n*m*k)) |> sized (n*m*k)
-  -- r[0::2,0::2,0::2] :> [n][m][k]t
-  
+def gen_weights (cs: [4]real) : [3][3][3]real =
+  unroll_tabulate_3d 3 3 3 (\i j l -> #[unsafe] cs[i32.abs(i-1)+i32.abs(j-1)+i32.abs(l-1)])
+
 def P [n] (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
-  -- fine2coarseF (relaxF a (gen_weights [1/2, 1/4, 1/8, 1/16]))
   let weights = gen_weights [1/2, 1/4, 1/8, 1/16]
+  in  relax n (2*n) (\x->2*x+1) (getElmFlat a) weights |> flatten_3d
+-- -- Or a bit more efficient and longer:
+--  let f ijl =
+--     let (i',j',l') = unflatInd ijl (i32.i64 n) (i32.i64 n)
+--     let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
+--     let hood = hood_3d (2*n) (getElmFlat a) i j l
+--     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+--  in map f (iota (n*n*n))
 
-  let f ijl =
-     let (i',j',l') = unflatInd ijl (i32.i64 n) (i32.i64 n)
-     let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
-     let hood = hood_3dF a i j l
-     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-  in map f (iota (n*n*n))
---  let f i' j' l' =
---    let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
---    let hood = hood_3dF a i j l
---    in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
---  in (tabulate_3d' n n n f) |> flatten_3d
+def coarse2fine [n] (z: [n][n][n]real) =
+  tabulate_3d' (2*n) (2*n) (2*n) (get2ndElm z)
 
-def Q a = relax (coarse2fine a) (gen_weights [1,1/2,1/4,1/8])
-
-def hood_3d_ind 't (n: i32) (getElm: i32 -> i32 -> i32 -> t) i j l : [3][3][3]t =
-  let nm1 = n-1 in
-  unroll_tabulate_3d 3 3 3 (\a b c -> getElm ((i+a-1) & nm1) ((j+b-1) & nm1) ((l+c-1) & nm1) )
+def Q [n] (a: [n][n][n]real) =
+  relax (2*n) (2*n) id (get3dElm (coarse2fine a)) (gen_weights [1,1/2,1/4,1/8])
 
 def Qopt [n] (arr: [n][n][n]real) : [2*n][2*n][2*n]real =
-  let weights = gen_weights [1,1/2,1/4,1/8]
-  let f i j k =
-    let hood = hood_3d_ind (i32.i64 (2*n)) (getElm arr) i j k
-    in #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
-  in tabulate_3d' (2*n) (2*n) (2*n) f
+  relax (2*n) (2*n) id (get2ndElm arr) (gen_weights [1,1/2,1/4,1/8])
 
-def mA v a =
+def mA [n] (v: [n][n][n]real) (a: [n][n][n]real) =
    map2_3d (-) v <|
    if withNAS then relaxNas [-8/3, 0, 1/6, 1/12] a
-   else relax a (gen_weights [-8/3, 0, 1/6, 1/12])
+   else relax n n id (get3dElm a) (gen_weights [-8/3, 0, 1/6, 1/12])
 
-def S (ws, exp_ws) a =
-   -- map2_3d (+) v <|
+def S [n] (ws, exp_ws) (a: [n][n][n]real) =
    if withNAS then relaxNas ws a
-   else relax a exp_ws
+   else relax n n id (get3dElm a) exp_ws
 
 type S = ([4]real, [3][3][3]real)
-
 
 def M [n] (wS: S) (r: [n][n][n]real) : [n][n][n]real =
   -- compute the flat size of rss
@@ -169,7 +93,7 @@ def M [n] (wS: S) (r: [n][n][n]real) : [n][n][n]real =
     loop (end, m, z) = (off, m2, z1)
     for _k < count do
       let m2 = m*2
-      let z' = (Q z) :> [m2][m2][m2]real
+      let z' = (Qopt z) :> [m2][m2][m2]real
       let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = mA r z'
@@ -185,7 +109,7 @@ def L2 [n][m][q] (xsss: [n][m][q]real) : real =
   let s = flatten_3d xsss |> map (\x -> x*x) |> sum
   in  s / (int2Real (n*m*q)) |> sqrt
 
-def mg [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
+def mg2 [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
   let u = M wS v
   let u =
     loop u for _i < iter-1 do
@@ -193,7 +117,7 @@ def mg [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
       in  M wS r |> map2_3d (+) u
   in L2 (mA v u)
 
-def mg2 [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
+def mg [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
   let u = M wS v
   let r = mA v u
   let (_,r) =
@@ -204,7 +128,7 @@ def mg2 [n] (iter: i64) (wS: S) (v: [n][n][n]real) =
   in  L2 r
 
 entry mk_input n =
-  let f i j k : f64 =
+  let f i j k : real =
     if any (==(i,j,k)) [(211,154,98),
                         (102,138,112),
                         (101,156,59),

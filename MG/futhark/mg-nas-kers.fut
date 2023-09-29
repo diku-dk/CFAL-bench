@@ -1,16 +1,5 @@
+import "util"
 -- import "mg-in-work"
-
-type real = f64
-
-def map2_3d f = map2 (map2 (map2 f))
-
-def tabulate' n f = tabulate n (\i -> f (i32.i64 i))
-
-def imapIntra as f =
-    #[incremental_flattening(only_intra)] map f as
-
-def tabulateIntra_2d n2 n1 f =
-  tabulate' n2 (\i2 -> imapIntra (iota n1) (\i1 -> f i2 (i32.i64 i1)))
 
 def relaxNas [n] (a: [4]real) (u_d: [n][n][n]real) : [n][n][n]real =
   let nm1= (i32.i64 n) - 1
@@ -36,10 +25,9 @@ def relaxNas [n] (a: [4]real) (u_d: [n][n][n]real) : [n][n][n]real =
       in  tabulate' n (g u1s u2s)
   in  tabulateIntra_2d n n iterBody
 
-
 -- performance testing
 -- ==
--- entry: nasAmV origAmV
+-- entry: nasA nasS
 -- random input { [512][512][512]f64 [512][512][512]f64 }
 
 entry nasA [n] (v: [n][n][n]real) (u: [n][n][n]f64) : [n][n][n]real =
@@ -47,7 +35,6 @@ entry nasA [n] (v: [n][n][n]real) (u: [n][n][n]f64) : [n][n][n]real =
 
 entry nasS [n] (v: [n][n][n]real) (u: [n][n][n]f64) : [n][n][n]real =
   relaxNas [-3/8, 1/32, -1/64, 0] u |> map2_3d (+) v
-
 
 -- entry origAmV [n] (v: [n][n][n]real) (u: [n][n][n]f64) : [n][n][n]real =
 --   map2_3d (-) v (A u)
