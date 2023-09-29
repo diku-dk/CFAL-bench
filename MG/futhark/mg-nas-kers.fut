@@ -2,17 +2,12 @@
 
 type real = f64
 
+def map2_3d f = map2 (map2 (map2 f))
+
 def tabulate' n f = tabulate n (\i -> f (i32.i64 i))
 
 def imapIntra as f =
     #[incremental_flattening(only_intra)] map f as
-
-def tabulate_nestA n f =
-  imapIntra (iota (n*n))
-    (\ ij -> let (n, ij) = (i32.i64 n, i32.i64 ij)
-             let (i, j)  = ( ij / n, ij & (n-1) )
-             in  f i j
-    )
 
 def tabulateIntra_2d n2 n1 f =
   tabulate' n2 (\i2 -> imapIntra (iota n1) (\i1 -> f i2 (i32.i64 i1)))
@@ -31,15 +26,14 @@ def mAnas [n] (a: [4]real) (v_d: [n][n][n]real) (u_d: [n][n][n]real) : [n][n][n]
                     u_d[(i3+1) & nm1, (i2+1) & nm1, i1]
            in  (u1, u2)
       let g u1s u2s (i1: i32) = #[unsafe]
-           v_d[i3,i2,i1]
-           - a[0] * u_d[i3, i2, i1]
-           - a[2] * (u2s[i1] + u1s[(i1-1) & nm1] + u1s[(i1+1) & nm1] )
-           - a[3] * (u2s[(i1-1) & nm1] + u2s[(i1+1) & nm1])
-
+           -- v_d[i3,i2,i1] -
+           ( a[0] * u_d[i3, i2, i1] +
+             a[2] * ( u2s[i1] + u1s[(i1-1) & nm1] + u1s[(i1+1) & nm1] ) +
+             a[3] * ( u2s[(i1-1) & nm1] + u2s[(i1+1) & nm1] )
+           )
       let (u1s, u2s) = map f (map i32.i64 (iota n)) |> unzip
       in  map (g u1s u2s) (map i32.i64 (iota n))
-  in  tabulateIntra_2d n n iterBody
-  -- in  tabulate_nestA n iterBody |> unflatten
+  in  tabulateIntra_2d n n iterBody |> map2_3d (-) v_d
 
   
 -- performance testing
