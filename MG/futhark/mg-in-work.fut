@@ -1,5 +1,4 @@
 import "util"
--- import "mg-nas-kers"
 
 ------------------------------
 --- Array Indexing Helpers ---
@@ -90,13 +89,13 @@ def Q [n] (withNAS: bool) (a: [n][n][n]real) : [2*n][2*n][2*n]real =
   else relaxSAC (2*n) (2*n) id (get8thElm3d a) (gen_weights [1,1/2,1/4,1/8])
 
 def mA [n] (withNAS: bool) (v: [n][n][n]real) (a: [n][n][n]real) =
-   map2_3d (-) v <|
-   if withNAS then relaxNAS n (getElm3d a) [-8/3, 0, 1/6, 1/12]
-   else relaxSAC n n id (getElm3d a) (gen_weights [-8/3, 0, 1/6, 1/12])
+  map2_3d (-) v <|
+  if withNAS then relaxNAS n (getElm3d a) [-8/3, 0, 1/6, 1/12]
+  else relaxSAC n n id (getElm3d a) (gen_weights [-8/3, 0, 1/6, 1/12])
 
 def S [n] (withNAS: bool) (ws, exp_ws) (a: [n][n][n]real) =
-   if withNAS then relaxNAS n (getElm3d a) ws
-   else relaxSAC n n id (getElm3d a) exp_ws
+  if withNAS then relaxNAS n (getElm3d a) ws
+  else relaxSAC n n id (getElm3d a) exp_ws
 
 type S = ([4]real, [3][3][3]real)
 
@@ -115,25 +114,23 @@ def M [n] (withNAS: bool) (wS: S) (r: [n][n][n]real) : [n][n][n]real =
   let (off, m2, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
-      let off' = off + m*m*m
-      let m' = m / 2
-      let r  = rss[off: off + m*m*m] |> sized ((m'*2)*(m'*2)*(m'*2))
-      let r' = P r
-      let rss[off': off' + m'*m'*m'] = r'
+      let (off', m') = (off + m*m*m, m / 2)
+      let r  = rss[off: off + m*m*m]
+            |> sized ((m'*2)*(m'*2)*(m'*2))
+      let rss[off': off' + m'*m'*m'] = P r
       in  (off', m', rss)
 
   -- base case of M
   let r1 = rss[off: off + m2*m2*m2]
-           |> sized (2*2*2) |> unflatten_3d
+        |> sized (2*2*2) |> unflatten_3d
   let z1 = S withNAS wS r1
 
   -- loop back
   let (_, _, z) =
     loop (end, m, z) = (off, m2, z1)
     for _k < count do
-      let m2 = m*2
+      let (beg, m2) = (end - 8*m*m*m, m*2)
       let z' = (Q withNAS z) :> [m2][m2][m2]real
-      let beg = end - 8*m*m*m
       let r  = rss[beg : end] |> sized (m2*m2*m2) |> unflatten_3d
       let r' = mA withNAS r z'
       let z''= map2_3d (+) z' (S withNAS wS r')
