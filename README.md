@@ -18,17 +18,17 @@ In order to suggest a new benchmark, please do perform the following steps:
   This can be in any programming language but it should be small enough to allow for a quick
   assessment even if people are *not* familiar with the language used
 * add the acronym into the table below and indicate what is available so far; the column "inclusion in CFAL"
-  indicates whether there exists a consensus amongst us to include this BM. The language specific columns 
+  indicates whether there exists a consensus amongst us to include this BM. The language specific columns
   currently should only include whether an implementation in that language has been uploaded or not, it is not meant
   to indicate whether a super efficient one has been put there
 
 ## Benchmark Status
 
-| BM name     | description | seq/par baselines| inclusion in CFAL   | Accelerate | APL  | DaCe   | Futhark | SaC   |
-| ------------| ----        | ----             |  ----               |  ----      | ---- | ----   |  ----   |  ---- | 
-| MG          | done        | GPU, Fortran, SAC| VERY LIKELY         |            | YES  | Almost | YES     | YES   |
-| nbody-naive | done        | Seq C            | under consideration |            |      |        | YES     |       |
-| Fin-LocVolC | done        | GPU,OMP, Haskell | under consideration |            |      |        | YES     |       |
-| FFT         | done        |                  |                     |            |      |        |         |       |
+| BM name     | description | seq/par baselines | inclusion in CFAL   | Accelerate | APL | DaCe   | Futhark | SaC |
+| ----------- | ----------- | ----------------- | ------------------- | ---------- | --- | ------ | ------- | --- |
+| MG          | done        | GPU, Fortran, SAC | VERY LIKELY         |            | YES | Almost | YES     | YES |
+| nbody-naive | done        | Seq C             | under consideration |            |     | YES    | YES     | YES |
+| Fin-LocVolC | done        | GPU,OMP, Haskell  | under consideration |            |     |        | YES     | YES |
+| FFT         | done        |                   |                     |            |     |        |         |     |
 
 
