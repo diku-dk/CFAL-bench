@@ -9,7 +9,7 @@ use Benchmarking: all;
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
  */
-REAL[.], REAL[.] updateParams(REAL[.] X, REAL[.] Y, REAL t)
+REAL[NUM_Y], REAL[NUM_X] updateParams(REAL[NUM_X] X, REAL[NUM_Y] Y, REAL t)
 {
   VarX1 = {[j] -> exp(2.0 * Y[j] - NU * NU * t)};
   VarX2 = {[i] -> pow(X[i], 2.0 * BETA)};
@@ -20,8 +20,7 @@ REAL[.], REAL[.] updateParams(REAL[.] X, REAL[.] Y, REAL t)
 /**
  * Initializes indX, indY and X, Y, Time
  */
-inline
-int, int, REAL[.], REAL[.], REAL[.] initGrid()
+int, int, REAL[NUM_X], REAL[NUM_Y], REAL[NUM_T] initGrid()
 {
   Time = {[i] -> T * TO_REAL(i) / TO_REAL(NUM_T - 1) | [i] < [NUM_T]};
   stdX = 20.0 * ALPHA * S0 * sqrt(T);
@@ -67,7 +66,7 @@ REAL[., .] initOperator(REAL[.] xx)
   return DD;
 }
 
-REAL[., .] setPayoff(REAL strike, REAL[.] X)
+REAL[NUM_X, NUM_Y] setPayoff(REAL strike, REAL[NUM_X] X)
 {
   return {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 }
@@ -95,11 +94,8 @@ inline REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
   return y;
 }
 
-specialize REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2,
-                                  REAL[NUM_X, 3] Dxx, REAL dtInv,
-                                  REAL[NUM_X] uu);
-REAL[.] implicit_x(REAL VarX1, REAL[.] VarX2, REAL[., .] Dxx,
-                   REAL dtInv, REAL[.] uu)
+REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[NUM_X, 3] Dxx,
+                   REAL dtInv, REAL[NUM_X] uu)
 {
   a = {[i] -> -0.25 * VarX1 * VarX2[i] * Dxx[i, 0]};
   b = {[i] -> dtInv - 0.25 * VarX1 * VarX2[i] * Dxx[i, 1]};
@@ -108,9 +104,8 @@ REAL[.] implicit_x(REAL VarX1, REAL[.] VarX2, REAL[., .] Dxx,
   return tridag(a, b, c, uu);
 }
 
-specialize REAL[NUM_Y] implicit_y(REAL VarY, REAL[NUM_Y, 3] Dyy,
-                                  REAL dtInv, REAL[NUM_Y] yy);
-REAL[.] implicit_y(REAL VarY, REAL[., .] Dyy, REAL dtInv, REAL[.] yy)
+REAL[NUM_Y] implicit_y(REAL VarY, REAL[NUM_Y, 3] Dyy, REAL dtInv,
+                       REAL[NUM_Y] yy)
 {
   a = {[j] -> -0.25 * VarY * Dyy[j, 0]};
   b = {[j] -> dtInv - 0.25 * VarY * Dyy[j, 1]};
@@ -119,15 +114,11 @@ REAL[.] implicit_y(REAL VarY, REAL[., .] Dyy, REAL dtInv, REAL[.] yy)
   return tridag(a, b, c, yy);
 }
 
-specialize REAL[NUM_X, NUM_Y] rollback(REAL dtInv,
-                    REAL[NUM_X, 3] Dxx, REAL[NUM_Y] VarX1, REAL[NUM_X] VarX2,
-                    REAL[NUM_Y, 3] Dyy, REAL VarY,
-                    REAL[NUM_X, NUM_Y] ResultE);
-REAL[., .] rollback(REAL dtInv,
-                    REAL[., .] Dxx,
-                    REAL[.] VarX1, REAL[.] VarX2,
-                    REAL[., .] Dyy, REAL VarY,
-                    REAL[., .] ResultE)
+inline
+REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[NUM_X, 3] Dxx,
+                            REAL[NUM_Y] VarX1, REAL[NUM_X] VarX2,
+                            REAL[NUM_Y, 3] Dyy, REAL VarY,
+                            REAL[NUM_X, NUM_Y] ResultE)
 {
   /* explicit x */
   /*  FIXME letting the compiler infer the bounds on k causes a segfault.
@@ -180,22 +171,14 @@ REAL[., .] rollback(REAL dtInv,
   return ResultE;
 }
 
-/* indX, indY, X, Y, Time, Dxx, Dyy don't depend on the index value of result,
-   and can be lifted out. VarX1, VarX2 differ along iterations of value, but
-   are independent of the index value of result.
-   */
-specialize REAL value(REAL strike, int indX, int indY,
-           REAL[NUM_X] X, REAL[NUM_Y] Y, REAL[NUM_T] Time,
-           REAL[NUM_X, 3] Dxx, REAL[NUM_Y, 3] Dyy);
+inline
 REAL value(REAL strike, int indX, int indY,
-           REAL[.] X, REAL[.] Y, REAL[.] Time,
-           REAL[., .] Dxx, REAL[., .] Dyy)
+           REAL[NUM_X] X, REAL[NUM_Y] Y, REAL[NUM_T] Time,
+           REAL[NUM_X, 3] Dxx, REAL[NUM_Y, 3] Dyy)
 {
   ResultE = setPayoff(strike, X);
 
   for (t = NUM_T - 2; t >= 0; t--) {
-    /* VarX1 does not depend on t, so it should be lifted out of this loop,
-       and then lifted out of the with-loop. */
     VarX1, VarX2 = updateParams(X, Y, Time[t]);
 
     ResultE = rollback(1.0 / (Time[t + 1] - Time[t]),
