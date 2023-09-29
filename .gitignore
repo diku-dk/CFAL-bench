@@ -6,4 +6,7 @@ results.log
 perf.json
 perf*.csv
 
-
+# Python-related byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
