@@ -8,7 +8,6 @@ def getElm3d (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
   #[unsafe] arr[i, j, k]
 
 def getElmFlat [n] (arr:[n*n*n]real) (i: i32) (j: i32) (k: i32) : real =
-  -- let n = i32.i64 n in #[unsafe] arr[ i*n*n + j*n + k ]
   #[unsafe] arr[ flatenInd (i,j,k) (i32.i64 n) (i32.i64 n) ]
 
 def get8thElm3d (arr:[][][]real) (i: i32) (j: i32) (k: i32) : real =
@@ -202,7 +201,6 @@ entry mgSAC [n] (iter: i64) (v: [n][n][n]real) : real =
 -- output { 0.2433365309e-5 }
 -- "Class B" script input { (20i64, mk_input 256i64) }
 -- output { 0.180056440132e-5 }
-
 -- "Class C" script input { (20i64, mk_input 512i64) }
 -- output { 0.5706732285740e-6 }
 
