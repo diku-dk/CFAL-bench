@@ -49,12 +49,15 @@ def readDataSet():
     return outer, num_x, num_y, num_t, s0, t, alpha, nu, beta
 
 
-def getPrefedinedDataSet(size: str):
+def getPrefedinedInputDataSet(size: str):
     """
     Returns one of the predefined (original benchmark) datasets (small/medium/large)
+
+    :param size: It should be 'XS', 'S', 'M' or 'L'
+    :return: outer, num_x, num_y, num_t, s0, t, alpha, nu, beta
     """
 
-    assert size.upper() in {'S', 'M', 'L'}
+    assert size.upper() in {'XS', 'S', 'M', 'L'}
     outer = constants.inputs[size.upper()]["Outer"]
     num_x = constants.inputs[size.upper()]["Num_X"]
     num_y = constants.inputs[size.upper()]["Num_Y"]
@@ -69,3 +72,12 @@ def getPrefedinedDataSet(size: str):
     )
 
     return outer, num_x, num_y, num_t, s0, t, alpha, nu, beta
+
+
+def getPrefefinedOutputDataSet(size: str):
+    """
+    Returns golden result
+    """
+
+    assert size.upper() in {'XS', 'S', 'M', 'L'}
+    return constants.outputs[size.upper()]
