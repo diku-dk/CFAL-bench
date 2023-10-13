@@ -20,9 +20,9 @@ def pointmass ({position, mass, velocity=_}: body) : pointmass =
 def accel (x: pointmass) (y: pointmass): velocity =
   let r = vec3.(y.position - x.position)
   let rsqr = vec3.dot r r + EPSILON
-  let invr = 1 / f64.sqrt rsqr
-  let invr3 = invr * invr * invr
-  let s = y.mass * invr3
+  let inv_dist = 1 / f64.sqrt rsqr
+  let inv_dist3 = inv_dist * inv_dist * inv_dist
+  let s = y.mass * inv_dist3
   in vec3.scale s r
 
 def advance_body (time_step: f64) (body: body) (acc: acceleration): body =
