@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./src/Main.hs"
+      component: "nbody-naive:exe:nbody-naive"
+
+    - path: "./src/NBody.hs"
+      component: "nbody-naive:exe:nbody-naive"
+
+    - path: "./src/Physics.hs"
+      component: "nbody-naive:exe:nbody-naive"

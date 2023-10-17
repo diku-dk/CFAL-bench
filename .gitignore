@@ -10,3 +10,6 @@ perf*.csv
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Haskell / Accelerate
+nbody-naive/accelerate/nbody-naive/.stack-work/*

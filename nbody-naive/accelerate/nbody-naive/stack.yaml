@@ -1,0 +1,6 @@
+resolver: lts-21.4
+
+extra-deps:
+- github: acceleratehs/accelerate
+  commit: 17466411109170c4e4361d9980f1cded0eb85efb
+
