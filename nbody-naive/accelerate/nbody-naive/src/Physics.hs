@@ -8,16 +8,16 @@
 module Physics where
 import Data.Array.Accelerate
 
-data ThreeDoubles = Three_ {x_ ::Double, y_ :: Double, z_ :: Double}
+data ThreeDoubles = Three_ Double Double Double
   deriving (Generic, Elt)
 
 type Mass = Double
 type Position = ThreeDoubles
 type Acceleration = ThreeDoubles
 type Velocity = ThreeDoubles
-data PointMass = PointMass_ {pmposition_ :: Position, pmmass_ :: Mass}
+data PointMass = PointMass_ Position Mass
   deriving (Generic, Elt)
-data Body = Body_ {bposition_ :: Position, bmass_ :: Mass, bvelocity_ :: Velocity}
+data Body = Body_ Position Mass Velocity
   deriving (Generic, Elt)
 
 mkPatterns [''ThreeDoubles, ''PointMass, ''Body]
@@ -44,17 +44,17 @@ pointmass = match \case
   Body p m _ -> PointMass p m
 
 accel :: Exp PointMass -> Exp PointMass -> Exp Velocity
-accel x y =
-  let r = pmposition y - pmposition x
+accel = match \(PointMass xpos _) (PointMass ypos ymass) ->
+  let r = ypos - xpos
       rsqr = dot r r + epsilon -- ???
       inv_dist = constant 1 / sqrt rsqr
       inv_dist3 = inv_dist * inv_dist * inv_dist
-      s = pmmass y * inv_dist3
+      s = ymass * inv_dist3
   in scale s r
 
 advance_body :: Exp Double -> Exp Body -> Exp Acceleration -> Exp Body
-advance_body time_step body acc =
-  let position = bposition body + scale time_step (bvelocity body)
-      velocity = bvelocity body + scale time_step acc
-  in Body position (bmass body) velocity
+advance_body = match $ \time_step (Body pos mass vel) acc ->
+  let position = pos + scale time_step vel
+      velocity = vel + scale time_step acc
+  in Body position mass velocity
 
