@@ -49,15 +49,15 @@ use Benchmarking: all;
 #endif
 
 inline
-double[*] rotate (int[.] off, double[*] a)
+double[*] rotate(int[.] off, double[*] a)
 {
-  return {iv -> a[mod (iv-off, shape(a)) ] | iv < shape(a) };
+  return {iv -> a[mod(iv-off, shape(a))] | iv < shape(a) };
 }
 
 inline
-double[.,.,.] relax (double[.,.,.] x, double[3, 3, 3] weights)
+double[.,.,.] relax(double[.,.,.] x, double[3, 3, 3] weights)
 {
-  return {iv -> sum ({jv -> weights[jv] * rotate (1 - jv, x)[iv]})
+  return {iv -> sum({jv -> weights[jv] * rotate (1 - jv, x)[iv]})
              | iv < shape(x)};
 }
 
@@ -68,13 +68,9 @@ double[.,.,.] gen_weights(double[4] cs)
 }
 
 inline
-double[*] coarse2fine (double[*] z)
+double[*] coarse2fine(double[*] z)
 {
-  printf("Call c2f with shape [%d, %d, %d]\n",
-          shape(z)[0], shape(z)[1], shape(z)[2]);
   res = {iv -> z[(iv - 1) / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2] };
-  printf("Call c2f with shape [%d, %d, %d] done\n",
-          shape(z)[0], shape(z)[1], shape(z)[2]);
   return res;
 }
 
@@ -85,33 +81,33 @@ double[*] fine2coarse(double[*] r)
 }
 
 inline
-double[.,.,.] A (double[.,.,.] a)
+double[.,.,.] A(double[.,.,.] a)
 {
-  return relax (a, gen_weights([-8d/3d , 0d    , 1d/6d  , 1d/12d]));
+  return relax(a, gen_weights([-8d/3d, 0d, 1d/6d, 1d/12d]));
 }
 
 inline
-double[.,.,.] P (double[.,.,.] a)
+double[.,.,.] P(double[.,.,.] a)
 {
-  return fine2coarse (relax (a, gen_weights([1d/2d  , 1d/4d , 1d/8d  , 1d/16d])));
+  return fine2coarse(relax(a, gen_weights([1d/2d, 1d/4d, 1d/8d, 1d/16d])));
 }
 
 inline
-double[.,.,.] Q (double[.,.,.] a)
+double[.,.,.] Q(double[.,.,.] a)
 {
-  return relax (coarse2fine (a), gen_weights([1d     , 1d/2d , 1d/4d  , 1d/8d ]));
+  return relax(coarse2fine (a), gen_weights([1d, 1d/2d, 1d/4d, 1d/8d]));
 }
 
 inline
-double[.,.,.] Sa (double[.,.,.] a)
+double[.,.,.] Sa(double[.,.,.] a)
 {
-  return relax (a, gen_weights([-3d/8d , 1d/32d, -1d/64d, 0d    ]));
+  return relax(a, gen_weights([-3d/8d, 1d/32d, -1d/64d, 0d]));
 }
 
 inline
-double[.,.,.] Sb (double[.,.,.] a)
+double[.,.,.] Sb(double[.,.,.] a)
 {
-  return relax (a, gen_weights([-3d/17d, 1d/33d, -1d/61d, 0d    ]));
+  return relax(a, gen_weights([-3d/17d, 1d/33d, -1d/61d, 0d]));
 }
 
 specialize double[1024,1024,1024] M (double[1024,1024,1024] r);
@@ -122,44 +118,37 @@ specialize double[64,64,64] M (double[64,64,64] r);
 specialize double[32,32,32] M (double[32,32,32] r);
 specialize double[16,16,16] M (double[16,16,16] r);
 specialize double[8,8,8]    M (double[8,8,8] r);
-//specialize double[4,4,4]  M (double[4,4,4] r);
-double[.,.,.] M (double[.,.,.] r)
+specialize double[4,4,4]  M (double[4,4,4] r);
+double[.,.,.] M(double[.,.,.] r)
 {
-  printf("Call m with shape [%d, %d, %d]\n",
-          shape(r)[0], shape(r)[1], shape(r)[2]);
-  rs = P (r);
-  zs = M (rs);
-  z = Q (zs);
-  r = r - A (z);
-  z = z + S (r);
-
-  printf("Call m with shape [%d, %d, %d] done\n",
-          shape(r)[0], shape(r)[1], shape(r)[2]);
+  rs = P(r);
+  zs = M(rs);
+  z = Q(zs);
+  r = r - A(z);
+  z = z + S(r);
 
   return z;
 }
 
-double[4,4,4] M (double[4,4,4] r)
+double[2,2,2] M(double[2,2,2] r)
 {
-  printf("Call m with shape [%d, %d, %d]\n",
-          shape(r)[0], shape(r)[1], shape(r)[2]);
-  return S (r);
+  return S(r);
 }
 
-double MG (double[N,N,N] v, double[N,N,N] u)
+double MG(double[N,N,N] v, double[N,N,N] u)
 {
-  for (i = 1; i < ITER; i++) {
-    r = v - A (u);
+  for (i = 0; i < ITER; i++) {
+    r = v - A(u);
     u = u + M(r);
   }
 
-  return L2 (v- A(u));
+  return L2(v - A(u));
 }
 
 inline
 double L2 (double[.,.,.] r)
 {
-  return sqrt(sum(r) / prod(tod(shape(r))));
+  return sqrt(sum(r * r) / prod(tod(shape(r))));
 }
 
 int main()
@@ -172,15 +161,14 @@ int main()
   v = init(N);
   end(i_init);
   time, unit = returnResultUnit(i_init);
-  printf("Initialisation took %f %s.\n", time, unit);
 
   start(i_mg);
-  r = MG (v, u);
+  r = MG(v, u);
   end(i_mg);
   time, unit = returnResultUnit(i_init);
   printf("%f Mflops/%s\n",
       58d * tod(ITER) * tod(N) * tod(N) * tod(N) * 1e-6 / tod(time), unit);
 
-  printf("Error: %lf\n", abs(r - ref));
+  printf("Error: %.17e\n", abs(r - ref));
   return 0;
 }
