@@ -21,7 +21,7 @@ int main()
   }
   delete_randlc(rng);
 
-  direct = {[k] -> LCG(seed, k + 1) | [k] < [n]};
+  direct = {[k] -> LCG_direct(seed, k + 1) | [k] < [n]};
 
   printf("Stdlib %s direct\n", all(direct == stdlib) ? "==" : "!=");
 
