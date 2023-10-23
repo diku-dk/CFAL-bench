@@ -1,5 +1,5 @@
 module RNG;
-export {LCG};
+export {LCG, LCG_direct, LCG_skip};
 
 use Array: all;
 use StdIO: all;
@@ -10,12 +10,18 @@ ulong pow(ulong a, int b)
   return prod(genarray([b], a));
 }
 
+double, ulong LCG(ulong previous)
+{
+  next = (pow(5ul, 13) * previous) % pow(2ul, 46);
+  return (tod(next) * Math::pow(2d, -46d), next);
+}
+
 /* Directly calculates the kth number of LCG
      x_{k + 1} = 5^13 * x_k mod 2^{46}
    and multiplies it by 2^{-46}. Time complexity: O(log k).
    I assume ulong is a 64-bit unsigned integer satisfying the arithmetic of
    the C standard! */
-double LCG(ulong seed, int k)
+ulong LCG_skip(ulong seed, int k)
 {
   a = pow(5ul, 13);
 
@@ -23,9 +29,7 @@ double LCG(ulong seed, int k)
   t = a;
 
   /* Multiplication of ulong is done mod 2^64 and (a mod 2^64) mod 2^46 =
-     a mod 2^46, so we do not need the NPB hacks. Is very slow, if we had
-     bitwise operations, we could write b = (b * t) % (1 << 46) and let
-     the C compiler compile this down to a bitwise and. */
+     a mod 2^46, so we do not need the NPB hacks. */
   while (k != 0) {
     if (k % 2 == 1) {
       b = (b * t) % pow(2ul, 46);
@@ -33,6 +37,14 @@ double LCG(ulong seed, int k)
     t = (t * t) % pow(2ul, 46);
     k /= 2;
   }
+
+  return b;
+}
+
+/* Convert to double in [0, 1[. */
+double LCG_direct(ulong seed, int k)
+{
+  b = LCG_skip(seed, k);
 
   /* Conversion of b is exact as IEEE754 has 52 bits of mantissa. */
   return tod(b) * Math::pow(2d, -46d);
