@@ -164,7 +164,7 @@ int main()
   start(i_mg);
   r = MG(v, u);
   end(i_mg);
-  time, unit = returnResultUnit(i_init);
+  time, unit = returnResultUnit(i_mg);
   printf("Calculation took %f %s\n", time, unit);
   printf("%f Mflops/%s\n",
       58d * tod(ITER) * tod(N) * tod(N) * tod(N) * 1e-6 / tod(time), unit);
