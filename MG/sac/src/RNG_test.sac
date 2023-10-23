@@ -9,21 +9,40 @@ double pow(double a, int b)
   return prod(genarray([b], a));
 }
 
+inline
+double[.] LCG_array(ulong seed, int n)
+{
+  res = genarray([n], 0d);
+
+  res[0] = tod(seed) * Math::pow(2d, -46d);
+  for (i = 1; i < n; i++) {
+    random, seed = LCG(seed);
+    res[i] = random;
+  }
+
+  return res;
+}
+
 int main()
 {
-  n = 256 * 256 * 256;
+  n = 256;
   seed = 314159265ul;
 
   rng = create_randlc(tod(seed), pow(5d, 13));
-  stdlib = genarray([n], 0d);
-  for (k = 0; k < n; k++) {
+  stdlib = genarray([n * n * n], 0d);
+  for (k = 0; k < n * n * n; k++) {
     stdlib[k] = randlc(rng);
   }
   delete_randlc(rng);
 
-  direct = {[k] -> LCG_direct(seed, k + 1) | [k] < [n]};
+  direct = {[k] -> LCG_direct(seed, k + 1) | [k] < [n * n * n]};
+
+  parallel = {[k] -> LCG_array(LCG_skip(seed, k * n * n + 1), n * n) 
+                   | [k] < [n]};
+  parallel = reshape([n * n * n], parallel);
 
   printf("Stdlib %s direct\n", all(direct == stdlib) ? "==" : "!=");
+  printf("direct %s parallel LCG\n", all(direct == parallel) ? "==" : "!=");
 
   return 0;
 }

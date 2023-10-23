@@ -4,8 +4,9 @@
 module Input;
 export {init};
 
-use RNG: all;
+import RNG: all;
 use Array: all;
+use StdIO: all;
 
 double[.] swap(double[.] list, int i, int j)
 {
@@ -100,11 +101,13 @@ int[., .] col_maj(int[.] ks, int[3] shape)
   return {iv -> col_maj(ks[iv], shape)};
 }
 
+inline
 double[.] LCG_array(ulong seed, int n)
 {
   res = genarray([n], 0d);
 
-  for (i = 0; i < n; i++) {
+  res[0] = tod(seed) * Math::pow(2d, -46d);
+  for (i = 1; i < n; i++) {
     random, seed = LCG(seed);
     res[i] = random;
   }
@@ -117,13 +120,14 @@ double[., ., .] init(int n)
   shape = [n, n, n];
   result = genarray(shape, 0d);
 
-  random_values = {[k] -> LCG_direct(314159265ul, k + 1) | [k] < [n * n * n]};
+  /* Probably fastest for GPU */
+//  random_values = {[k] -> LCG_direct(314159265ul, k + 1) | [k] < [n * n * n]};
 
-//  random_values = {[k] -> LCG_array(LCG_skip(314159265ul, k * n * n + 1), 
-//                                             n * n) 
-//                        | [k] < [n]};
-//
-//  random_values = reshape([n * n * n], random_values);
+  /* Probably fastest for CPU */
+  random_values = {[k] -> LCG_array(LCG_skip(314159265ul, k * n * n + 1), 
+                                    n * n) 
+                       | [k] < [n]};
+  random_values = reshape([n * n * n], random_values);
 
   ones = col_maj(largest(random_values, 10), shape);
   minusones = col_maj(smallest(random_values, 10), shape);
