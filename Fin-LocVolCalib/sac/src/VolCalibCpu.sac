@@ -67,7 +67,7 @@ REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[3] Dxx,
                    REAL dtInv, REAL[NUM_X] uu)
 {
   a = {[j] -> -0.25 * VarX1 * VarX2[j] * Dxx[0] | [1] <= [j] < [NUM_X - 1];
-       [j] -> 0d                                | [NUM_X - 1] <= [j] < [NUM_X]}; 
+       [j] -> 0d | [NUM_X - 1] <= [j] < [NUM_X]}; 
 
   return tridag(a, dtInv - 2d * a, a, uu); 
 }
@@ -77,7 +77,7 @@ REAL[NUM_Y] implicit_y(REAL VarY, REAL[3] Dyy, REAL dtInv,
                        REAL[NUM_Y] yy)
 {
   a = {[j] -> -0.25 * VarY * Dyy[0] | [1] <= [j] < [NUM_Y - 1];
-       [j] -> 0d                    | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
+       [j] -> 0d | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
 
   return tridag(a, dtInv - 2d * a, a, yy);
 }

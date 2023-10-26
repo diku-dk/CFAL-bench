@@ -39,6 +39,36 @@ int, int, REAL[NUM_X], REAL[NUM_Y] initGrid()
 }
 
 inline 
+REAL[.] tridag_c(REAL a, REAL[.] b, REAL[.] y)
+{
+  n = shape(y)[0];
+
+  /* This is the modified Thomas method from Numerical Methods.
+   * Here we use that the first and last diagonal are constant and
+   * equal to eachother.
+   * Note that the non-zeroes in a row are a, b, c in this application,
+   * and b, a, c in Numerical Methods.
+   * We store gamma in b. */
+  b[0] = 1.0 / b[0];
+  y[0] = b[0] * y[0];
+
+  b[1] = 1.0 / b[1];
+  y[1] = b[1] * (y[1] - a * y[0]);
+  for (i = 2; i < n - 1; i++) {
+      b[i] = 1.0 / (b[i] - a * b[i - 1] * a);
+      y[i] = b[i] * (y[i] - a * y[i - 1]);
+  }
+  b[n - 1] = 1.0 / b[n - 1];
+  y[n - 1] = b[n - 1] * y[n - 1]; 
+
+  for (i = n - 2; i >= 1; i--) {
+      y[i] = y[i] - b[i] * a * y[i + 1];
+  }
+
+  return y;
+}
+
+inline 
 REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
 {
   n = shape(y)[0];
@@ -50,10 +80,14 @@ REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
   b[0] = 1.0 / b[0];
   y[0] = b[0] * y[0];
 
-  for (i = 1; i < n; i++) {
+  b[1] = 1.0 / b[1];
+  y[1] = b[1] * (y[1] - a[1] * y[0]);
+  for (i = 2; i < n - 1; i++) {
       b[i] = 1.0 / (b[i] - a[i] * b[i - 1] * c[i - 1]);
       y[i] = b[i] * (y[i] - a[i] * y[i - 1]);
   }
+  b[n - 1] = 1.0 / b[n - 1];
+  y[n - 1] = b[n - 1] * y[n - 1]; 
 
   for (i = n - 2; i >= 1; i--) {
       y[i] = y[i] - b[i] * c[i] * y[i + 1];
@@ -67,9 +101,10 @@ REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[3] Dxx,
                    REAL dtInv, REAL[NUM_X] uu)
 {
   a = {[j] -> -0.25 * VarX1 * VarX2[j] * Dxx[0] | [1] <= [j] < [NUM_X - 1];
-       [j] -> 0d                                | [NUM_X - 1] <= [j] < [NUM_X]}; 
+       [j] -> 0d | [NUM_X - 1] <= [j] < [NUM_X]}; 
+  b = dtInv - 2.0 * a; // Dxx[1] = -2.0 Dxx[0]
 
-  return tridag(a, dtInv - 2d * a, a, uu); 
+  return tridag(a, b, a, uu); // Dxx[0] = Dxx[2]
 }
 
 inline
@@ -77,9 +112,11 @@ REAL[NUM_Y] implicit_y(REAL VarY, REAL[3] Dyy, REAL dtInv,
                        REAL[NUM_Y] yy)
 {
   a = {[j] -> -0.25 * VarY * Dyy[0] | [1] <= [j] < [NUM_Y - 1];
-       [j] -> 0d                    | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
+       [j] -> 0d | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
+  b = dtInv - 2.0 * a;
 
-  return tridag(a, dtInv - 2d * a, a, yy);
+//  return tridag(a, b, a, yy); 
+  return tridag_c(-0.25 * VarY * Dyy[0], b, yy);
 }
 
 inline
@@ -94,7 +131,7 @@ REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[3] Dxx,
   V = {[i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[k]
                                  | [0] <= [k] < [3]})
                | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
-       [i, j] -> 0d
+        [i, j] -> 0d
                | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
       };
 
@@ -141,27 +178,27 @@ REAL value(REAL strike, int indX, int indY,
 
 int main()
 {
-  fprintf(stdout, "\n// SaC Volatility Calibration Benchmark:\n");
+    fprintf(stdout, "\n// SaC Volatility Calibration Benchmark:\n");
 
-  itime = getInterval("time", 1);
-  start(itime);
-  indX, indY, X, Y = initGrid();
+    itime = getInterval("time", 1);
+    start(itime);
+    indX, indY, X, Y = initGrid();
 
-  stdX = 20.0 * ALPHA * S0 * sqrt(T);
-  dx = stdX / TO_REAL(NUM_X);
-  stdY = 10.0 * NU * sqrt(T);
-  dy = stdY / TO_REAL(NUM_Y);
-  Dxx = [1.0 / (dx * dx), -2.0 / (dx * dx), 1.0 / (dx * dx)];
-  Dyy = [1.0 / (dy * dy), -2.0 / (dy * dy), 1.0 / (dy * dy)];
+    stdX = 20.0 * ALPHA * S0 * sqrt(T);
+    dx = stdX / TO_REAL(NUM_X);
+    stdY = 10.0 * NU * sqrt(T);
+    dy = stdY / TO_REAL(NUM_Y);
+    Dxx = [1.0 / (dx * dx), -2.0 / (dx * dx), 1.0 / (dx * dx)];
+    Dyy = [1.0 / (dy * dy), -2.0 / (dy * dy), 1.0 / (dy * dy)];
 
-  result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y,
-                         Dxx, Dyy)
-                 | [i] < [OUTER]};
-  end(itime);
-  print(result);
+    result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y,
+                           Dxx, Dyy)
+                   | [i] < [OUTER]};
+    end(itime);
+    print(result);
 
-  time, unit = returnResultUnit(itime);
-  printf("This took %f%s.\n", time, unit);
+    time, unit = returnResultUnit(itime);
+    printf("This took %f%s.\n", time, unit);
 
-  return 0;
+    return 0;
 }
