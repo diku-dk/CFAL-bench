@@ -1,18 +1,17 @@
-# Cuda won't parallelise
-
-SAC = sac2c_d
+SAC = sac2c_p
 SAC_FLAGS = -Xc -Ofast
 
 .PHONY: all clean run_small run_medium run_large
 
-all: seq mt
+all: seq mt cuda
 
-seq: bin/small bin/medium bin/large
+seq: bin/small_seq bin/medium_seq bin/large_cuda
 mt: bin/small_mt bin/medium_mt bin/large_mt
-mt: SAC_FLAGS += -t mt_pth
-# TODO Code won't cudarize, have a look at the GPU backend
+mt: SAC_FLAGS += -t mt_pth -minmtsize 12
+cuda: bin/small_cuda bin/medium_cuda bin/large_cuda
+cuda: SAC_FLAGS = -t cuda -Xc -O3
 
-bin/smal%: src/VolCalib.sac
+bin/small_%: src/VolCalib.sac
 	$(SAC) -D OUTER=16 \
 		   -D NUM_X=32 \
 		   -D NUM_Y=256 \
@@ -24,7 +23,7 @@ bin/smal%: src/VolCalib.sac
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
 
-bin/mediu%: src/VolCalib.sac
+bin/medium_%: src/VolCalib.sac
 	$(SAC) -D OUTER=128 \
 		   -D NUM_X=256 \
 		   -D NUM_Y=32 \
@@ -36,7 +35,7 @@ bin/mediu%: src/VolCalib.sac
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
 
-bin/larg%: src/VolCalib.sac
+bin/large_%: src/VolCalib.sac
 	$(SAC) -D OUTER=256 \
 		   -D NUM_X=256 \
 		   -D NUM_Y=256 \
@@ -47,18 +46,6 @@ bin/larg%: src/VolCalib.sac
 		   -D NU=0.6 \
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
-
-run_small:
-	bin/small
-	bin/small_mt -mt 4
-
-run_medium:
-	bin/medium
-	bin/medium_mt -mt 4
-
-run_large:
-	bin/large
-	bin/large_mt -mt 4
 
 clean:
 	$(RM) bin/*

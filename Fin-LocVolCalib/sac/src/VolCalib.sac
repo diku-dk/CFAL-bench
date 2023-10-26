@@ -18,24 +18,26 @@ REAL[NUM_Y], REAL[NUM_X] updateParams(REAL[NUM_X] X, REAL[NUM_Y] Y, REAL t)
 }
 
 /**
- * Initializes indX, indY and X, Y
+ * Initializes indX, indY, X, Y, Dxx, Dyy
  */
 inline
-int, int, REAL[NUM_X], REAL[NUM_Y] initGrid()
+int, int, REAL[NUM_X], REAL[NUM_Y], REAL[3], REAL[3] initGrid()
 {
   stdX = 20.0 * ALPHA * S0 * sqrt(T);
   dx = stdX / TO_REAL(NUM_X);
   indX = toi(S0 / dx);
   X = {[i] -> TO_REAL(i) * dx - TO_REAL(indX) * dx + S0 | [i] < [NUM_X]};
+  Dxx = [1.0 / (dx * dx), -2.0 / (dx * dx), 1.0 / (dx * dx)];
 
   stdY = 10.0 * NU * sqrt(T);
   dy = stdY / TO_REAL(NUM_Y);
   indY = NUM_Y / 2;
+  Dyy = [1.0 / (dy * dy), -2.0 / (dy * dy), 1.0 / (dy * dy)];
 
   Y = {[i] -> TO_REAL(i) * dy - TO_REAL(indY) * dy + log(ALPHA)
             | [i] < [NUM_Y]};
 
-  return (indX, indY, X, Y);
+  return (indX, indY, X, Y, Dxx, Dyy);
 }
 
 inline 
@@ -130,10 +132,8 @@ REAL value(REAL strike, int indX, int indY,
   ResultE = {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 
   for (t = NUM_T - 2; t >= 0; t--) {
-    ResultE = rollback(TO_REAL(NUM_T - 1) / T,
-                       Dxx, X, Y, t,
-                       Dyy, NU * NU,
-                       ResultE);
+    ResultE = rollback(TO_REAL(NUM_T - 1) / T, Dxx, X, Y, t, 
+                       Dyy, NU * NU, ResultE);
   }
 
   return ResultE[indX, indY];
@@ -145,17 +145,9 @@ int main()
 
   itime = getInterval("time", 1);
   start(itime);
-  indX, indY, X, Y = initGrid();
+  indX, indY, X, Y, Dxx, Dyy = initGrid();
 
-  stdX = 20.0 * ALPHA * S0 * sqrt(T);
-  dx = stdX / TO_REAL(NUM_X);
-  stdY = 10.0 * NU * sqrt(T);
-  dy = stdY / TO_REAL(NUM_Y);
-  Dxx = [1.0 / (dx * dx), -2.0 / (dx * dx), 1.0 / (dx * dx)];
-  Dyy = [1.0 / (dy * dy), -2.0 / (dy * dy), 1.0 / (dy * dy)];
-
-  result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y,
-                         Dxx, Dyy)
+  result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y, Dxx, Dyy)
                  | [i] < [OUTER]};
   end(itime);
   print(result);
