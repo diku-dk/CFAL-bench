@@ -95,6 +95,9 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    /* Don't use more than 1 thread for the gemm call */
+    omp_set_nested(0);
+
     int num_threads;
 
     #pragma omp parallel 

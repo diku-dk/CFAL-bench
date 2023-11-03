@@ -6,7 +6,10 @@ LFLAGS = -lm -lblis64
 
 .PHONY: all clean
 
-all: bin/flash bin/flash_mt
+all: seq mt
+
+seq: bin/flash
+mt: bin/flash_mt
 
 bin/flash: src/flash.c
 	$(CC) $(FLAGS) $< -o $@ $(LFLAGS)
