@@ -1,0 +1,69 @@
+use Array: all;
+use Benchmarking: all;
+use StdIO: all;
+
+#define REAL float
+#define tor tof
+
+#define N 1024
+#define d 64
+
+inline
+REAL[*] exp(REAL[*] X)
+{
+  return {iv -> Math::exp(X[iv])};
+}
+
+inline
+REAL[N] softmax(REAL[N] S)
+{
+  return {iv -> exp(S[iv]) / sum(exp(S))};
+}
+
+inline
+REAL[N, N] softmax(REAL[N, N] S)
+{
+  return {iv -> softmax(S[iv]) | iv < [N]};
+}
+
+inline
+REAL[., .] matmul(REAL[., .] A, REAL[., .] B)
+{
+  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+}
+
+noinline
+REAL[N, d] FlashAttention(REAL[N, d] Q, REAL[N, d] K, REAL[N, d] V)
+{
+  Kt = {[i, j] -> K[j, i]};
+  S = matmul(Q, Kt);
+  P = softmax(S);
+  return matmul(P, V);
+}
+
+REAL L2(REAL[*] x)
+{
+  return Math::sqrt(sum(x * x));
+}
+
+int main()
+{
+  Q = {[i, j] -> tor(1) | [i, j] < [N, d]};
+  K = {[i, j] -> tor(1) | [i, j] < [N, d]};
+  V = {[i, j] -> tor(1) | [i, j] < [N, d]};
+
+  i_flash = getInterval("flash", 1);
+  start(i_flash);
+
+  O = FlashAttention(Q, K, V);
+
+  end(i_flash);
+  time, unit = returnResultUnit(i_flash);
+
+  printf("Calculation took %f %s\n", time, unit);
+  printf("%f Gflops / %s\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+  printf("L2 norm of output is %lf\n", L2(O));
+
+  return 0;
+}

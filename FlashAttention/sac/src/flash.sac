@@ -1,0 +1,65 @@
+/* TODO look at numerical stability and performance */
+
+use Array: all;
+use Benchmarking: all;
+use StdIO: all;
+
+#define REAL float
+#define tor tof
+
+#define N 10240
+#define d 64
+
+REAL[*] exp(REAL[*] X)
+{
+  return {iv -> Math::exp(X[iv])};
+}
+
+REAL[., .] matmul(REAL[., .] A, REAL[., .] B)
+{
+  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+}
+
+REAL[., .] scale(REAL[., .] x)
+{
+  return {[i] -> x[i] / sum(x[i])};
+}
+
+noinline
+REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
+{
+  Kt = {[i, j] -> K[j, i]};
+  return {[i] -> matmul(scale(exp(matmul(Q[i], Kt))),
+                        V)};
+}
+
+REAL L2(REAL[*] x)
+{
+  return Math::sqrt(sum(x * x));
+}
+
+int main()
+{
+  /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
+     Multiplying that with V gives all 1s again.
+     Taking the L2 norm of this is sqrt(d * N) */
+  Q = {[i, j] -> tor(1) | [i, j] < [N / d, d, d]};
+  K = {[i, j] -> tor(1) | [i, j] < [N, d]};
+  V = {[i, j] -> tor(1) | [i, j] < [N, d]};
+
+  i_flash = getInterval("flash", 1);
+  start(i_flash);
+
+  O = FlashAttention(Q, K, V);
+
+  end(i_flash);
+  time, unit = returnResultUnit(i_flash);
+
+  printf("Calculation took %f %s\n", time, unit);
+  printf("%f Gflops / %s\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+  printf("L2 norm of output is %lf, should be %lf\n", 
+              L2(O), Math::sqrt(tor(d * N)));
+
+  return 0;
+}
