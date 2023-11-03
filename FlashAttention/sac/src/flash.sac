@@ -10,27 +10,66 @@ use StdIO: all;
 #define N 10240
 #define d 64
 
+inline 
+REAL maximum(REAL[.] x)
+{
+  res = x[0];
+
+  for (i = 1; i < shape(x)[0]; i++) {
+    if (x[i] > res) {
+      res = x[i];
+    }
+  }
+
+  return res;
+}
+
+inline 
+REAL[., .] stabilise(REAL[., .] x)
+{
+  return {[i] -> x[i] - maximum(x[i])};
+}
+
+inline
 REAL[*] exp(REAL[*] X)
 {
   return {iv -> Math::exp(X[iv])};
 }
 
+/* sum does not fold well. */
+inline
 REAL[., .] matmul(REAL[., .] A, REAL[., .] B)
 {
-  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [shape(A)[1]]): A[i, p] * B[p, j];
+                    }: fold(+, tor(0))
+                  | [i, j] < [shape(A)[0], shape(B)[1]]};
 }
 
+inline
+REAL[., .] matmulT(REAL[., .] A, REAL[., .] B)
+{
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [shape(A)[1]]): A[i, p] * B[j, p];
+                    }: fold(+, tor(0))
+                  | [i, j] < [shape(A)[0], shape(B)[0]]};
+}
+
+inline
 REAL[., .] scale(REAL[., .] x)
 {
-  return {[i] -> x[i] / sum(x[i])};
+//  return {[i] -> x[i] / sum(x[i])};
+  return {[i] -> x[i] / with {
+                          ([0] <= [j] < [shape(x)[1]]): x[i, j];
+                        }: fold(+, tor(0))};
 }
 
 noinline
 REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
 {
-  Kt = {[i, j] -> K[j, i]};
-  return {[i] -> matmul(scale(exp(matmul(Q[i], Kt))),
-                        V)};
+  return {[i] -> matmul(scale(exp(stabilise(matmulT(Q[i], K)))), V)};
 }
 
 REAL L2(REAL[*] x)
@@ -43,7 +82,8 @@ int main()
   /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
      Multiplying that with V gives all 1s again.
      Taking the L2 norm of this is sqrt(d * N) */
-  Q = {[i, j] -> tor(1) | [i, j] < [N / d, d, d]};
+//  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
+  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
   K = {[i, j] -> tor(1) | [i, j] < [N, d]};
   V = {[i, j] -> tor(1) | [i, j] < [N, d]};
 
@@ -55,11 +95,10 @@ int main()
   end(i_flash);
   time, unit = returnResultUnit(i_flash);
 
-  printf("Calculation took %f %s\n", time, unit);
-  printf("%f Gflops / %s\n", 
-        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
   printf("L2 norm of output is %lf, should be %lf\n", 
               L2(O), Math::sqrt(tor(d * N)));
+  printf("Compute rate: %f Gflops / %s\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
 
   return 0;
 }

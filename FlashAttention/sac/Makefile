@@ -1,5 +1,5 @@
 SAC = ~/repos/sac2c/build_CFAL/sac2c_d
-SAC_FLAGS = 
+SAC_FLAGS = #-profile m
 
 .PHONY: all seq mt cuda clean
 

@@ -31,6 +31,21 @@ void scale(REAL *x, int m, int n)
     }
 }
 
+void stabilize(REAL *x, int m, int n)
+{
+    for (int i = 0; i < m; i++) {
+        REAL maximum = x[i * n + 0];
+        for (int j = 0; j < n; j++) {
+            if (x[i * n + j] > maximum) {
+                maximum = x[i * n + j];
+            }
+        }
+        for (int j = 0; j < n; j++) {
+            x[i * n + j] -= maximum;
+        }
+    }
+}
+
 void exp_arr(REAL *x, int size)
 {
     for (int i = 0; i < size; i++) {
@@ -67,6 +82,7 @@ void FlashAttention(REAL *Q, REAL *K, REAL *V, REAL *O, REAL *P_block,
     for (int i = 0; i < N / d; i++) {
         /* P_block = matmul(Q[i], K^t). Q[i] is d x d, K is N x d. */
         matmulT(Q + i * d * d, K, P_block, d, d, N);
+        stabilize(P_block, d, N);
         exp_arr(P_block, N * d);
         scale(P_block, d, N);
         /* P_block is d x N, V is N x d. */
