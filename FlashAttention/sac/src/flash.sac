@@ -1,5 +1,3 @@
-/* TODO look at numerical stability and performance */
-
 use Array: all;
 use Benchmarking: all;
 use StdIO: all;
@@ -36,17 +34,6 @@ REAL[*] exp(REAL[*] X)
   return {iv -> Math::exp(X[iv])};
 }
 
-/* sum does not fold well. */
-inline
-REAL[., .] matmul(REAL[., .] A, REAL[., .] B)
-{
-//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
-  return {[i, j] -> with {
-                      ([0] <= [p] < [shape(A)[1]]): A[i, p] * B[p, j];
-                    }: fold(+, tor(0))
-                  | [i, j] < [shape(A)[0], shape(B)[1]]};
-}
-
 inline
 REAL[., .] matmulT(REAL[., .] A, REAL[., .] B)
 {
@@ -69,7 +56,9 @@ REAL[., .] scale(REAL[., .] x)
 noinline
 REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
 {
-  return {[i] -> matmul(scale(exp(stabilise(matmulT(Q[i], K)))), V)};
+  Kt = {[i, j] -> K[j, i]};
+  Vt = {[i, j] -> V[j, i]};
+  return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
 }
 
 REAL L2(REAL[*] x)
@@ -82,8 +71,8 @@ int main()
   /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
      Multiplying that with V gives all 1s again.
      Taking the L2 norm of this is sqrt(d * N) */
-//  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
-  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
+  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
+//  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
   K = {[i, j] -> tor(1) | [i, j] < [N, d]};
   V = {[i, j] -> tor(1) | [i, j] < [N, d]};
 
