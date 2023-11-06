@@ -5,21 +5,24 @@ use StdIO: all;
 #define REAL float
 #define tor tof
 
-#define N 10240
+#define N 2048
 #define d 64
 
 inline 
 REAL maximum(REAL[.] x)
 {
-  res = x[0];
-
-  for (i = 1; i < shape(x)[0]; i++) {
-    if (x[i] > res) {
-      res = x[i];
-    }
-  }
-
-  return res;
+  return with {
+    (0 * shape(x) <= iv < shape(x)): x[iv];
+  }: fold(max, x[0]);
+//  res = x[0];
+//
+//  for (i = 1; i < shape(x)[0]; i++) {
+//    if (x[i] > res) {
+//      res = x[i];
+//    }
+//  }
+//
+//  return res;
 }
 
 inline 
@@ -53,11 +56,11 @@ REAL[., .] scale(REAL[., .] x)
                         }: fold(+, tor(0))};
 }
 
-noinline
+inline
 REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
 {
   Kt = {[i, j] -> K[j, i]};
-  Vt = {[i, j] -> V[j, i]};
+  Vt = {[i, j] -> V[j, i]}; /* This is done for performance */
   return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
 }
 
@@ -71,8 +74,8 @@ int main()
   /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
      Multiplying that with V gives all 1s again.
      Taking the L2 norm of this is sqrt(d * N) */
-  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
-//  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
+//  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
+  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
   K = {[i, j] -> tor(1) | [i, j] < [N, d]};
   V = {[i, j] -> tor(1) | [i, j] < [N, d]};
 
