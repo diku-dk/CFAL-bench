@@ -14,3 +14,4 @@ __pycache__/
 # Haskell / Accelerate
 nbody-naive/accelerate/nbody-naive/.stack-work/*
 MG/accelerate/.stack-work/*
+quickhull/accelerate/.stack-work/*
