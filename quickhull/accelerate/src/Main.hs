@@ -14,6 +14,8 @@ main = do
   let quickhullCPU = CPU.runN quickhull
   let quickhullGPU = GPU.runN quickhull
 
+  mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU), ("GPU", quickhullGPU)]) inputs
+
   defaultMain [backend "CPU" quickhullCPU inputs, backend "GPU" quickhullGPU inputs]
   where
     backend name quickhull' inputs
@@ -36,3 +38,9 @@ load name = do
     parseLine line = case words line of
       [x, y] -> (read x, read y)
       _ -> error "Parse error"
+
+testInput :: (String, A.Vector Point -> A.Vector Point) -> Input -> IO ()
+testInput (backend, f) (inputName, inputData) = do
+  putStrLn $ backend ++ "/" ++ inputName
+  putStrLn $ take 80 $ show $ f inputData
+  putStrLn ""
