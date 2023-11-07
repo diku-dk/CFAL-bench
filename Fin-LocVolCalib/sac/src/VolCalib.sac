@@ -5,6 +5,7 @@ use Benchmarking: all;
 
 #define REAL double
 #define TO_REAL tod
+#define VEC 4
 
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
@@ -65,13 +66,12 @@ REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
 }
 
 inline
-REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[3] Dxx,
-                   REAL dtInv, REAL[NUM_X] uu)
+REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[3] Dxx, REAL[NUM_X] uu)
 {
   a = {[j] -> -0.25 * VarX1 * VarX2[j] * Dxx[0] | [1] <= [j] < [NUM_X - 1];
        [j] -> 0d                                | [NUM_X - 1] <= [j] < [NUM_X]}; 
 
-  return tridag(a, dtInv - 2d * a, a, uu); 
+  return tridag(a, 1d - 2d * a, a, uu); 
 }
 
 inline
@@ -86,14 +86,13 @@ REAL[NUM_Y] implicit_y(REAL VarY, REAL[3] Dyy, REAL dtInv,
 
 inline
 REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[3] Dxx,
-                            REAL[NUM_X] X, REAL[NUM_Y] Y, int t,
+                            REAL[NUM_X] X, REAL[NUM_Y] Y, 
+                            REAL[NUM_Y] VarX1, REAL[NUM_X] VarX2,
                             REAL[3] Dyy, REAL VarY,
                             REAL[NUM_X, NUM_Y] ResultE)
 {
-  VarX1, VarX2 = updateParams(X, Y, T * TO_REAL(t) / TO_REAL(NUM_T - 1));
-
   /* explicit y */
-  V = {[i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[k]
+  V = {[i, j] -> 0.25 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[k]
                                  | [0] <= [k] < [3]})
                | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
        [i, j] -> 0d
@@ -112,14 +111,17 @@ REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[3] Dxx,
                | [0, NUM_X - 1] <= [j, i] < [NUM_Y, NUM_X]
        };
 
-  U = {[j, i] -> U[j, i] + V[i, j]};
+  U = {[j, i] -> U[j, i] + 2.0 * V[i, j]};
 
-  /* implicit x */
-  U = {[j] -> implicit_x(VarX1[j], VarX2, Dxx, dtInv, U[j])};
+  /* implicit x 
+     TODO: transpose U so we can vectorise the sweeps on columns */
+  Dxx /= dtInv; /* Cheap way to multiply U with dtInv */
+  U = {[j] -> implicit_x(VarX1[j], VarX2, Dxx, U[j])};
 
-  /* implicit y */
-  ResultE = {[i] -> implicit_y(VarY, Dyy, dtInv,
-                      {[j] -> dtInv * U[j, i] - V[i, j] / 2.0})};
+  /* implicit y
+     TODO: transpose V so we can vectorise the sweeps on columns */
+  V = {[i, j] -> U[j, i] - V[i, j]};
+  ResultE = {[i] -> implicit_y(VarY, Dyy, dtInv, V[i])};
 
   return ResultE;
 }
@@ -129,11 +131,13 @@ REAL value(REAL strike, int indX, int indY,
            REAL[NUM_X] X, REAL[NUM_Y] Y,
            REAL[3] Dxx, REAL[3] Dyy)
 {
+  VarX1, VarX2 = updateParams(X, Y, TO_REAL(NUM_T - 2) * T / TO_REAL(NUM_T - 1));
   ResultE = {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 
   for (t = NUM_T - 2; t >= 0; t--) {
-    ResultE = rollback(TO_REAL(NUM_T - 1) / T, Dxx, X, Y, t, 
+    ResultE = rollback(TO_REAL(NUM_T - 1) / T, Dxx, X, Y, VarX1, VarX2,
                        Dyy, NU * NU, ResultE);
+    VarX2 *= exp(NU * NU * T / TO_REAL(NUM_T - 1));
   }
 
   return ResultE[indX, indY];
