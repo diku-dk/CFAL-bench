@@ -1,13 +1,32 @@
 module Main where
 import Data.Array.Accelerate
-import Data.Array.Accelerate.LLVM.Native as CPU
--- import Data.Array.Accelerate.LLVM.PTX    as GPU
+import qualified Data.Array.Accelerate.LLVM.Native as CPU
+import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
 
 main :: Prelude.IO ()
-main = Prelude.print $ CPU.run $ mg 512 weightsB (unit 20) (makeInput $ unit 512) (generate (Z_ ::. 512 ::. 512 ::. 512) (const 0))
+main = defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
+  where
+    makeInput' = CPU.runN makeInput
+    input256 = makeInput' $ fromList Z [256]
+    input512 = makeInput' $ fromList Z [512]
+
+    backend name runN
+      = bgroup name
+      $ Prelude.map (testcase runN)
+      [(4, 256, input256), (20, 256, input256), (20, 512, input512)]
+
+    testcase runN (iter, n, input) =
+      env (Prelude.return $
+          runN $ \a ->
+              mg n
+                (if iter Prelude.== 4 then weightsA else weightsB) (use $ fromList Z [iter])
+                a
+                (generate (Z_ ::. constant n ::. constant n ::. constant n) $ const 0)
+        )
+        $ \f -> bench ("n=" Prelude.++ Prelude.show n Prelude.++ ", iter=" Prelude.++ Prelude.show iter) $ nf f input
 
 weightsA, weightsB :: (Double, Double, Double, Double)
 weightsA = (-3/8, 1/32, -1/64, 0)
@@ -15,9 +34,6 @@ weightsB = (-3/17, 1/33, -1/61, 0)
 
 type Array3 = Array DIM3
 type Triple a = (a, a, a)
-
-main' :: Acc (Scalar Int) -> Acc (Array3 Double) -> Acc (Scalar Double)
-main' = undefined
 
 coarse2fine :: Acc (Array3 Double) -> Acc (Array3 Double)
 coarse2fine z = generate (Z_ ::. n*2 ::. n*2 ::. n*2) $ \(I3 i j k) ->

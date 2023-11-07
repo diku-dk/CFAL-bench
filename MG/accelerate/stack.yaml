@@ -8,7 +8,7 @@ extra-deps:
   subdirs: 
   - accelerate-llvm
   - accelerate-llvm-native
-  # - accelerate-llvm-ptx
+  - accelerate-llvm-ptx
 - cuda-0.11.0.1
 - nvvm-0.10.0.1
 - github: llvm-hs/llvm-hs
