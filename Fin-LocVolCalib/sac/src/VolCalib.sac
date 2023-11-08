@@ -47,39 +47,13 @@ int, int, REAL[NUM_X], REAL[NUM_Y], REAL[3], REAL[3] initGrid()
   return (indX, indY, X, Y, Dxx, Dyy);
 }
 
-inline 
-REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
-{
-  n = shape(y)[0];
-
-  /* This is the modified Thomas method from Numerical Methods.
-   * Note that the non-zeroes in a row are a, b, c in this application,
-   * and b, a, c in Numerical Methods.
-   * We store gamma in b. */
-  b[0] = tor(1) / b[0];
-  y[0] = b[0] * y[0];
-
-  b[1] = tor(1) / b[1];
-  y[1] = b[1] * (y[1] - a[1] * y[0]);
-  for (i = 2; i < n; i++) {
-      b[i] = tor(1) / (b[i] - a[i] * b[i - 1] * c[i - 1]);
-      y[i] = b[i] * (y[i] - a[i] * y[i - 1]);
-  }
-
-  for (i = n - 2; i >= 1; i--) {
-      y[i] = y[i] - b[i] * c[i] * y[i + 1];
-  }
-
-  return y;
-}
-
 /* a, b, c are constants signifying a Toeplitz system. This solves
    the Toeplitz system on each column of y. */
-inline 
-REAL[., .] toeplitz(REAL a, REAL b, REAL c, REAL[., .] y)
+inline
+REAL[NUM_Y, NUM_X] toeplitz(REAL a, REAL b, REAL c, REAL[NUM_Y, NUM_X] y)
 {
-  n = shape(y)[0];
-  gamma = genarray([n], tor(0));
+  n = NUM_Y;
+  gamma = with {}: genarray([NUM_Y], tor(0));
 
   /* This is the modified Thomas method from Numerical Mathematics.
    * Note that the non-zeroes in a row are a, b, c in this application,
