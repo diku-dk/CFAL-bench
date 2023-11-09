@@ -13,8 +13,8 @@ def readDataSet():
     Reads formatted input.
     The current format contains 4 unsigned integer numbers and 5 float numbers, new lines separated
     - OUTER -- no restrictions
-    - NUM_X -- 2^x, where x \in {5, ..., 9}
-    - NUM_Y -- 2^x, where x \in {5, ..., 9}
+    - NUM_X -- 2^x, where x \\in {5, ..., 9}
+    - NUM_Y -- 2^x, where x \\in {5, ..., 9}
     - NUM_T -- no restrictions
     - s0 
     - t 

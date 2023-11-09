@@ -294,7 +294,7 @@ def VolCalib(s0: float, t: float, alpha: float, nu: float, beta: float, Time: da
 
 
 #main
-dataset_size = "xs"
+dataset_size = "XS"
 outer, numX, numY, numT, s0, t, alpha, nu, beta = utils.getPrefedinedInputDataSet(dataset_size)
 
 #global array allocation
