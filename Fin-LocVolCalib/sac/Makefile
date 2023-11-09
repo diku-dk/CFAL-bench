@@ -1,5 +1,7 @@
-SAC = ~/repos/sac2c/build_CFAL/sac2c_d
+SAC = ~/repos/sac2c/build_wlir/sac2c_d
 SAC_FLAGS = -Xc -Ofast -d cccall #-profile m#-maxwlur 8 #-check c -ecc 
+CC = gcc
+CFLAGS = -Ofast -march=native -mtune=native -Wall -Wextra -Werror
 
 .PHONY: all float clean
 
@@ -20,6 +22,24 @@ mt_float: bin/small_mt_float bin/medium_mt_float bin/large_mt_float
 mt_float: SAC_FLAGS += -t mt_pth -minmtsize 12
 cuda_float: bin/small_cuda_float bin/medium_cuda_float bin/large_cuda_float
 cuda_float: SAC_FLAGS = -t cuda -Xc -O3
+
+bin/tridag_v.o: src/tridag_v.c
+	$(CC) -D REAL=float \
+		  -D NUM_X=256 \
+		  -D VEC=8 \
+		  $(CFLAGS) -c $< -o $@
+
+bin/large_manual: src/manual.sac bin/tridag_v.o
+	$(SAC) -D OUTER=256 \
+		   -D NUM_X=256 \
+		   -D NUM_Y=256 \
+		   -D NUM_T=64 \
+		   -D S0=0.03f \
+		   -D T=5.0f \
+		   -D ALPHA=0.2f \
+		   -D NU=0.6f \
+		   -D BETA=0.5f \
+		   $(SAC_FLAGS) -t mt_pth $< -o $@
 
 bin/small_%: src/VolCalib.sac
 	$(SAC) -D DOUBLE=1 \
