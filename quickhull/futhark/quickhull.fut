@@ -7,9 +7,12 @@
 -- right ordering, but the flattened quickhull does not otherwise
 -- preserve it.
 -- ==
--- input @ data/1M_circle_16384.dat
--- input @ data/1M_quadratic_2147483648.dat
--- input @ data/1M_rectangle_16384.dat
+-- "1M_circle_16384.dat"
+-- script input { points_from_string ($loadbytes "../input/1M_circle_16384.dat") }
+-- "1M_quadratic_2147483648.dat"
+-- script input { points_from_string ($loadbytes "../input/1M_quadratic_2147483648.dat") }
+-- "1M_rectangle_16384.dat"
+-- script input { points_from_string ($loadbytes "../input/1M_rectangle_16384.dat") }
 
 module type euclidean_space = {
   type dist
@@ -167,8 +170,12 @@ def clockwise (convex_upper: []point) (convex_lower: []point) =
   let lower_is = map (.1) (reverse sorted_lower)
   in upper_is++lower_is
 
-def main [k] (ps : [k][2]f64) : []i32 =
+entry main [k] (ps : [k][2]f64) : []i32 =
   let ps' = map2 (\i p -> ({x=f64.f64 p[0], y=f64.f64 p[1]}, i32.i64 i))
                  (indices ps) ps
   let (convex_upper, convex_lower) = naive_quickhull.compute ps'
   in clockwise convex_upper convex_lower
+
+module input = import "input"
+
+entry points_from_string = input.points_from_string
