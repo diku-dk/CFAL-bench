@@ -58,21 +58,6 @@ module naive_space : euclidean_space with point = {x:f64, y:f64} = {
     in ssqr (ax * by - ay * bx) / (sqr ax + sqr ay)
 }
 
-module indexed_space (S: euclidean_space)
-       : euclidean_space with point = (S.point, i32) = {
-  type dist = S.dist
-  type point = (S.point, i32)
-
-  def zero_dist = S.zero_dist
-  def dist_less = S.dist_less
-
-  def point_eq (a: point) (b: point) = S.point_eq a.0 b.0
-  def point_less (a: point) (b: point) = S.point_less a.0 b.0
-
-  def signed_dist_to_line (p: point) (q: point) (r: point) =
-    S.signed_dist_to_line p.0 q.0 r.0
-}
-
 module quickhull (S : euclidean_space) : convex_hull with space.point = S.point = {
   module space = S
   open space
@@ -154,25 +139,23 @@ module quickhull (S : euclidean_space) : convex_hull with space.point = S.point 
     in (upper_hull, lower_hull)
 }
 
-module space = (indexed_space naive_space)
-module naive_quickhull = quickhull space
+module naive_quickhull = quickhull naive_space
 
-type point = space.point
+type point = naive_space.point
 
 import "lib/github.com/diku-dk/sorts/radix_sort"
 def sort_by f = radix_sort_float_by_key f f64.num_bits f64.get_bit
 
 def clockwise (convex_upper: []point) (convex_lower: []point) =
-  let sorted_upper = convex_upper |> sort_by (.0.y) |> sort_by (.0.x)
-  let sorted_lower = convex_lower |> sort_by (.0.y) |> sort_by (.0.x)
-  let p ({x,y},_) = [x,y]
+  let sorted_upper = convex_upper |> sort_by (.y) |> sort_by (.x)
+  let sorted_lower = convex_lower |> sort_by (.y) |> sort_by (.x)
+  let p {x,y} = [x,y]
   let upper_is = map p sorted_upper
   let lower_is = map p (reverse sorted_lower)
   in upper_is++lower_is
 
 entry main [k] (ps : [k][2]f64) : [][2]f64 =
-  let ps' = map2 (\i p -> ({x=f64.f64 p[0], y=f64.f64 p[1]}, i32.i64 i))
-                 (indices ps) ps
+  let ps' = map (\p -> {x=f64.f64 p[0], y=f64.f64 p[1]}) ps
   let (convex_upper, convex_lower) = naive_quickhull.compute ps'
   in clockwise convex_upper convex_lower
 
