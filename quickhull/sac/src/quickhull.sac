@@ -10,12 +10,9 @@ use StdIO: {print, printf};
 #define DBL_MAX 1.79769e+308
 
 inline
-double[N, 2] swap(double[N, 2] P, int a, int b)
+double[2], double[2] swap(double[2] x, double[2] y)
 {
-  temp = P[a];
-  P[a] = P[b];
-  P[b] = temp;
-  return P;
+  return (y, x);
 }
 
 inline 
@@ -27,12 +24,23 @@ double orient(double[2] p, double[2] q, double[2] u)
 inline
 double, double[2] set_max(double o, double max, double[2] p, double[2] argmax)
 {
+#if 0
   if (o > max) {
     max = o;
     argmax = p;
   }
-
+#else
+  swap = tod(toi(o > max));
+  max = (o > max) ? o : max;
+  argmax = (1d - swap) * argmax + swap * p;
+#endif
   return (max, argmax);
+}
+
+inline
+double, int set_max(double o, double max, int index, int argmax)
+{
+  return ((o > max) ? o : max, (o > max) ? index : argmax);
 }
 
 /* Returns (P', c, argmax) where argmax is u in P with maximal orient(p, q, u),
@@ -42,7 +50,9 @@ double[N, 2], int, double[2]
 BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
 {
     r -= 1; // Point to the last element
-    argmax = [0d, 0d]; // junk value
+    /* TODO this is allocated many times in the recursive calls */
+//    argmax = [0d, 0d]; // junk value
+    argmax = 0;
 
     max = -DBL_MAX;
     offsetsl = genarray([BLOCK], 0);
@@ -60,7 +70,8 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
                 offsetsl[numl] = i;
                 o = orient(p, q, P[l + i]);
                 numl += toi(o > 0d);
-                max, argmax = set_max(o, max, P[l + i], argmax);
+//                max, argmax = set_max(o, max, P[l + i], argmax);
+                max, argmax = set_max(o, max, l + i, argmax);
             }
         }
         if (numr == 0) {
@@ -70,14 +81,25 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
                 offsetsr[numr] = i;
                 o = orient(p, q, P[r - i]);
                 numr += toi(o <= 0d);
-                max, argmax = set_max(o, max, P[r - i], argmax);
+//                max, argmax = set_max(o, max, P[r - i], argmax);
+                max, argmax = set_max(o, max, r - i, argmax);
             }
         }
 
         num = (numl < numr) ? numl : numr;
 
         for (j = 0; j < num; j++) {
-            P = swap(P, l + offsetsl[startl + j], r - offsetsr[startr + j]);
+            Pr, Pl = swap(P[r - offsetsr[startr + j]], 
+                          P[l + offsetsl[startl + j]]);
+            P[l + offsetsl[startl + j]] = Pl;
+            P[r - offsetsr[startr + j]] = Pr;
+        }
+        for (j = 0; j < num; j++) {
+          if (argmax == l + offsetsl[startl + j]) {
+            argmax = r - offsetsr[startr + j];
+          } else if (argmax == r - offsetsr[startr + j]) {
+            argmax = l + offsetsl[startl + j];
+          }
         }
 
         numl -= num;
@@ -91,23 +113,33 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
 
     while (l <= r) {
         while (l <= r && orient(p, q, P[l]) <= 0d) {
-          max, argmax = set_max(orient(p, q, P[l]), max, P[l], argmax);
+//          max, argmax = set_max(orient(p, q, P[l]), max, P[l], argmax);
+          max, argmax = set_max(orient(p, q, P[l]), max, l, argmax);
           l++;
         }
 
         if (l <= r) {
           while (l <= r && orient(p, q, P[r]) > 0d) {
-              max, argmax = set_max(orient(p, q, P[r]), max, P[r], argmax);
+//              max, argmax = set_max(orient(p, q, P[r]), max, P[r], argmax);
+              max, argmax = set_max(orient(p, q, P[r]), max, r, argmax);
               r--;
           }
         }
 
         if (l < r) {
+            if (argmax == l) {
+              argmax = r;
+            } else if (argmax == r) {
+              argmax = l;
+            }
+            Pl, Pr = swap(P[l], P[r]);
+            P[l] = Pl;
+            P[r] = Pr;
             P = swap(P, l, r);
         }
     }
 
-    return (P, l, argmax);
+    return (P, l, P[argmax]);
 }
 
 inline
