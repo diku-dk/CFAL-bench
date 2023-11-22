@@ -24,6 +24,17 @@ double orient(double[2] p, double[2] q, double[2] u)
   return (p[0] - u[0]) * (q[1] - u[1]) - (p[1] - u[1]) * (q[0] - u[0]);
 }
 
+inline
+double, double[2] set_max(double o, double max, double[2] p, double[2] argmax)
+{
+  if (o > max) {
+    max = o;
+    argmax = p;
+  }
+
+  return (max, argmax);
+}
+
 /* Returns (P', c, argmax) where argmax is u in P with maximal orient(p, q, u),
    [0, c[ with orientation <= 0, and [c, n[ with orientation > 0. */
 inline
@@ -44,15 +55,12 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
     while (r - l > 2 * BLOCK) {
         if (numl == 0) {
             startl = 0;
-            /* Sets offsets[0:numl] to the indices that have > 0 */ 
+            /* Sets offsets[0:numl] to the indices that have > 0 */
             for (i = 0; i < BLOCK; i++) {
                 offsetsl[numl] = i;
                 o = orient(p, q, P[l + i]);
                 numl += toi(o > 0d);
-                if (o > max) {
-                    max = o;
-                    argmax = P[l + i];
-                }
+                max, argmax = set_max(o, max, P[l + i], argmax);
             }
         }
         if (numr == 0) {
@@ -62,10 +70,7 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
                 offsetsr[numr] = i;
                 o = orient(p, q, P[r - i]);
                 numr += toi(o <= 0d);
-                if (o > max) {
-                    max = o;
-                    argmax = P[r - i];
-                }
+                max, argmax = set_max(o, max, P[r - i], argmax);
             }
         }
 
@@ -85,32 +90,16 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
     }
 
     while (l <= r) {
-        o = orient(p, q, P[l]);
-        if (o > max) {
-          max = o;
-          argmax = P[l];
-        }
-        while (o <= 0d && l <= r) {
-            l++;
-            o = orient(p, q, P[l]);
-          if (o > max) {
-            max = o;
-            argmax = P[l];
-          }
+        while (l <= r && orient(p, q, P[l]) <= 0d) {
+          max, argmax = set_max(orient(p, q, P[l]), max, P[l], argmax);
+          l++;
         }
 
-        o = orient(p, q, P[r]);
-        if (o > max) {
-          max = o;
-          argmax = P[r];
-        }
-        while (o > 0d && l <= r) {
-            r--;
-            o = orient(p, q, P[r]);
-            if (o > max) {
-              max = o;
-              argmax = P[r];
-            }
+        if (l <= r) {
+          while (l <= r && orient(p, q, P[r]) > 0d) {
+              max, argmax = set_max(orient(p, q, P[r]), max, P[r], argmax);
+              r--;
+          }
         }
 
         if (l < r) {
@@ -124,13 +113,13 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
 inline
 double[2] min_x(double[2] a, double[2] b)
 {
-  return (a[0] < b[0] || (a[0] == b[0] && a[1] <= b[1])) ? a : b;
+  return (a[0] < b[0] || (a[0] == b[0] && a[1] < b[1])) ? a : b;
 }
 
 inline
 double[2] max_x(double[2] a, double[2] b)
 {
-  return (a[0] > b[0] || (a[0] == b[0] && a[1] >= b[1])) ? a : b;
+  return (a[0] > b[0] || (a[0] == b[0] && a[1] > b[1])) ? a : b;
 }
 
 double[., .] QuickHull(double[N, 2] P)
