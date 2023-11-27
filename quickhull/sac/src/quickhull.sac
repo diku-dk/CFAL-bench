@@ -50,8 +50,8 @@ double[N, 2], int, double[2]
 BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
 {
     r -= 1; // Point to the last element
-    /* TODO this is allocated many times in the recursive calls */
-//    argmax = [0d, 0d]; // junk value
+    /* Use index to avoid allocations */
+//    argmax = [0d, 0d];
     argmax = 0;
 
     max = -DBL_MAX;
@@ -135,7 +135,7 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
             Pl, Pr = swap(P[l], P[r]);
             P[l] = Pl;
             P[r] = Pr;
-            P = swap(P, l, r);
+            //P = swap(P, l, r);
         }
     }
 

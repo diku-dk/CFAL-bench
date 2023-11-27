@@ -6,7 +6,7 @@ use StdIO: all;
 #define tor tof
 
 #define N 2048
-#define d 64
+#define d 128
 
 inline 
 REAL maximum(REAL[.] x)
@@ -14,19 +14,10 @@ REAL maximum(REAL[.] x)
   return with {
     (0 * shape(x) <= iv < shape(x)): x[iv];
   }: fold(max, x[0]);
-//  res = x[0];
-//
-//  for (i = 1; i < shape(x)[0]; i++) {
-//    if (x[i] > res) {
-//      res = x[i];
-//    }
-//  }
-//
-//  return res;
 }
 
 inline 
-REAL[., .] stabilise(REAL[., .] x)
+REAL[m, n] stabilise(REAL[m, n] x)
 {
   return {[i] -> x[i] - maximum(x[i])};
 }
@@ -38,21 +29,21 @@ REAL[*] exp(REAL[*] X)
 }
 
 inline
-REAL[., .] matmulT(REAL[., .] A, REAL[., .] B)
+REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
 {
 //  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
   return {[i, j] -> with {
-                      ([0] <= [p] < [shape(A)[1]]): A[i, p] * B[j, p];
+                      ([0] <= [p] < [k]): A[i, p] * B[j, p];
                     }: fold(+, tor(0))
-                  | [i, j] < [shape(A)[0], shape(B)[0]]};
+                  | [i, j] < [m, n]};
 }
 
 inline
-REAL[., .] scale(REAL[., .] x)
+REAL[m, n] scale(REAL[m, n] x)
 {
 //  return {[i] -> x[i] / sum(x[i])};
   return {[i] -> x[i] / with {
-                          ([0] <= [j] < [shape(x)[1]]): x[i, j];
+                          ([0] <= [j] < [n]): x[i, j];
                         }: fold(+, tor(0))};
 }
 
