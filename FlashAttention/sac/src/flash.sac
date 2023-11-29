@@ -1,0 +1,87 @@
+use Array: all;
+use Benchmarking: all;
+use StdIO: all;
+
+#define REAL float
+#define tor tof
+
+#define N 2048
+#define d 128
+
+inline 
+REAL maximum(REAL[.] x)
+{
+  return with {
+    (0 * shape(x) <= iv < shape(x)): x[iv];
+  }: fold(max, x[0]);
+}
+
+inline 
+REAL[m, n] stabilise(REAL[m, n] x)
+{
+  return {[i] -> x[i] - maximum(x[i])};
+}
+
+inline
+REAL[*] exp(REAL[*] X)
+{
+  return {iv -> Math::exp(X[iv])};
+}
+
+inline
+REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
+{
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [k]): A[i, p] * B[j, p];
+                    }: fold(+, tor(0))
+                  | [i, j] < [m, n]};
+}
+
+inline
+REAL[m, n] scale(REAL[m, n] x)
+{
+//  return {[i] -> x[i] / sum(x[i])};
+  return {[i] -> x[i] / with {
+                          ([0] <= [j] < [n]): x[i, j];
+                        }: fold(+, tor(0))};
+}
+
+inline
+REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
+{
+  Kt = {[i, j] -> K[j, i]};
+  Vt = {[i, j] -> V[j, i]}; /* This is done for performance */
+  return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
+}
+
+REAL L2(REAL[*] x)
+{
+  return Math::sqrt(sum(x * x));
+}
+
+int main()
+{
+  /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
+     Multiplying that with V gives all 1s again.
+     Taking the L2 norm of this is sqrt(d * N) */
+//  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
+  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
+  K = {[i, j] -> tor(1) | [i, j] < [N, d]};
+  V = {[i, j] -> tor(1) | [i, j] < [N, d]};
+
+  i_flash = getInterval("flash", 1);
+  start(i_flash);
+
+  O = FlashAttention(Q, K, V);
+
+  end(i_flash);
+  time, unit = returnResultUnit(i_flash);
+
+  printf("L2 norm of output is %lf, should be %lf\n", 
+              L2(O), Math::sqrt(tor(d * N)));
+  printf("Compute rate: %f Gflops / %s\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+
+  return 0;
+}

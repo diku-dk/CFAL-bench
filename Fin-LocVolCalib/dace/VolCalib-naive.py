@@ -196,7 +196,7 @@ def value(s0: float, strike: float, t: float, alpha: float, nu: float, beta: flo
 
 
 #main
-dataset_size = "xs"
+dataset_size = "XS"
 outer, numX, numY, numT, s0, t, alpha, nu, beta = utils.getPrefedinedInputDataSet(dataset_size)
 
 #global array allocation
@@ -235,7 +235,13 @@ end = time.time()
 
 print(f"Time in usecs: {(end-start)*1e6}")
 # validate
-
-assert np.allclose(result, utils.getPrefefinedOutputDataSet(dataset_size))
 print(result)
+print("------------")
+print(utils.getPrefefinedOutputDataSet(dataset_size))
+print("------------")
+print(
+    print(
+        np.linalg.norm(result - utils.getPrefefinedOutputDataSet(dataset_size)) /
+        np.linalg.norm(utils.getPrefefinedOutputDataSet(dataset_size))))
+assert np.allclose(result, utils.getPrefefinedOutputDataSet(dataset_size))
 # TODO

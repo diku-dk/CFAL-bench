@@ -11,9 +11,9 @@ import dace
 from dace.transformation.auto.auto_optimize import auto_optimize
 
 # TODOs:
-# - promote also s0, alpha, nu, ... to symbols?
-numX, numY, numT, N, Ntridiag, numZ = (dace.symbol(s, dtype=dace.int32)
-                                       for s in ('numX', 'numY', 'numT', 'N', 'Ntridiag', 'numZ'))
+numX, numY, numT, N, Ntridiag, numZ, outer, __tmp112 = (dace.symbol(s, dtype=dace.int32)
+                                                        for s in ('numX', 'numY', 'numT', 'N', 'Ntridiag', 'numZ',
+                                                                  'outer', '__tmp112'))
 
 
 @dace.program
@@ -88,9 +88,15 @@ def initOperator(xx: dace.float64[N], D: dace.float64[N, 3], DD: dace.float64[N,
 
 @dace.program
 def setPayoff(strike: dace.float64, X: dace.float64[numX], ResultE: dace.float64[numX, numY]):
-    payoff = np.maximum(X - strike, 0.0)
+    # payoff = np.maximum(X - strike, 0.0)
+    # for i in range(numX):
+    #     ResultE[i, :] = payoff[i]
+
     for i in range(numX):
-        ResultE[i, :] = payoff[i]
+        payoff = max(X[i] - strike, 0.0)
+
+        for j in range(numY):
+            ResultE[i, j] = payoff
 
 
 def updateParams(numX: int, numY: int, g: int, alpha: float, beta: float, nu: float, X, Y, Time, MuX, VarX, MuY, VarY):
@@ -112,19 +118,12 @@ def updateParams(g: int, alpha: float, beta: float, nu: float, X: dace.float64[n
                  MuY: dace.float64[numX, numY], VarY: dace.float64[numX, numY]):
 
     # DaCE
-    # Maybe can be improved for readability/functional-friendliness
-    # - second loop nest can be avoided but currently we are missing fill support
-    # - the first one maybe can be further simplified?
-
-    MuX.fill(0)
 
     for j in range(numY):
-
-        VarX[j, :] = np.exp(2 * (beta * np.log(X) + Y[j] - 0.5 * nu * nu * Time[g]))
-        # for i in range(numX):
-        #     # MuX[j, i] = 0.0
-        #     value = (beta * np.log(X[i]) + Y[j] - 0.5 * nu * nu * Time[g])
-        #     VarX[j, i] = np.exp(2 * value)
+        for i in range(numX):
+            MuX[j, i] = 0.0
+            VarX[j, i] = np.exp(2 * (beta * np.log(X[i]) + Y[j] - 0.5 * nu * nu * Time[g]))
+            # VarX[j, i] = np.exp(2 * (beta * np.log(X[i]) + Y[j] - 0.5 * nu * nu * Tvalue))
 
     # MuY.fill(0)
     # VarY.fill(nu**2)  # apparantely currently not supported in DaCe is not ok
@@ -134,9 +133,8 @@ def updateParams(g: int, alpha: float, beta: float, nu: float, X: dace.float64[n
             VarY[i, j] = nu * nu
 
 
-# @dace.program
-def tridag(Ntridiag, a: dace.float64[Ntridiag], b: dace.float64[Ntridiag], c: dace.float64[Ntridiag],
-           y: dace.float64[Ntridiag]):
+@dace.program
+def tridag(a: dace.float64[Ntridiag], b: dace.float64[Ntridiag], c: dace.float64[Ntridiag], y: dace.float64[Ntridiag]):
     """
     Computes the solution of the tridiagonal system in output array y
     - a contains the N-1 subdiagonal elements
@@ -145,9 +143,8 @@ def tridag(Ntridiag, a: dace.float64[Ntridiag], b: dace.float64[Ntridiag], c: da
     - y right hand side and output
     """
 
-    # DaCe TODOs:
-    # - currently using a different symbol (Ntridiag vs N). Maybe we can use another symbol (numZ is the max between numX and numY)
-    # - rewrite in a more array-programminsh way
+    # TODO DaCe :
+    # - rewrite in a more array-programminsh way (if possible)
 
     #forward swap
     for i in range(1, Ntridiag - 1):
@@ -163,20 +160,13 @@ def tridag(Ntridiag, a: dace.float64[Ntridiag], b: dace.float64[Ntridiag], c: da
 
 
 @dace.program
-def rollback(g: int, a: dace.float64[numZ], b: dace.float64[numZ], c: dace.float64[numZ], Time: dace.float64[numT],
-             U: dace.float64[numY, numX], V: dace.float64[numX, numY], Dx: dace.float64[numX,
-                                                                                        3], Dxx: dace.float64[numX, 3],
-             MuX: dace.float64[numY, numX], VarX: dace.float64[numY, numX], Dy: dace.float64[numY,
-                                                                                             3], Dyy: dace.float64[numY,
-                                                                                                                   3],
+def rollback(g: int, Time: dace.float64[numT], U: dace.float64[numY, numX], V: dace.float64[numX, numY],
+             Dx: dace.float64[numX, 3], Dxx: dace.float64[numX, 3], MuX: dace.float64[numY, numX],
+             VarX: dace.float64[numY, numX], Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3],
              MuY: dace.float64[numX, numY], VarY: dace.float64[numX, numY], ResultE: dace.float64[numX, numY]):
-
+    # DaCe:
+    # - differently from the naive implementation, we allocate here a,b,c to favor symbol inference
     dtInv = 1.0 / (Time[g + 1] - Time[g])
-
-    # tridag_sdfg = tridag.to_sdfg()
-
-    # TODOs:
-    # - With Tridag we are passing a view. This generates a TypeError: Passing a numpy view ...
 
     # explicit x
     for j in range(numY):
@@ -204,105 +194,114 @@ def rollback(g: int, a: dace.float64[numZ], b: dace.float64[numZ], c: dace.float
 
             U[j, i] += V[i, j]
 
+    a = np.empty(numX, dtype=dace.float64)
+    b = np.empty(numX, dtype=dace.float64)
+    c = np.empty(numX, dtype=dace.float64)
     # implicit x
+    # TODO DaCe: can this loop be a map? (likely yes, should be auto-optimized)
     for j in range(numY):
-        for i in range(numX):
-            a[i] = -0.5 * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
-            b[i] = dtInv - 0.5 * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
-            c[i] = -0.5 * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
 
-        uu = U[j, :]
+        a = -0.5 * (MuX[j, :] * Dx[:, 0] + 0.5 * VarX[j, :] * Dxx[:, 0])
+        b = dtInv - 0.5 * (MuX[j, :] * Dx[:, 1] + 0.5 * VarX[j, :] * Dxx[:, 1])
+        c = -0.5 * (MuX[j, :] * Dx[:, 2] + 0.5 * VarX[j, :] * Dxx[:, 2])
+        # for i in range(numX):
+        #     a[i] = -0.5 * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
+        #     b[i] = dtInv - 0.5 * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
+        #     c[i] = -0.5 * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
 
-        tridag(numX, a, b, c, uu)
-        # tridag(a, b, c, uu, Ntridiag=numX)
+        uu = U[j, :numX]
 
+        # tridag(numX, a, b, c, uu)
+        tridag(a, b, c, uu)
+
+    aa = np.empty(numY, dtype=dace.float64)
+    bb = np.empty(numY, dtype=dace.float64)
+    cc = np.empty(numY, dtype=dace.float64)
     # implicit y
+    # TODO DaCe: can this loop be a map? (likely yes, should be auto-optimized)
     for i in range(numX):
-        for j in range(numY):
-            a[j] = -0.5 * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
-            b[j] = dtInv - 0.5 * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
-            c[j] = -0.5 * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
+        aa = -0.5 * (MuY[i, :] * Dy[:, 0] + 0.5 * VarY[i, :] * Dyy[:, 0])
+        bb = dtInv - 0.5 * (MuY[i, :] * Dy[:, 1] + 0.5 * VarY[i, :] * Dyy[:, 1])
+        cc = -0.5 * (MuY[i, :] * Dy[:, 2] + 0.5 * VarY[i, :] * Dyy[:, 2])
+        # for j in range(numY):
+        #     aa[j] = -0.5 * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
+        #     bb[j] = dtInv - 0.5 * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
+        #     cc[j] = -0.5 * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
 
-        yy = ResultE[i, :]
+        yy = ResultE[i, :numY]
 
+        # TODO: DaCe: technically this loop can be rewritten, but then it does not validate if auto-opt is applied. It seems that
+        # updates are not transferred back to ResultE (rather a transient array is created)
+        # yy[:] = dtInv * U[:, i] - 0.5 * V[i, :]
         for j in range(numY):
             yy[j] = dtInv * U[j, i] - 0.5 * V[i, j]
 
-        tridag(
-            numY,
-            a,
-            b,
-            c,
-            yy,
-        )
-        # tridag(a, b, c, yy, Ntridiag=numY)
+        # tridag(
+        #     numY,
+        #     a,
+        #     b,
+        #     c,
+        #     yy,
+        # )
+        tridag(aa, bb, cc, yy)
 
 
-def value(s0: float, strike: float, t: float, alpha: float, nu: float, beta: float, numX: int, numY: int, numT: int, a,
-          b, c, Time, U, V, X, Dx, Dxx, MuX, VarX, Y, Dy, Dyy, MuY, VarY, ResultE):
+# def value(s0: float, strike: float, t: float, alpha: float, nu: float, beta: float, numX: int, numY: int, numT: int, a,
+#           b, c, Time, U, V, X, Dx, Dxx, MuX, VarX, Y, Dy, Dyy, MuY, VarY, ResultE):
+@dace.program
+def value(s0: float, strike: float, t: float, alpha: float, nu: float, beta: float, Time: dace.float64[numT],
+          U: dace.float64[numY, numX], V: dace.float64[numX, numY], X: dace.float64[numX], Dx: dace.float64[numX, 3],
+          Dxx: dace.float64[numX, 3], MuX: dace.float64[numY, numX], VarX: dace.float64[numY, numX],
+          Y: dace.float64[numY], Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3], MuY: dace.float64[numX, numY],
+          VarY: dace.float64[numX, numY], ResultE: dace.float64[numX, numY]):
 
-    # TODO: have this function as DaCe Program itself
     # indX, indY = initGrid(numX, numY, numT, s0, alpha, nu, t, X, Y, Time)
-    initGrid_sdfg = initGrid.to_sdfg()
-    initGrid_sdfg = auto_optimize(initGrid_sdfg, dace.dtypes.DeviceType.CPU)
-    indX, indY = initGrid_sdfg(s0, alpha, nu, t, X, Y, Time, numX=numX, numY=numY, numT=numT)
+    # indX, indY = initGrid(s0, alpha, nu, t, X, Y, Time, numX=numX, numY=numY, numT=numT)
+    indX, indY = initGrid(s0, alpha, nu, t, X, Y, Time)
 
     # initOperator(numX, X, Dx, Dxx)
     # initOperator(numY, Y, Dy, Dyy)
 
-    initOperator_sdfg = initOperator.to_sdfg()
-    initOperator_sdfg = auto_optimize(initOperator_sdfg, dace.dtypes.DeviceType.CPU)
-    initOperator_sdfg(X, Dx, Dxx, N=numX)
-    initOperator_sdfg(Y, Dy, Dyy, N=numY)
+    initOperator(X, Dx, Dxx)
+    initOperator(Y, Dy, Dyy)
 
-    # setPayoff(numX, numY, strike, X, ResultE)
-    setPayoff_sdfg = setPayoff.to_sdfg()
-    # setPayoff_sdfg = auto_optimize(setPayoff_sdfg, dace.dtypes.DeviceType.CPU) # THIS one does not work!!
-    setPayoff_sdfg(strike, X, ResultE, numX=numX, numY=numY)
+    setPayoff(strike, X, ResultE)
 
-    updateParams_sdfg = updateParams.to_sdfg()
-    updateParams_sdfg = auto_optimize(updateParams_sdfg, dace.dtypes.DeviceType.CPU)
-
-    # rollback_sdfg = rollback.to_sdfg()
     for i in range(numT - 2, -1, -1):
 
-        # updateParams(numX, numY, i, alpha, beta, nu, X, Y, Time, MuX, VarX, MuY, VarY)
-
-        updateParams_sdfg(i, alpha, beta, nu, X, Y, Time, MuX, VarX, MuY, VarY, numX=numX, numY=numY, numT=numT)
-        rollback.f(i, a, b, c, Time, U, V, Dx, Dxx, MuX, VarX, Dy, Dyy, MuY, VarY, ResultE)
-        # rollback.f(i,
-        #            a,
-        #            b,
-        #            c,
-        #            Time,
-        #            U,
-        #            V,
-        #            Dx,
-        #            Dxx,
-        #            MuX,
-        #            VarX,
-        #            Dy,
-        #            Dyy,
-        #            MuY,
-        #            VarY,
-        #            ResultE,
-        #            numX=numX,
-        #            numY=numY,
-        #            numZ=max(numX, numY))
+        updateParams(i, alpha, beta, nu, X, Y, Time, MuX, VarX, MuY, VarY)
+        rollback(i, Time, U, V, Dx, Dxx, MuX, VarX, Dy, Dyy, MuY, VarY, ResultE)
 
     res = ResultE[indX, indY]
     return res
 
 
+@dace.program
+def VolCalib(s0: float, t: float, alpha: float, nu: float, beta: float, Time: dace.float64[numT],
+             U: dace.float64[numY, numX], V: dace.float64[numX, numY], X: dace.float64[numX], Dx: dace.float64[numX, 3],
+             Dxx: dace.float64[numX, 3], MuX: dace.float64[numY, numX], VarX: dace.float64[numY, numX],
+             Y: dace.float64[numY], Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3], MuY: dace.float64[numX,
+                                                                                                             numY],
+             VarY: dace.float64[numX, numY], ResultE: dace.float64[numX, numY], result: dace.float64[outer]):
+
+    # tmp = np.empty(outer, dtype=dace.float64)
+    for i in range(outer):
+        strike = 0.001 * i
+        # compute
+        result[i] = value(s0, strike, t, alpha, nu, beta, Time, U, V, X, Dx, Dxx, MuX, VarX, Y, Dy, Dyy, MuY, VarY,
+                          ResultE)
+    # return tmp
+
+
 #main
-dataset_size = "xs"
+dataset_size = "XS"
 outer, numX, numY, numT, s0, t, alpha, nu, beta = utils.getPrefedinedInputDataSet(dataset_size)
 
 #global array allocation
-num_z = max(numX, numY)
-a = np.ndarray(num_z).astype(np.float64)
-b = np.ndarray(num_z).astype(np.float64)
-c = np.ndarray(num_z).astype(np.float64)
+numZ = max(numX, numY)
+# a = np.ndarray(numZ).astype(np.float64)
+# b = np.ndarray(numZ).astype(np.float64)
+# c = np.ndarray(numZ).astype(np.float64)
 V = np.ndarray((numX, numY)).astype(np.float64)
 U = np.ndarray((numY, numX)).astype(np.float64)
 
@@ -325,16 +324,48 @@ result = np.ndarray(outer).astype(np.float64)
 ### main computation kernel
 
 start = time.time()
-for i in range(outer):
-    strike = 0.001 * i
-    # compute
-    result[i] = value(s0, strike, t, alpha, nu, beta, numX, numY, numT, a, b, c, Time, U, V, X, Dx, Dxx, MuX, VarX, Y,
-                      Dy, Dyy, MuY, VarY, ResultE)
+
+VolCalib_sdfg = VolCalib.to_sdfg()
+# VolCalib_sdfg = auto_optimize(VolCalib_sdfg, dace.dtypes.DeviceType.CPU)  # THis one does not work
+
+VolCalib_sdfg(s0,
+              t,
+              alpha,
+              nu,
+              beta,
+              Time,
+              U,
+              V,
+              X,
+              Dx,
+              Dxx,
+              MuX,
+              VarX,
+              Y,
+              Dy,
+              Dyy,
+              MuY,
+              VarY,
+              ResultE,
+              result,
+              numX=numX,
+              numT=numT,
+              numY=numY,
+              numZ=numZ,
+              outer=outer,
+              __tmp112=0)
+
 end = time.time()
 
 print(f"Time in usecs: {(end-start)*1e6}")
-# validate
 
+# validate (currently also printing out actual results for inspection)
+print("Computed results: ", result)
+print("------------")
+print("Expected results: ", utils.getPrefefinedOutputDataSet(dataset_size))
+print("------------")
+print(
+    print(
+        np.linalg.norm(result - utils.getPrefefinedOutputDataSet(dataset_size)) /
+        np.linalg.norm(utils.getPrefefinedOutputDataSet(dataset_size))))
 assert np.allclose(result, utils.getPrefefinedOutputDataSet(dataset_size))
-print(result)
-# TODO

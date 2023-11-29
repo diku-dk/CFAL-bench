@@ -1,0 +1,19 @@
+resolver: lts-21.4
+
+extra-deps:
+- github: acceleratehs/accelerate
+  commit: 17466411109170c4e4361d9980f1cded0eb85efb
+- github: ivogabe/accelerate-llvm
+  commit: 23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de
+  subdirs:
+  - accelerate-llvm
+  - accelerate-llvm-native
+  - accelerate-llvm-ptx
+- github: dpvanbalen/cuda
+  commit: a140e84a905753fd63fc4a4a707d7e60cb1888f3
+- nvvm-0.10.0.1
+- github: llvm-hs/llvm-hs
+  commit: e4b3cfa47e72f094ab109884f18acfc666b0fb7d  # llvm-15
+  subdirs:
+    - llvm-hs
+    - llvm-hs-pure

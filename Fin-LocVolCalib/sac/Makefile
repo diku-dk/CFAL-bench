@@ -1,19 +1,49 @@
-# Cuda won't parallelise
+SAC = ~/repos/sac2c/build_wlir/sac2c_d
+SAC_FLAGS = -Xc -Ofast -d cccall #-profile m#-maxwlur 8 #-check c -ecc 
+CC = gcc
+CFLAGS = -Ofast -march=native -mtune=native -Wall -Wextra -Werror
 
-SAC = sac2c_d
-SAC_FLAGS = -Xc -Ofast
+.PHONY: all float clean
 
-.PHONY: all clean run_small run_medium run_large
+all: seq mt cuda
 
-all: seq mt
+# Tridiagonal solver does not vectorize, so there is little use 
+# in reducing the accuracy.
+float: seq_float mt_float cuda_float
 
-seq: bin/small bin/medium bin/large
+seq: bin/small_seq bin/medium_seq bin/large_seq
 mt: bin/small_mt bin/medium_mt bin/large_mt
-mt: SAC_FLAGS += -t mt_pth
-# TODO Code won't cudarize, have a look at the GPU backend
+mt: SAC_FLAGS += -t mt_pth -minmtsize 12
+cuda: bin/small_cuda bin/medium_cuda bin/large_cuda
+cuda: SAC_FLAGS = -t cuda -Xc -O3 -noemrl -profile c
 
-bin/smal%: src/VolCalib.sac
-	$(SAC) -D OUTER=16 \
+seq_float: bin/small_seq_float bin/medium_seq_float bin/large_seq_float
+mt_float: bin/small_mt_float bin/medium_mt_float bin/large_mt_float
+mt_float: SAC_FLAGS += -t mt_pth -minmtsize 12
+cuda_float: bin/small_cuda_float bin/medium_cuda_float bin/large_cuda_float
+cuda_float: SAC_FLAGS = -t cuda -Xc -O3
+
+bin/tridag_v.o: src/tridag_v.c
+	$(CC) -D REAL=float \
+		  -D NUM_X=256 \
+		  -D VEC=8 \
+		  $(CFLAGS) -c $< -o $@
+
+bin/large_manual: src/manual.sac bin/tridag_v.o
+	$(SAC) -D OUTER=256 \
+		   -D NUM_X=256 \
+		   -D NUM_Y=256 \
+		   -D NUM_T=64 \
+		   -D S0=0.03f \
+		   -D T=5.0f \
+		   -D ALPHA=0.2f \
+		   -D NU=0.6f \
+		   -D BETA=0.5f \
+		   $(SAC_FLAGS) -t mt_pth $< -o $@
+
+bin/small_%: src/VolCalib.sac
+	$(SAC) -D DOUBLE=1 \
+		   -D OUTER=16 \
 		   -D NUM_X=32 \
 		   -D NUM_Y=256 \
 		   -D NUM_T=256 \
@@ -24,8 +54,9 @@ bin/smal%: src/VolCalib.sac
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
 
-bin/mediu%: src/VolCalib.sac
-	$(SAC) -D OUTER=128 \
+bin/medium_%: src/VolCalib.sac
+	$(SAC) -D DOUBLE=1 \
+	       -D OUTER=128 \
 		   -D NUM_X=256 \
 		   -D NUM_Y=32 \
 		   -D NUM_T=64 \
@@ -36,8 +67,9 @@ bin/mediu%: src/VolCalib.sac
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
 
-bin/larg%: src/VolCalib.sac
-	$(SAC) -D OUTER=256 \
+bin/large_%: src/VolCalib.sac
+	$(SAC) -D DOUBLE=1 \
+	       -D OUTER=256 \
 		   -D NUM_X=256 \
 		   -D NUM_Y=256 \
 		   -D NUM_T=64 \
@@ -48,17 +80,41 @@ bin/larg%: src/VolCalib.sac
 		   -D BETA=0.5 \
 		   $(SAC_FLAGS) $< -o $@
 
-run_small:
-	bin/small
-	bin/small_mt -mt 4
+bin/small_%_float: src/VolCalib.sac
+	$(SAC) -D OUTER=16 \
+		   -D NUM_X=32 \
+		   -D NUM_Y=256 \
+		   -D NUM_T=256 \
+		   -D S0=0.03f \
+		   -D T=5.0f \
+		   -D ALPHA=0.2f \
+		   -D NU=0.6f \
+		   -D BETA=0.5f \
+		   $(SAC_FLAGS) $< -o $@
 
-run_medium:
-	bin/medium
-	bin/medium_mt -mt 4
+bin/medium_%_float: src/VolCalib.sac
+	$(SAC) -D OUTER=128 \
+		   -D NUM_X=256 \
+		   -D NUM_Y=32 \
+		   -D NUM_T=64 \
+		   -D S0=0.03f \
+		   -D T=5.0f \
+		   -D ALPHA=0.2f \
+		   -D NU=0.6f \
+		   -D BETA=0.5f \
+		   $(SAC_FLAGS) $< -o $@
 
-run_large:
-	bin/large
-	bin/large_mt -mt 4
+bin/large_%_float: src/VolCalib.sac
+	$(SAC) -D OUTER=256 \
+		   -D NUM_X=256 \
+		   -D NUM_Y=256 \
+		   -D NUM_T=64 \
+		   -D S0=0.03f \
+		   -D T=5.0f \
+		   -D ALPHA=0.2f \
+		   -D NU=0.6f \
+		   -D BETA=0.5f \
+		   $(SAC_FLAGS) $< -o $@
 
 clean:
 	$(RM) bin/*
