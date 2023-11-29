@@ -1,5 +1,6 @@
 :Namespace nbody_naive
 
+⍝ calc←{{p v⊣p+←t×v←v+t×+/d×⍤2⊢m×[1]3*⍨÷.5*⍨1e¯9++⌿×⍨d←∘.-⍤1⍨p⊣p v←⍵}⍣k⊢⍵⊣k t m←⍺}
 calc←{{p v⊣p+←t×v←v+t×{+⌿d×[0]m×3*⍨÷.5*⍨1e¯9++/×⍨d←⍺-[1]⍵}⍤1 99⍨⊃p v←⍵}⍣k⊢⍵⊣k t m←⍺}
 
 Run←{K T N←3↑⍵,10 0.1 1000
