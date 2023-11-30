@@ -1,13 +1,20 @@
 """
-    Naive python implementation of FlashAttention benchmark
+    DaCe python implementation of FlashAttention benchmark
     
     Note: this is in single precision
 """
+
+# TODOs:
+# - MatmulT: avoid transposition
 
 import numpy as np
 import math
 import time
 import argparse
+import dace
+from dace.transformation.auto.auto_optimize import auto_optimize
+
+N, d = (dace.symbol(s, dtype=dace.int32) for s in ('N', 'd'))
 
 
 def scale(x, m: int, n: int):
@@ -23,15 +30,18 @@ def stabilize(x, m: int, n: int):
         x[i, :] -= maximum
 
 
+@dace.program
 def exp_arr(x):
     return np.exp(x)
 
 
+@dace.program
 def matmul(a, b):
     return a @ b
 
 
-def matmulT(a, b):
+@dace.program
+def matmulT(a: dace.float32[d, d], b: dace.float32[N, d]):
     return a @ np.transpose(b)
 
 
@@ -39,11 +49,13 @@ def l2(x):
     return math.sqrt(np.sum(x * x))
 
 
-def FlashAttention(Q, K, V, O, P_block, d, N):
+@dace.program
+def FlashAttention(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d], O: dace.float32[N, d]):
     # Q, K, V, and O are Nxd matrices
     # P is a d x d matrix
 
-    O_i = np.empty((d, d)).astype(np.float32)
+    O_i = np.empty((d, d), dtype=Q.dtype)
+    P_block = np.empty((d, N), dtype=Q.dtype)
     for i in range(N // d):
         #P_block = matmul(Q[i], K^t). Q[i] is d x d, K is N x d.
         # Note: original implementation uses pointers to select the block
@@ -64,9 +76,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('d', type=int, help="d")
     parser.add_argument('N', type=int, help="N")
+    parser.add_argument("-t", "--target", default='cpu', choices=['cpu', 'gpu'], help="Target platform")
+
     args = vars(parser.parse_args())
     N = args["N"]
     d = args["d"]
+    target = args["target"]
 
     assert N % d == 0, "N must divide d"
 
@@ -79,9 +94,17 @@ if __name__ == "__main__":
     O = np.empty((N, d)).astype(np.float32)
     P_block = np.empty((d, N)).astype(np.float32)
 
+    # Parsing SDFG
+    sdfg = FlashAttention.to_sdfg()
+    if target == "cpu":
+        sdfg = auto_optimize(sdfg, dace.dtypes.DeviceType.CPU)
+    else:
+        sdfg = auto_optimize(sdfg, dace.dtypes.DeviceType.GPU)
+    sdfg.compile()
+
     ### Start
     start = time.time()
-    FlashAttention(Q, K, V, O, P_block, d, N)
+    sdfg(Q=Q, K=K, V=V, O=O, d=d, N=N)
     end = time.time()
 
     ### Check
