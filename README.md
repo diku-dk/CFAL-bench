@@ -26,9 +26,9 @@ In order to suggest a new benchmark, please do perform the following steps:
 
 | BM name     | description | seq/par baselines | inclusion in CFAL   | Accelerate | APL | DaCe   | Futhark | SaC |
 | ----------- | ----------- | ----------------- | ------------------- | ---------- | --- | ------ | ------- | --- |
-| MG          | done        | GPU, Fortran, SAC | VERY LIKELY         |            | YES | YES    | YES     | YES |
-| nbody-naive | done        | Seq C             | under consideration |            |     | YES    | YES     | YES |
+| MG          | done        | GPU, Fortran, SAC | VERY LIKELY         | YES        | YES | YES    | YES     | YES |
+| nbody-naive | done        | Seq C             | under consideration | YES        |     | YES    | YES     | YES |
 | Fin-LocVolC | done        | GPU,OMP, Haskell  | under consideration |            |     | Almost | YES     | YES |
 | FFT         | done        |                   |                     |            |     |        |         |     |
-
+| Quickhull   | done        |                   |                     | YES        |     |        | ?       | ?   |
 
