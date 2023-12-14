@@ -1,0 +1,918 @@
+
+********************************************************************************
+*** Overall Profile                                                          ***
+********************************************************************************
+time used                               :      0.59 sec
+
+********************************************************************************
+*** Memory Profile                                                           ***
+********************************************************************************
+
+*** Memory operation counters:                                              
+ ## For Arrays                                                              
+no. calls to (m)alloc                   :  4251925
+no. calls to free                       :  4251596
+no. reuses of memory                    :  125154
+ ## For Descriptors                                                         
+no. calls to (m)alloc                   :  4251926
+no. calls to free                       :  4251599
+
+*** Memory usage counters:                                                  
+total size of memory allocated          :    314728 Kbytes
+total size of memory freed              :    330253 Kbytes
+size of largest single allocation       :     15625 Kbytes
+size of memory footprint                :  18014398509466463 Kbytes
+
+********************************************************************************
+*** main( hidden _rso_661_stdin, hidden _rso_660_TheBenchmarkObject, hidden  ***
+********************************************************************************
+--- Application 0
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  908590
+   no. calls to free                    :  908588
+   no. reuses of memory                 :  28182
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  908591
+   no. calls to free                    :  908591
+--- Application 4
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  7515
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 8
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  5500
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  5500
+--- Application 10
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  5760
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  5760
+   no. calls to free                    :  0
+--- Application 13
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2167
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2167
+--- Application 15
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  2173
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  2173
+   no. calls to free                    :  0
+--- Application 19
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  718
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 24
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  357440
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  357440
+--- Application 25
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  357440
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  357440
+   no. calls to free                    :  0
+--- Application 26
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+   no. reuses of memory                 :  5526
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+--- Application 28
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  68096
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  68096
+--- Application 29
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  68096
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  68096
+   no. calls to free                    :  0
+--- Application 30
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+   no. reuses of memory                 :  1005
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+--- Application 34
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  6474
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 37
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  118
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  118
+--- Application 40
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  5751
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  5751
+--- Application 42
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  5751
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  5751
+   no. calls to free                    :  0
+--- Application 45
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2057
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2057
+--- Application 47
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  2057
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  2057
+   no. calls to free                    :  0
+--- Application 51
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  797
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 56
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  319104
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  319104
+--- Application 57
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  319104
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  319104
+   no. calls to free                    :  0
+--- Application 58
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  4985
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+--- Application 60
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  88768
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  88768
+--- Application 61
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  88768
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  88768
+   no. calls to free                    :  0
+--- Application 62
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  1386
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+--- Application 66
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  6290
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 69
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+--- Application 72
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  93
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  93
+--- Application 74
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  93
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  93
+   no. calls to free                    :  0
+--- Application 77
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  27
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  27
+--- Application 79
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  27
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  27
+   no. calls to free                    :  0
+--- Application 83
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  21
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 88
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  64
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  64
+--- Application 89
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  64
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  64
+   no. calls to free                    :  0
+--- Application 90
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+--- Application 92
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  498752
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  498752
+--- Application 93
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  498752
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  498752
+   no. calls to free                    :  0
+--- Application 94
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  7793
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+--- Application 98
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  2
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+
+********************************************************************************
+*** QuickHull__Cond_87( bool _cwc_1030, double[*] P)                         ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  1
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  1
+
+********************************************************************************
+*** QuickHull( double[1000000,2] P)                                          ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  6
+   no. calls to free                    :  1
+   no. reuses of memory                 :  1
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  6
+   no. calls to free                    :  1
+
+********************************************************************************
+*** _dup_6489_BlockHoare__Loop_24( int{0} _flat_65, double[2] argmax, double ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+
+********************************************************************************
+*** _dup_6480_BlockHoare__Cond_23( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  7793
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_6479_BlockHoare__Loop_21( int _iveras_51434, int _iveras_51433, dou ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  498816
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  498816
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_6478_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  498815
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  498815
+
+********************************************************************************
+*** _dup_6483_BlockHoare__Cond_20( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  7829
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_6482_BlockHoare__Loop_18( int _iveras_51432, int _iveras_51431, dou ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  501120
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  501120
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_6481_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  501120
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  501120
+
+********************************************************************************
+*** _dup_6486_BlockHoare__Cond_16( int[64] offsetsl, int[64] offsetsr, int s ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  15366
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_4978_BlockHoare__Loop_8( int _iveras_51546, int _iveras_51545, doub ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  84
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  84
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_4976_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  84
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  84
+
+********************************************************************************
+*** _dup_4983_BlockHoare__Loop_3( int _iveras_51540, int _iveras_51539, doub ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  44
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  44
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_4981_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  44
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  44
+
+********************************************************************************
+*** _dup_4986_BlockHoare__Cond_1( bool _flat_134, int r, int l, double[10000 ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  19
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_5659_FindHull__Cond_40( bool _flat_231, int{1} hull_count, double[1 ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  2
+   no. calls to free                    :  0
+   no. reuses of memory                 :  1
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  2
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_5614_BlockHoare__Loop_24( int{0} _flat_65, double[2] argmax, double ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  2
+
+********************************************************************************
+*** _dup_5604_BlockHoare__Cond_23( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  6373
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_10766_BlockHoare__Loop_21( int _iveras_51402, int _iveras_51401, do ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  407936
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  407936
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_10765_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  407935
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  407935
+
+********************************************************************************
+*** _dup_5608_BlockHoare__Cond_20( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+   no. reuses of memory                 :  1455
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  1
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_10778_BlockHoare__Loop_18( int _iveras_51400, int _iveras_51399, do ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  93184
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  93184
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_10777_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  93184
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  93184
+
+********************************************************************************
+*** _dup_5611_BlockHoare__Cond_16( int[64] offsetsl, int[64] offsetsr, int s ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  7703
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_5619_BlockHoare__Loop_8( int _iveras_51466, int _iveras_51465, doub ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  56
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  56
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_5617_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  56
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  56
+
+********************************************************************************
+*** _dup_5624_BlockHoare__Loop_3( int _iveras_51460, int _iveras_51459, doub ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  52
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  52
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_5622_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  52
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  52
+
+********************************************************************************
+*** _dup_5627_BlockHoare__Cond_1( bool _flat_134, int r, int l, double[10000 ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+   no. reuses of memory                 :  9
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  0
+
+********************************************************************************
+*** FindHull__Cond_40( bool _flat_231, int hull_count, double[1000000,2] hul ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  650
+   no. calls to free                    :  658
+   no. reuses of memory                 :  325
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  650
+   no. calls to free                    :  658
+
+********************************************************************************
+*** _dup_5144_BlockHoare__Loop_24( int{0} _flat_65, double[2] argmax, double ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  118
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  118
+
+********************************************************************************
+*** _dup_5134_BlockHoare__Cond_23( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+   no. reuses of memory                 :  6566
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_9473_BlockHoare__Loop_21( int _iveras_51558, int _iveras_51557, dou ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  424000
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  424000
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_9472_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  423941
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  423941
+
+********************************************************************************
+*** _dup_5138_BlockHoare__Cond_20( double[2] argmax, double max, int[64] off ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+   no. reuses of memory                 :  1020
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  59
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_9487_BlockHoare__Loop_18( int _iveras_51556, int _iveras_51555, dou ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  69056
+   no. calls to free                    :  0
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  69056
+   no. calls to free                    :  0
+
+********************************************************************************
+*** _dup_9486_set_max__Cond_0( bool _flat_48, double[2] argmax, double[2] p, ***
+********************************************************************************
+
++++ System Memory:                                                          
+ ## For Arrays                                                              
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  69056
+   no. reuses of memory                 :  0
+ ## For Descriptors                                                         
+   no. calls to (m)alloc                :  0
+   no. calls to free                    :  69056
+
+********************************************************************************
+*** Function Profiles                                                        ***
+********************************************************************************
+
+********************************************************************************
+*** main( hidden _rso_661_stdin, hidden _rso_660_TheBenchmarkObject, hidden  ***
+********************************************************************************
+time used                               :      0.59 sec    100.00 %

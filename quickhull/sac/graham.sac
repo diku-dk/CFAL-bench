@@ -1,0 +1,92 @@
+inline
+double[n, 2] swap(double[n, 2] P, int x, int y)
+{
+    return {[i] -> P[[y]] | [x] <= [i] <[x+1];
+            [i] -> P[[x]] | [y] <= [i] <[y+1];
+            [i] -> P[[i]] };
+
+}
+
+inline
+double orient(double[2] p, double[2] q, double[2] u)
+{
+    return (p[0] - u[0]) * (q[1] - u[1]) - (p[1] - u[1]) * (q[0] - u[0]);
+}
+
+double[n,2] sort (double[n,2] P)
+{
+    return P;
+}
+
+double[m,2] Graham (double[n,2] P) | m <= n
+
+{
+
+    /* 13 GB/s (sequential) */
+
+    argmax = 0;
+
+    for (i = 1; i < n; i++) {
+
+        if ((P[i,1] < P[argmax,1]) || 
+
+            (P[i,1] == P[argmax,1] && P[i,0] < P[argmax,0])) 
+
+        {
+
+            argmax = i;
+
+        }
+
+    }
+
+​
+
+    P = swap (P, 0, argmax);
+
+​
+
+    /* 500 MB/s (parallel) 100 MB/s (sequential) */
+
+    P = sort (P); /* State-of-the-art for CPU */
+
+​
+
+    /* 1.7 GB/s (sequential)
+
+     * Probably bound by branch-misses. */
+
+    sp = 2; /* First two elements are always on hull */
+
+    for (counter = 2; counter < n; counter++) {
+
+        while (sp > 0 && orient(P[sp - 1], P[sp], P[counter]) <= 0.0) {
+
+            sp--;
+
+        }
+
+        sp++;
+
+        P[sp] = P[counter];
+
+    }
+
+​
+
+    return take ([sp + 1],P);
+
+}
+
+​
+
+int main () {
+
+    P = tod (reshape ([10,2], iota(20)));
+
+    /* StdIO::print ( your expression here ); */
+
+    return 0;
+
+}
+

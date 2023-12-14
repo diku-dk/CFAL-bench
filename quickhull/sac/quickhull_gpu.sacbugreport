@@ -1,0 +1,139 @@
+/**********************************************************************
+ *
+ * SAC bug report: quickhull_gpu.sacbugreport
+ *
+ **********************************************************************
+ *
+ * Automatically generated on wo 22 nov 2023 12:59:48 CET
+ *
+ * using sac2c 1.3.3-MijasCosta-1092-g67688-dirty
+ * built 2023-11-17T15:54:46.
+ * by user thomas on host thomas-laptop.
+ *
+ * The compiler was called by
+ *  /home/thomas/repos/sac2c/build_wlir/sac2c_d -t cuda -Xc -O3 src/quickhull_gpu.sac -o bin/quickhull_gpu_cuda
+ *
+ * The compiler crashed in
+ *  phase: scp (Loading SAC program)
+ *  sub phase: prs (Parsing input file)
+ *
+ * What follows is the contents of src/quickhull_gpu.sac.
+ *
+ **********************************************************************/
+
+use Array: all;
+use Benchmarking: all;
+use FibreIO: all;
+use Math: all;
+use StdIO: {print, printf};
+
+#define N 1000000
+#define PI 3.1415926535897932384626433832795028841971693993751058209749445923078164062
+
+/* double[N, 2] x, y, int[N] label, double[N] orientation */
+
+
+inline
+double[N, 2] swap(double[N, 2] P, int a, int b)
+{
+  temp = P[a];
+  P[a] = P[b];
+  P[b] = temp;
+  return P;
+}
+
+inline 
+double orient(double[2] p, double[2] q, double[2] u)
+{
+  return (p[0] - u[0]) * (q[1] - u[1]) - (p[1] - u[1]) * (q[0] - u[0]);
+}
+
+inline
+double[2] min_x(double[2] a, double[2] b)
+{
+  return (a[0] < b[0] || (a[0] == b[0] && a[1] < b[1])) ? a : b;
+}
+
+inline
+double[2] max_x(double[2] a, double[2] b)
+{
+  return (a[0] > b[0] || (a[0] == b[0] && a[1] > b[1])) ? a : b;
+}
+
+/* Returns P', c1, c2 such that [0, c1[ has o < 0, [c1, c2] has o > 0 */
+double[N, 2], int, int Partition(double[N, 2] P, double[N] o)
+{
+  c1 = sum({iv -> toi(o[iv] > 0d)});
+  c2 = c1 + sum({iv -> toi(o[iv] < 0d)});
+
+  /* We need the inverse of a prefix sum. P[iv] needs to go to 
+     sum({jv -> toi(o[jv] < 0) | jv < iv}) if toi[jv] < 0 */
+}
+
+double[., .] QuickHull(double[N, 2] P)
+{
+  hull = genarray(shape(P), 0d);
+  labels = genarray(shape(P), 1);
+  nr_of_labels = 1;
+
+  /* [segment[j], segment[j + 1][ have label j */
+  segments = genarray(shape(P), -1);
+
+  p, q = with {
+    ([0] <= iv < [N]): (P[iv], P[iv]);
+  }: (fold(min_x, P[0]), fold(max_x, P[0]));
+
+  hull[0] = p;
+  hull[1] = q;
+
+  o = {iv -> orient(p, q, P[iv])};
+
+  segments[0] = 0;
+  P, segments[1], segments[2] = Partition(P, o);
+
+  return hull;
+}
+
+double[N, 2] CreateCircle()
+{
+  return {[i] -> [cos(tod(2 * i) * PI / tod(N)), 
+                  sin(tod(2 * i) * PI / tod(N))]
+               | [i] < [N]};
+}
+
+double[N, 2] CreateQuad()
+{
+  return {[i] -> [tod(i) / tod(N), (tod(i) / tod(N)) * (tod(i) / tod(N))]
+               | [i] < [N]};
+}
+
+double[N, 2] CreateHyperbola(double A)
+{
+  return {[i] -> [tod(i + 1) / tod(N), tod(N) * A / tod(i + 1)]
+               | [i] < [N]};
+}
+
+int main()
+{
+  P = FibreScanDoubleArray();
+  P = reshape([shape(P)[0] / 2, 2], P);
+
+  i_bench = getInterval("bench", 1);
+  start(i_bench);
+  hull = QuickHull(P);
+  end(i_bench);
+
+  print(shape(hull));
+
+  time, unit = returnResultUnit(i_bench);
+  printf("This took %lf ms\n", time * 1e3);
+  return 0;
+}
+
+
+/**********************************************************************
+ *
+ * End of bug report
+ *
+ **********************************************************************/
+

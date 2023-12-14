@@ -135,10 +135,11 @@ BlockHoare(double[N, 2] P, int l, int r, double[2] p, double[2] q)
             Pl, Pr = swap(P[l], P[r]);
             P[l] = Pl;
             P[r] = Pr;
-            //P = swap(P, l, r);
+//            P = swap(P, l, r);
         }
     }
 
+//  return (P, l, argmax);
     return (P, l, P[argmax]);
 }
 
