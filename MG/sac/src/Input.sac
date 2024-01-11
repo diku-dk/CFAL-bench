@@ -8,6 +8,7 @@ import RNG: all;
 use Array: all;
 use StdIO: all;
 
+inline
 double[.] swap(double[.] list, int i, int j)
 {
   tmp = list[i];
@@ -16,6 +17,7 @@ double[.] swap(double[.] list, int i, int j)
   return list;
 }
 
+inline
 int, double[.] partition(double[.] list, int left, int right, int pivot)
 {
   pivotValue = list[pivot];
@@ -33,6 +35,7 @@ int, double[.] partition(double[.] list, int left, int right, int pivot)
   return (storeIndex, list);
 }
 
+inline
 double, double[.] quickselect(double[.] list, int left, int right, int k)
 {
   if (left == right) {
@@ -52,6 +55,7 @@ double, double[.] quickselect(double[.] list, int left, int right, int k)
 }
 
 /* Returns the indices of the k largest numbers */
+inline
 int[.] largest(double[.] x, int k)
 {
   n = shape(x)[0];
@@ -70,6 +74,7 @@ int[.] largest(double[.] x, int k)
 }
 
 /* Returns the indices of the k smallest numbers */
+inline
 int[.] smallest(double[.] x, int k)
 {
   n = shape(x)[0];
@@ -87,6 +92,7 @@ int[.] smallest(double[.] x, int k)
   return result;
 }
 
+inline
 int[3] col_maj(int k, int[3] shape)
 {
   n0 = shape[0];
@@ -106,7 +112,7 @@ double[.] LCG_array(ulong seed, int n)
 {
   res = genarray([n], 0d);
 
-  res[0] = tod(seed) * Math::pow(2d, -46d);
+  res[0] = tod(seed) * 0x1p-46;
   for (i = 1; i < n; i++) {
     random, seed = LCG(seed);
     res[i] = random;
@@ -128,6 +134,8 @@ double[., ., .] init(int n)
                                     n * n) 
                        | [k] < [n]};
   random_values = reshape([n * n * n], random_values);
+
+//  random_values = LCG_array(314159265ul, n * n * n);
 
   ones = col_maj(largest(random_values, 10), shape);
   minusones = col_maj(smallest(random_values, 10), shape);

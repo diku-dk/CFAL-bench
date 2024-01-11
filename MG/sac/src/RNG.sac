@@ -12,8 +12,11 @@ ulong pow(ulong a, int b)
 
 double, ulong LCG(ulong previous)
 {
-  next = (pow(5ul, 13) * previous) % pow(2ul, 46);
-  return (tod(next) * Math::pow(2d, -46d), next);
+  /* We precompute the constants as the pow is not evaluated at compile time. */
+//  next = (pow(5ul, 13) * previous) % pow(2ul, 46);
+//  return (tod(next) * Math::pow(2d, -46d), next);
+  next = 1220703125ul * previous % 70368744177664ul;
+  return (tod(next) * 0x1p-46, next);
 }
 
 /* Directly calculates the kth number of LCG
@@ -23,7 +26,8 @@ double, ulong LCG(ulong previous)
    the C standard! */
 ulong LCG_skip(ulong seed, int k)
 {
-  a = pow(5ul, 13);
+  a = 1220703125ul;
+//  a = pow(5ul, 13);
 
   b = seed;
   t = a;
@@ -32,9 +36,11 @@ ulong LCG_skip(ulong seed, int k)
      a mod 2^46, so we do not need the NPB hacks. */
   while (k != 0) {
     if (k % 2 == 1) {
-      b = (b * t) % pow(2ul, 46);
+//      b = (b * t) % pow(2ul, 46);
+      b = (b * t) % 70368744177664ul;
     }
-    t = (t * t) % pow(2ul, 46);
+//    t = (t * t) % pow(2ul, 46);
+    t = (t * t) % 70368744177664ul;
     k /= 2;
   }
 
@@ -47,5 +53,5 @@ double LCG_direct(ulong seed, int k)
   b = LCG_skip(seed, k);
 
   /* Conversion of b is exact as IEEE754 has 52 bits of mantissa. */
-  return tod(b) * Math::pow(2d, -46d);
+  return tod(b) * 0x1p-46;
 }
