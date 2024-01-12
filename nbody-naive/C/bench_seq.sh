@@ -30,6 +30,9 @@ mkdir -p "$4"
 make clean
 make -j2
 
+printf 'p,mean,stddev\n' > "${outfile}"
+printf '1,' >> "${outfile}"
+
 i=1
 {
 while [ $i -le "$runs" ]
@@ -37,4 +40,4 @@ do
     ./nbody_bench "$n" "$iter"
     i=$(( i + 1 ))
 done
-} | variance > "$outfile"
+} | variance >> "$outfile"
