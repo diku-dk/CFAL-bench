@@ -129,6 +129,10 @@ int main(int argc, char **argv)
     double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
                       (double) (tv2.tv_sec - tv1.tv_sec);
 
+    fprintf(stderr, "Sequential nbody with %d bodies, %d iterations.\n"
+                    "This took %lfs.\n"
+                    "Compute rate in Gflops/s: ",
+                    n, iterations, duration);
     printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
 
     free_points(positions);
