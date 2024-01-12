@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
-#SBATCH --output=run.out
+#SBATCH --output=omp.out
 
 # No idea why this is necessary, something
 # with slurm and the FPGA
@@ -32,14 +32,19 @@ mkdir -p "$4"
 make clean
 make -j
 
+printf 'p,mean,stddev\n' > "${outfile}"
+
 p=1
-while [ $p -ne "$pmax" ]
+while [ $p -le "$pmax" ]
 do
-    i=1
-    while [ $i -ne "$runs" ]
-    do
-        OMP_NUM_THREADS="$p" ./nbody_omp "$n" "$iter" >> "${outfile}_${p}"
-        i=$(( i + 1 ))
-    done
+    printf '%d' "$p" >> "${outfile}"
+    {
+        i=1
+        while [ $i -le "$runs" ]
+        do
+            OMP_NUM_THREADS="$p" ./nbody_omp "$n" "$iter" >> "${outfile}_${p}"
+            i=$(( i + 1 ))
+        done
+    } | variance >> "${outfile}"
     p=$(( 2 * p ))
 done

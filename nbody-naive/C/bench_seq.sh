@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
-#SBATCH --output=run.out
+#SBATCH --output=seq.out
 
 # No idea why this is necessary, something
 # with slurm and the FPGA
@@ -31,8 +31,10 @@ make clean
 make -j2
 
 i=1
-while [ $i -ne "$runs" ]
-    do
-        ./nbody_bench "$n" "$iter" >> "$outfile"
-        i=$(( i + 1 ))
-    done
+{
+while [ $i -le "$runs" ]
+do
+    ./nbody_bench "$n" "$iter"
+    i=$(( i + 1 ))
+done
+} | variance > "$outfile"
