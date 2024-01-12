@@ -42,7 +42,7 @@ do
         i=1
         while [ $i -le "$runs" ]
         do
-            OMP_NUM_THREADS="$p" ./nbody_omp "$n" "$iter" >> "${outfile}_${p}"
+            OMP_NUM_THREADS="$p" ./nbody_omp "$n" "$iter"
             i=$(( i + 1 ))
         done
     } | variance >> "${outfile}"
