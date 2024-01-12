@@ -52,13 +52,14 @@ double pow3(double x)
 /* 18 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
-    /* Breaks vectorization with at least GCC 11.4.0 and 12.3.0 */
-    /* TODO file issue with gcc, also block these loops to avoid L1 misses */
     #pragma omp parallel for
     for (int i = 0; i < n; i++) {
         accel.x[i] = 0.0;
         accel.y[i] = 0.0;
         accel.z[i] = 0.0;
+        double ax = 0.0;
+        double ay = 0.0;
+        double az = 0.0;
         /* Loop body is (worst case n != 0) 18 flops */
         for (int j = 0; j < n; j++) {
             Point buf;
@@ -78,10 +79,13 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
                 buf.y *= masses[j] / n;
                 buf.z *= masses[j] / n;
             }
-            accel.x[i] += buf.x;
-            accel.y[i] += buf.y;
-            accel.z[i] += buf.z;
+            ax += buf.x;
+            ay += buf.y;
+            az += buf.z;
         }
+        accel.x[i] = ax;
+        accel.y[i] = ay;
+        accel.z[i] = az;
     }
 }
 
