@@ -49,37 +49,34 @@ double pow3(double x)
 }
 
 /* 18 n^2 flops */
-void accelerateAll(Points accel, Points positions, double *masses, 
-                   Points buf, int n)
+void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
         accel.x[i] = 0.0;
         accel.y[i] = 0.0;
         accel.z[i] = 0.0;
-        /* Loop body is (worst case n != 0) 15 flops */
+        /* Loop body is (worst case n != 0) 18 flops */
         for (int j = 0; j < n; j++) {
-            buf.x[j] = positions.x[i] - positions.x[j];
-            buf.y[j] = positions.y[i] - positions.y[j],
-            buf.z[j] = positions.z[i] - positions.z[j]; 
+            Point buf;
+            buf.x = positions.x[i] - positions.x[j];
+            buf.y = positions.y[i] - positions.y[j],
+            buf.z = positions.z[i] - positions.z[j]; 
             /* n = ||positions[i] - positions[j]||^3 */
-            double n = pow3(sqrt(buf.x[j] * buf.x[j] + 
-                                 buf.y[j] * buf.y[j] + 
-                                 buf.z[j] * buf.z[j]));
+            double n = pow3(sqrt(buf.x * buf.x + 
+                                 buf.y * buf.y + 
+                                 buf.z * buf.z));
             if (n == 0) {
-                buf.x[j] = 0.0;
-                buf.y[j] = 0.0;
-                buf.z[j] = 0.0;
+                buf.x = 0.0;
+                buf.y = 0.0;
+                buf.z = 0.0;
             } else {
-                buf.x[j] *= masses[j] / n;
-                buf.y[j] *= masses[j] / n;
-                buf.z[j] *= masses[j] / n;
+                buf.x *= masses[j] / n;
+                buf.y *= masses[j] / n;
+                buf.z *= masses[j] / n;
             }
-        }
-        /* 3 flops */
-        for (int j = 0; j < n; j++) {
-            accel.x[i] += buf.x[j];
-            accel.y[i] += buf.y[j];
-            accel.z[i] += buf.z[j];
+            accel.x[i] += buf.x;
+            accel.y[i] += buf.y;
+            accel.z[i] += buf.z;
         }
     }
 }
@@ -88,9 +85,9 @@ void accelerateAll(Points accel, Points positions, double *masses,
  * initialized.
  * 18n^2 + 12n flops */
 void advance(Points positions, Points velocities, double *masses,
-             Points accel, Points buf, double dt, int n)
+             Points accel, double dt, int n)
 {
-    accelerateAll(accel, positions, masses, buf, n);
+    accelerateAll(accel, positions, masses, n);
 
     for (int i = 0; i < n; i++) {
         velocities.x[i] += accel.x[i] * dt;
@@ -115,7 +112,6 @@ int main(int argc, char **argv)
     Points positions = alloc_points(n);
     Points velocities = alloc_points(n);
     Points accel = alloc_points(n);
-    Points buf = alloc_points(n);
     double *masses = (double *)malloc(n * sizeof(double));
 
     init(positions, n);
@@ -123,7 +119,7 @@ int main(int argc, char **argv)
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     for (int i = 0; i < iterations; i++) {
-        advance(positions, velocities, masses, accel, buf, 0.1, n);
+        advance(positions, velocities, masses, accel, 0.1, n);
     }
     gettimeofday(&tv2, NULL);
     double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
@@ -138,7 +134,6 @@ int main(int argc, char **argv)
     free_points(positions);
     free_points(velocities);
     free_points(accel);
-    free_points(buf);
     free(masses);
 
     return EXIT_SUCCESS;
