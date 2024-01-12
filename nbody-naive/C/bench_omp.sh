@@ -37,7 +37,7 @@ printf 'p,mean,stddev\n' > "${outfile}"
 p=1
 while [ $p -le "$pmax" ]
 do
-    printf '%d' "$p," >> "${outfile}"
+    printf '%d,' "$p" >> "${outfile}"
     {
         i=1
         while [ $i -le "$runs" ]
