@@ -1,3 +1,26 @@
+/**********************************************************************
+ *
+ * SAC bug report: nbody.sacbugreport
+ *
+ **********************************************************************
+ *
+ * Automatically generated on vr 12 jan 2024 10:00:19 CET
+ *
+ * using sac2c 1.3.3-MijasCosta-1125-g8ae1e-dirty
+ * built 2024-01-12T09:44:41.
+ * by user thomas on host thomas-laptop.
+ *
+ * The compiler was called by
+ *  /home/thomas/sac2c/build_CFAL/sac2c_d -D N=4096 -D ITER=10 -t cuda -Xc -O3 -doPFD src/nbody.sac -o bin/nbody_cuda
+ *
+ * The compiler crashed in
+ *  phase: cuda (Automatic parallelisation for GPUs)
+ *  sub phase: pfd (CUDA Partial folding)
+ *
+ * What follows is the contents of src/nbody.sac.
+ *
+ **********************************************************************/
+
 use Array: all;
 use Math: all;
 use StdIO: all;
@@ -24,20 +47,10 @@ double sicsaL2Norm(double[.] x)
 }
 
 inline
-double L2(double[.] x)
-{
-    return sqrt(sum(x * x));
-}
-
-inline
 double[3] acceleration(double[3] pos1, double[3] pos2, double mass)
 {
-  dir = pos1 - pos2;
-  return all(dir == 0.0) ? 
-        [0.0, 0.0, 0.0] :
-        mass * dir / (L2(dir) * L2(dir) * L2(dir));
-//  n = sicsaL2Norm(pos2 - pos1);
-//  return (pos2 - pos1) * mass / (n * n * n);
+  n = sicsaL2Norm(pos2 - pos1);
+  return (pos2 - pos1) * mass / (n * n * n);
 }
 
 inline
@@ -80,12 +93,20 @@ int main()
 
     end(itime);
 
-    fprintf(stderr, "Sum is %lf\n", sum(positions));
+    print(sum(positions));
 
     time, unit = returnResultUnit(itime);
-    fprintf(stderr, "This took %f%s.\n", time, unit);
-    printf("%f\n", 
-        (18.0 * tod(N) * tod(N) + 12.0 * tod(N)) * tod(ITER) / 1e9 / time);
+    printf("This took %f%s.\n", time, unit);
+    printf("Compute rate: %f Gflops/%s.\n",
+              3.0 * 16.0 * tod(N) * tod(N) * tod(ITER) / 1e9 / time, unit);
 
     return 0;
 }
+
+
+/**********************************************************************
+ *
+ * End of bug report
+ *
+ **********************************************************************/
+
