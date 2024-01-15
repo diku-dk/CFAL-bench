@@ -4,15 +4,19 @@ CUDA_LPATH := host/cuda
 
 DYLIB := so                          # adjust to your system (e.g. so)
 
-SAC2C := sac2c_p                     # may need to adjust if sac2c is not in your PATH
-SAC2CFLAGS := -maxwlur 27 -Xc -Ofast # when changing you may want to include -check c
+SAC2C := ~/sac2c/build_CFAL/sac2c_d  # may need to adjust if sac2c is not in your PATH
+SAC2CFLAGS := -nomemrt -dcccall -maxwlur 27 -v3 # when changing you may want to include -check c
 
-all: bin/MG_${CLASS}_seq bin/RNG_test bin/input_test
+all: seq bin/RNG_test bin/input_test
+
+seq: bin/MG_${CLASS}_seq
+seq: SAC2CFLAGS += -Xc -Ofast
 
 mt: bin/MG_${CLASS}_mt
+mt: SAC2CFLAGS += -Xc -Ofast
 
 cuda: bin/MG_${CLASS}_cuda
-cuda: SAC2CFLAGS += -t cuda 
+cuda: SAC2CFLAGS += -t cuda -Xc -O3 -profile c
 
 bin/MG_${CLASS}_seq: src/MG.sac $(SEQ_LPATH)/libInputMod.$(DYLIB)
 	mkdir -p bin
@@ -46,13 +50,13 @@ $(CUDA_LPATH)/libInputMod.$(DYLIB): $(CUDA_LPATH)/libRNGMod.$(DYLIB)
 
 
 $(SEQ_LPATH)/lib%Mod.$(DYLIB): src/%.sac
-	$(SAC2C) $<
+	$(SAC2C) $(SAC_FLAGS) $<
 
 $(MT_LPATH)/lib%Mod.$(DYLIB): src/%.sac
-	$(SAC2C) -tmt_pth $<
+	$(SAC2C) $(SAC_FLAGS) -tmt_pth $<
 
 $(CUDA_LPATH)/lib%Mod.$(DYLIB): src/%.sac
-	$(SAC2C) -tcuda $<
+	$(SAC2C) $(SAC_FLAGS) -tcuda $<
 
 
 clean:
