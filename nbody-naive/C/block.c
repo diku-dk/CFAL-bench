@@ -7,8 +7,19 @@
 #define min(a, b) ((a) < (b) ? a : b)
 
 /* BLOCK bodies should comfortably fit inside L1,
- * should also be a multiple of the vector width. */
-#define BLOCK 1000
+ * should also be a multiple of the vector width. 
+ * For n = 10000, iter = 10 we get
+ *
+ * BLOCK    Gflops/s
+ * 1000     19,2
+ * 2000     21,6
+ * 2500     23,0
+ * 3000     17,3
+ *
+ * This is a little surprising as 2500 gives more
+ * L1 cache misses than 2000.
+ */
+#define BLOCK 2500
 
 typedef struct {
     double x;

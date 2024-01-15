@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
-#SBATCH --output=seq.out
+#SBATCH --output=block.out
 
 # No idea why this is necessary, something
 # with slurm and the FPGA

@@ -12,7 +12,7 @@ nbody_bench: nbody_bench.c
 	$(CC) -o $@ $^ $(CFLAGS) -lm
 
 block: block.c
-	$(CC) -o $@ $^ $(CFLAGS) -lm
+	$(CC) -o $@ $^ $(CFLAGS) -lm -fopenmp
 
 nbody_omp: nbody_omp.c
 	$(CC) -o $@ $^ -fopenmp $(CFLAGS) -lm -fopenmp
@@ -24,7 +24,7 @@ bench_omp:
 	sbatch bench_omp.sh 10000 10 10 out 32
 
 bench_block:
-	sbatch bench_block.sh 10000 10 10 out 32
+	sbatch bench_block.sh 10000 10 10 out
 
 clean:
 	$(RM) nbody nbody_bench nbody_omp block
