@@ -32,6 +32,13 @@ printf 'mean,stddev\n'
 } > "$outfile"
 
 i=1
+while [ $i -le 5 ]
+do
+    bin/MG_"${class}"_cuda
+    i=$(( i + 1 ))
+done
+
+i=1
 {
 while [ $i -le "$runs" ]
 do
