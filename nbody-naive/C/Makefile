@@ -3,7 +3,7 @@ CFLAGS=-Ofast -march=native -mtune=native -Wall -Wextra -pedantic
 
 .PHONY: all bench_seq bench_omp clean
 
-all: nbody nbody_bench nbody_omp block
+all: nbody nbody_bench nbody_omp block block_omp
 
 nbody: nbody.c
 	$(CC) -o $@ $^ $(CFLAGS) -lm
@@ -12,6 +12,9 @@ nbody_bench: nbody_bench.c
 	$(CC) -o $@ $^ $(CFLAGS) -lm
 
 block: block.c
+	$(CC) -o $@ $^ $(CFLAGS) -lm
+
+block_omp: block_omp.c
 	$(CC) -o $@ $^ $(CFLAGS) -lm -fopenmp
 
 nbody_omp: nbody_omp.c
@@ -26,5 +29,8 @@ bench_omp:
 bench_block:
 	sbatch bench_block.sh 10000 10 10 out
 
+bench_block_omp:
+	sbatch bench_block_omp.sh 10000 10 10 out 32
+
 clean:
-	$(RM) nbody nbody_bench nbody_omp block
+	$(RM) nbody nbody_bench nbody_omp block block_omp
