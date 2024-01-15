@@ -4,10 +4,12 @@ CUDA_LPATH := host/cuda
 
 DYLIB := so                          # adjust to your system (e.g. so)
 
-SAC2C := ~/sac2c/build_CFAL/sac2c_d  # may need to adjust if sac2c is not in your PATH
-SAC2CFLAGS := -nomemrt -dcccall -maxwlur 27 -v3 # when changing you may want to include -check c
+SAC2C := ~/sac2c/build/sac2c_d                  # may need to adjust if sac2c is not in your PATH
+SAC2CFLAGS := -dcccall -maxwlur 27 -v3 # when changing you may want to include -check c
 
-all: seq bin/RNG_test bin/input_test
+all: seq test mt cuda
+
+test: bin/RNG_test bin/input_test
 
 seq: bin/MG_${CLASS}_seq
 seq: SAC2CFLAGS += -Xc -Ofast
@@ -16,7 +18,7 @@ mt: bin/MG_${CLASS}_mt
 mt: SAC2CFLAGS += -Xc -Ofast
 
 cuda: bin/MG_${CLASS}_cuda
-cuda: SAC2CFLAGS += -t cuda -Xc -O3 -profile c
+cuda: SAC2CFLAGS += -t cuda -Xc -O3 -profile c -nomemrt
 
 bin/MG_${CLASS}_seq: src/MG.sac $(SEQ_LPATH)/libInputMod.$(DYLIB)
 	mkdir -p bin
@@ -40,6 +42,17 @@ bin/RNG_test: src/RNG_test.sac $(SEQ_LPATH)/libRNGMod.$(DYLIB)
 bin/input_test: src/input_test.sac $(SEQ_LPATH)/libInputMod.$(DYLIB)
 	mkdir -p bin
 	$(SAC2C) $(SAC2CFLAGS) $< -o $@
+
+bench: bench_seq bench_mt bench_cuda
+
+bench_seq:
+	sbatch bench_seq.sh B 10 out
+
+bench_mt:
+	sbatch bench_mt.sh B 10 out 32
+
+bench_cuda:
+	sbatch bench_cuda.sh B 10 out
 
 $(SEQ_LPATH)/libInputMod.$(DYLIB): $(SEQ_LPATH)/libRNGMod.$(DYLIB)
 
