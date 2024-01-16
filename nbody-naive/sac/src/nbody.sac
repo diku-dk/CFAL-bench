@@ -14,16 +14,6 @@ double[*] sum_outer( double[+] a)
 }
 
 inline
-double sicsaL2Norm(double[.] x)
-{
-  /* TODO currently this calls to GLIBC instead of directly doing
-   * assembly instruction vsqrtd.
-
-   * The C version gets 10 Gflops/s sequentially, this one 2. */
-  return sqrt(sum(x * x) + EPSILON);
-}
-
-inline
 double L2(double[.] x)
 {
     return sqrt(sum(x * x));
@@ -36,8 +26,6 @@ double[3] acceleration(double[3] pos1, double[3] pos2, double mass)
   return all(dir == 0.0) ? 
         [0.0, 0.0, 0.0] :
         mass * dir / (L2(dir) * L2(dir) * L2(dir));
-//  n = sicsaL2Norm(pos2 - pos1);
-//  return (pos2 - pos1) * mass / (n * n * n);
 }
 
 inline
@@ -53,12 +41,62 @@ double[3] acceleration(double[3] pos, double[N, 3] positions, double[N] masses)
 }
 
 inline
+double[3] accel(double[3] diff, double mass)
+{
+  return all(diff == 0.0) ?
+          [0.0, 0.0, 0.0] :
+          mass * diff / (L2(diff) * L2(diff) * L2(diff));
+}
+
+inline
+double pow3(double x)
+{
+  return x * x * x;
+}
+
+inline
 double[N, 3], double[N, 3]
 advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
         double dt)
 {
-  accelerations = {iv -> acceleration(positions[iv], positions, masses)
-                      | iv < [N]};
+  /* Why do I need to rename positions2? */
+  positions2 = transpose(positions);
+  accelerations = genarray([N, 3], 0d);
+
+  for (i = 0; i < N; i++) {
+    /* This needs to be lifted out manually, GCC also has trouble with it */
+    ax = 0d;
+    ay = 0d;
+    az = 0d;
+    for (j = 0; j < N; j++) {
+      diffx = positions[0, i] - positions[0, j];
+      diffy = positions[1, i] - positions[1, j];
+      diffz = positions[2, i] - positions[2, j];
+      n = pow3(sqrt(diffx * diffx + diffy * diffy + diffz * diffz));
+      if (n != 0d) {
+        diffx *= masses[j] / n;
+        diffy *= masses[j] / n;
+        diffz *= masses[j] / n;
+        ax += diffx;
+        ay += diffy;
+        az += diffz;
+      } 
+    }
+    accelerations[0, i] = ax;
+    accelerations[1, i] = ay;
+    accelerations[2, i] = az;
+  }
+//  accelerations = {[i] -> sum_outer({[j] -> accel([positions2[0, i] - positions2[0, j],
+//                                                   positions2[1, i] - positions2[1, j],
+//                                                   positions2[2, i] - positions2[2, j]],
+//                                                  masses[j])
+//                                         | [j] < [N]})
+//                        | [i] < [N]};
+
+  positions = transpose(positions2);
+
+//  accelerations = {iv -> acceleration(positions[iv], positions, masses)
+//                      | iv < [N]};
   velocities += accelerations * dt;
   positions += velocities * dt;
 
