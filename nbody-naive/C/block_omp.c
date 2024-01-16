@@ -50,12 +50,13 @@ void free_points(Points p)
     free(p.z);
 }
 
-void init(Points positions, int n)
+void init(Points positions, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
         positions.x[i] = i;
         positions.y[i] = i;
         positions.z[i] = i;
+        masses[i] = 1.0;
     }
 }
 
@@ -177,6 +178,17 @@ void advance(Points positions, Points velocities, double *masses,
     }
 }
 
+double sum_points(Points positions, int n)
+{
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += positions.x[i];
+        sum += positions.y[i];
+        sum += positions.z[i];
+    }
+    return sum;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3) {
@@ -192,7 +204,7 @@ int main(int argc, char **argv)
     Points accel = alloc_points(n);
     double *masses = (double *)malloc(n * sizeof(double));
 
-    init(positions, n);
+    init(positions, masses, n);
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
@@ -208,6 +220,7 @@ int main(int argc, char **argv)
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
     printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    fprintf(stderr, "Sum of positions %lf\n", sum_points(positions, n));
 
     free_points(positions);
     free_points(velocities);

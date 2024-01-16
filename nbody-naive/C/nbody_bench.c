@@ -101,6 +101,17 @@ void advance(Points positions, Points velocities, double *masses,
     }
 }
 
+double sum_points(Points positions, int n)
+{
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += positions.x[i];
+        sum += positions.y[i];
+        sum += positions.z[i];
+    }
+    return sum;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3) {
@@ -131,8 +142,8 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
-    printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
-    printf("%lf\n", positions.x[1]);
+    printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    fprintf(stderr, "Sum of positions %lf\n", sum_points(positions, n));
 
     free_points(positions);
     free_points(velocities);
