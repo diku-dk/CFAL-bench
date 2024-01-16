@@ -29,9 +29,9 @@ typedef struct {
 } Point;
 
 typedef struct {
-    double * __restrict__ x;
-    double * __restrict__ y;
-    double * __restrict__ z;
+    double *x;
+    double *y;
+    double *z;
 } Points;
 
 Points alloc_points(int n)
@@ -53,9 +53,9 @@ void free_points(Points p)
 void init(Points positions, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
-        positions.x[i] = i;
-        positions.y[i] = i;
-        positions.z[i] = i;
+        positions.x[i] = (double)rand() / RAND_MAX;
+        positions.y[i] = (double)rand() / RAND_MAX;
+        positions.z[i] = (double)rand() / RAND_MAX;
         masses[i] = 1.0;
     }
 }
@@ -123,7 +123,7 @@ void accelerateBodies(Points accel, Points positions, double *masses,
         double ax = 0;
         double ay = 0;
         double az = 0;
-        for (int j = roundDown(n, BLOCK); j < n; j++) {
+        for (int j = roundDown(n - BLOCK, BLOCK); j < n; j++) {
             Point buf;
             buf.x = positions.x[i] - positions.x[j];
             buf.y = positions.y[i] - positions.y[j],
@@ -196,6 +196,8 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    srand(314159);
+
     int n = atoi(argv[1]);
     int iterations = atoi(argv[2]);
 
@@ -220,7 +222,8 @@ int main(int argc, char **argv)
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
     printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
-    fprintf(stderr, "Sum of positions %lf\n", sum_points(positions, n));
+    fprintf(stderr, "First body is (%lf, %lf, %lf)\n", 
+                    positions.x[0], positions.y[0], positions.z[0]);
 
     free_points(positions);
     free_points(velocities);

@@ -37,9 +37,9 @@ void free_points(Points p)
 void init(Points positions, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
-        positions.x[i] = i;
-        positions.y[i] = i;
-        positions.z[i] = i;
+        positions.x[i] = (double)rand() / RAND_MAX;
+        positions.y[i] = (double)rand() / RAND_MAX;
+        positions.z[i] = (double)rand() / RAND_MAX;
         masses[i] = 1.0;
     }
 }
@@ -119,6 +119,8 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    srand(314159);
+
     int n = atoi(argv[1]);
     int iterations = atoi(argv[2]);
 
@@ -143,7 +145,8 @@ int main(int argc, char **argv)
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
     printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
-    fprintf(stderr, "Sum of positions %lf\n", sum_points(positions, n));
+    fprintf(stderr, "First body is (%lf, %lf, %lf)\n", 
+                    positions.x[0], positions.y[0], positions.z[0]);
 
     free_points(positions);
     free_points(velocities);
