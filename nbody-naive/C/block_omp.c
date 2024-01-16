@@ -86,7 +86,6 @@ void accelerateBodies(Points accel, Points positions, double *masses,
          * the case where n does not divide the vector width. */
         for (int J = 0; J + BLOCK < n; J += BLOCK) {
     for (int i = I; i < I + BLOCK && i < end; i++) {
-        /* Loop body is (worst case n != 0) 18 flops */
         double ax = 0;
         double ay = 0;
         double az = 0;
@@ -153,7 +152,7 @@ void accelerateBodies(Points accel, Points positions, double *masses,
 
 /* Advances the n-bodies in place. accel is a buffer, does not need to be
  * initialized.
- * 18n^2 + 12n flops */
+ * 21n^2 + 12n flops */
 void advance(Points positions, Points velocities, double *masses,
              Points accel, double dt, int n)
 {
@@ -208,7 +207,7 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
-    printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
 
     free_points(positions);
     free_points(velocities);

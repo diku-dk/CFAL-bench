@@ -68,7 +68,7 @@ double pow3(double x)
     return x * x * x;
 }
 
-/* 18 n^2 flops */
+/* 21 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
@@ -83,16 +83,19 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
          * the case where n does not divide the vector width. */
         for (int J = 0; J + BLOCK < n; J += BLOCK) {
     for (int i = I; i < I + BLOCK && i < n; i++) {
-        /* Loop body is (worst case n != 0) 18 flops */
+        /* Loop body is (worst case n != 0) 21 flops */
         double ax = 0;
         double ay = 0;
         double az = 0;
         for (int j = J; j < J + BLOCK; j++) {
             Point buf;
+            /* 3 subtractions */
             buf.x = positions.x[i] - positions.x[j];
             buf.y = positions.y[i] - positions.y[j],
             buf.z = positions.z[i] - positions.z[j];
-            /* n = ||positions[i] - positions[j]||^3 */
+            /* n = ||positions[i] - positions[j]||^3 
+             * pow3 is 2 mul, so 5 mul total. 2 additions,
+             * 1 sqrt. (rsqrt only exists on single precision on zen3)*/
             double n = pow3(sqrt(buf.x * buf.x +
                                  buf.y * buf.y +
                                  buf.z * buf.z));
@@ -101,10 +104,12 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
                 buf.y = 0.0;
                 buf.z = 0.0;
             } else {
+                /* 3 mul, 1 div */
                 buf.x *= masses[j] / n;
                 buf.y *= masses[j] / n;
                 buf.z *= masses[j] / n;
             }
+            /* 3 fma (6 flops) */
             ax += buf.x;
             ay += buf.y;
             az += buf.z;
@@ -150,7 +155,7 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
 
 /* Advances the n-bodies in place. accel is a buffer, does not need to be
  * initialized.
- * 18n^2 + 12n flops */
+ * 21n^2 + 12n flops */
 void advance(Points positions, Points velocities, double *masses,
              Points accel, double dt, int n)
 {
@@ -196,7 +201,7 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
-    printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
 
     free_points(positions);
     free_points(velocities);
