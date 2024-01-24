@@ -3,55 +3,48 @@ use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 
-#define EPSILON 0.000000001
-
 inline
-double[*] sum_outer( double[+] a)
+double l2norm(double x, double y, double z)
 {
-  return with {
-    ([0] <= iv < take([1], shape(a))): a[iv];
-  } : fold(+, genarray(drop([1], shape(a)), 0d));
-}
-
-inline
-double L2(double[.] x)
-{
-    return sqrt(sum(x * x));
-}
-
-inline
-double[3] acceleration(double[3] pos1, double[3] pos2, double mass)
-{
-  dir = pos1 - pos2;
-  return all(dir == 0.0) ? 
-        [0.0, 0.0, 0.0] :
-        mass * dir / (L2(dir) * L2(dir) * L2(dir));
-}
-
-inline
-double[3] acceleration(double[3] pos, double[N, 3] positions, double[N] masses)
-{
-  /* With sum_outer we get a complaint for GPU 'not in perfect nested position' */
-  acc = [0d, 0d, 0d];
-  for (j = 0; j < N; j++) {
-    acc += acceleration(pos, positions[j], masses[j]);
-  }
-  return acc;
-//  return sum_outer({jv -> acceleration(pos, positions[jv], masses[jv])});
-}
-
-inline
-double[3] accel(double[3] diff, double mass)
-{
-  return all(diff == 0.0) ?
-          [0.0, 0.0, 0.0] :
-          mass * diff / (L2(diff) * L2(diff) * L2(diff));
+    return sqrt(x * x + y * y + z * z);
 }
 
 inline
 double pow3(double x)
 {
   return x * x * x;
+}
+
+inline
+double, double, double acc(double x, double y, double z, 
+                           double x2, double y2, double z2, 
+                           double m)
+{
+   dirx = x2 - x;
+   diry = y2 - y;
+   dirz = z2 - z;
+   factor = (l2norm(dirx, diry, dirz) == 0d) ? 
+        0d : m / pow3(l2norm(dirx, diry, dirz));
+   return (dirx * factor, diry * factor, dirz * factor);
+}
+
+noinline
+double[N], double[N], double[N] 
+acc_v(double[N] px, double[N] py, double[N] pz, 
+      double[N] pxs, double[N] pys, double[N] pzs, double[N] ms)
+{
+   ax, ay, az =  with {
+                   (. <= [i] <= .) {
+                     x, y, z = with {
+                                 ([0] <= [j] < [N]) {
+                                   bx, by, bz = acc(px[i], py[i], pz[i], 
+                                                    pxs[j], pys[j], pzs[j], 
+                                                    ms[j]);
+                                  } : (bx, by, bz);
+                               }: (fold (+, 0.0), fold (+, 0.0), fold (+, 0.0));
+                   }: (x, y, z);
+                 }: (genarray([N], 0.0), genarray([N], 0.0), genarray([N], 0.0));
+   return (ax, ay, az);
 }
 
 inline
@@ -62,49 +55,15 @@ advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
   /* Why do I need to rename positions2? */
   positions2 = transpose(positions);
 
-  accelerations = with {
-    ([0] <= [i] < [N]) {
-#if 0
-      ax, ay, az = with {
-        ([0] <= [j] < [N]) {
-          diffx = positions2[0, i] - positions2[0, j];
-          diffy = positions2[1, i] - positions2[1, j];
-          diffz = positions2[2, i] - positions2[2, j];
-          n = pow3(sqrt(diffx * diffx + diffy * diffy + diffz * diffz));
-          if (n != 0d) {
-            diffx *= masses[j] / n;
-            diffy *= masses[j] / n;
-            diffz *= masses[j] / n;
-          } else {
-            diffx = 0d;
-            diffy = 0d;
-            diffz = 0d;
-          }
-        }: (diffx, diffy, diffz);
-      }: (fold(+, 0d), fold(+, 0d), fold(+, 0d));
-#else
-      ax = 0d; ay = 0d; az = 0d;
-      for (j = 0; j < N; j++) {
-        diffx = positions2[0, i] - positions2[0, j];
-        diffy = positions2[1, i] - positions2[1, j];
-        diffz = positions2[2, i] - positions2[2, j];
-        n = pow3(sqrt(diffx * diffx + diffy * diffy + diffz * diffz));
-        if (n != 0d) {
-          diffx *= masses[j] / n;
-          diffy *= masses[j] / n;
-          diffz *= masses[j] / n;
-          ax += diffx;
-          ay += diffy;
-          az += diffz;
-        }
-      }
-#endif
-    }: [ax, ay, az];
-  }: genarray([N], [0d, 0d, 0d]);
+  accelx, accely, accelz = acc_v(positions2[0], positions2[1], positions2[2],
+                                 positions2[0], positions2[1], positions2[2],
+                                 masses);
 
   positions = transpose(positions2);
 
-  velocities += accelerations * dt;
+  accelerations = {iv -> [accelx[iv], accely[iv], accelz[iv]]};
+
+  velocities += accelerations;
   positions += velocities * dt;
 
   return (positions, velocities);
@@ -115,7 +74,7 @@ int main()
     itime = getInterval("time", 1);
     start(itime);
 
-    positions = {[i] -> [tod(i), tod(i), tod(i)] | [i] < [N]};
+    positions = {[i] -> [0d, tod(i), tod(i)] | [i] < [N]};
     velocities = genarray([N, 3], 0d);
     masses = {[i] -> 1d | [i] < [N]};
 
@@ -126,6 +85,7 @@ int main()
     end(itime);
 
     fprintf(stderr, "Sum is %lf\n", sum(positions));
+    print(positions);
 
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
