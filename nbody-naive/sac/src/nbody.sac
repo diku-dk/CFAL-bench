@@ -63,7 +63,7 @@ advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
 
   accelerations = {iv -> [accelx[iv], accely[iv], accelz[iv]]};
 
-  velocities += accelerations;
+  velocities += accelerations * dt;
   positions += velocities * dt;
 
   return (positions, velocities);
@@ -74,7 +74,7 @@ int main()
     itime = getInterval("time", 1);
     start(itime);
 
-    positions = {[i] -> [0d, tod(i), tod(i)] | [i] < [N]};
+    positions = {[i] -> [tod(i), tod(i), tod(i)] | [i] < [N]};
     velocities = genarray([N, 3], 0d);
     masses = {[i] -> 1d | [i] < [N]};
 
