@@ -66,14 +66,14 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
             double bufx = positions.x[j] - positions.x[i];
             double bufy = positions.y[j] - positions.y[i];
             double bufz = positions.z[j] - positions.z[i];
-            /* n = ||positions[i] - positions[j]||^3 */
-            double n = pow3(sqrt(bufx * bufx +
-                                 bufy * bufy +
-                                 bufz * bufz));
-            if (n != 0.0) {
-                ax += bufx * masses[j] / n;
-                ay += bufy * masses[j] / n;
-                az += bufz * masses[j] / n;
+            /* norm = ||positions[i] - positions[j]||^3 */
+            double norm = pow3(sqrt(bufx * bufx +
+                                    bufy * bufy +
+                                    bufz * bufz));
+            if (norm != 0.0) {
+                ax += bufx * masses[j] / norm;
+                ay += bufy * masses[j] / norm;
+                az += bufz * masses[j] / norm;
             }
         }
         accel.x[i] = ax;
@@ -144,7 +144,8 @@ int main(int argc, char **argv)
     printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
     fprintf(stderr, "Bodies\n");
     for (int i = 0; i < n; i++) {
-        fprintf(stderr, "(%e, %e, %e)\n", positions.x[i], positions.y[i], positions.z[i]);
+        fprintf(stderr, "(%.17e, %.17e, %.17e)\n", 
+                    positions.x[i], positions.y[i], positions.z[i]);
     }
 
     free_points(positions);
