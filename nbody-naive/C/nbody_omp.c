@@ -14,9 +14,9 @@ typedef struct {
 } Point;
 
 typedef struct {
-    double * __restrict__ x;
-    double * __restrict__ y;
-    double * __restrict__ z;
+    double *x;
+    double *y;
+    double *z;
 } Points;
 
 Points alloc_points(int n)
@@ -35,12 +35,16 @@ void free_points(Points p)
     free(p.z);
 }
 
-void init(Points positions, int n)
+void init(Points positions, Points velocities, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
         positions.x[i] = i;
-        positions.y[i] = i;
-        positions.z[i] = i;
+        positions.y[i] = 2.0 * i;
+        positions.z[i] = 3.0 * i;
+        velocities.x[i] = 0.0;
+        velocities.y[i] = 0.0;
+        velocities.z[i] = 0.0;
+        masses[i] = 1.0;
     }
 }
 
@@ -49,39 +53,29 @@ double pow3(double x)
     return x * x * x;
 }
 
+/* accel[i] = sum_j m[j] (pos[i] - pos[j]) / ||pos[i] - pos[j]||^3 */
 /* 18 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
     #pragma omp parallel for
     for (int i = 0; i < n; i++) {
-        accel.x[i] = 0.0;
-        accel.y[i] = 0.0;
-        accel.z[i] = 0.0;
         double ax = 0.0;
         double ay = 0.0;
         double az = 0.0;
         /* Loop body is (worst case n != 0) 18 flops */
         for (int j = 0; j < n; j++) {
-            Point buf;
-            buf.x = positions.x[i] - positions.x[j];
-            buf.y = positions.y[i] - positions.y[j],
-            buf.z = positions.z[i] - positions.z[j];
+            double bufx = positions.x[j] - positions.x[i];
+            double bufy = positions.y[j] - positions.y[i];
+            double bufz = positions.z[j] - positions.z[i];
             /* n = ||positions[i] - positions[j]||^3 */
-            double n = pow3(sqrt(buf.x * buf.x +
-                                 buf.y * buf.y +
-                                 buf.z * buf.z));
-            if (n == 0) {
-                buf.x = 0.0;
-                buf.y = 0.0;
-                buf.z = 0.0;
-            } else {
-                buf.x *= masses[j] / n;
-                buf.y *= masses[j] / n;
-                buf.z *= masses[j] / n;
+            double n = pow3(sqrt(bufx * bufx +
+                                 bufy * bufy +
+                                 bufz * bufz));
+            if (n != 0.0) {
+                ax += bufx * masses[j] / n;
+                ay += bufy * masses[j] / n;
+                az += bufz * masses[j] / n;
             }
-            ax += buf.x;
-            ay += buf.y;
-            az += buf.z;
         }
         accel.x[i] = ax;
         accel.y[i] = ay;
@@ -108,6 +102,17 @@ void advance(Points positions, Points velocities, double *masses,
     }
 }
 
+double sum_points(Points positions, int n)
+{
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += positions.x[i];
+        sum += positions.y[i];
+        sum += positions.z[i];
+    }
+    return sum;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3) {
@@ -123,12 +128,12 @@ int main(int argc, char **argv)
     Points accel = alloc_points(n);
     double *masses = (double *)malloc(n * sizeof(double));
 
-    init(positions, n);
+    init(positions, velocities, masses, n);
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     for (int i = 0; i < iterations; i++) {
-        advance(positions, velocities, masses, accel, 0.1, n);
+        advance(positions, velocities, masses, accel, 0.01, n);
     }
     gettimeofday(&tv2, NULL);
     double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
@@ -139,6 +144,10 @@ int main(int argc, char **argv)
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
     printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    fprintf(stderr, "Bodies\n");
+    for (int i = 0; i < n; i++) {
+        fprintf(stderr, "(%e, %e, %e)\n", positions.x[i], positions.y[i], positions.z[i]);
+    }
 
     free_points(positions);
     free_points(velocities);
