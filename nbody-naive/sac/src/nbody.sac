@@ -3,6 +3,8 @@ use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 
+#define DEBUG 1
+
 inline
 double l2norm(double x, double y, double z)
 {
@@ -74,7 +76,7 @@ int main()
     itime = getInterval("time", 1);
     start(itime);
 
-    positions = {[i] -> [tod(i), tod(i), tod(i)] | [i] < [N]};
+    positions = {[i] -> [tod(i), tod(2 * i), tod(3 * i)] | [i] < [N]};
     velocities = genarray([N, 3], 0d);
     masses = {[i] -> 1d | [i] < [N]};
 
@@ -85,7 +87,9 @@ int main()
     end(itime);
 
     fprintf(stderr, "Sum is %lf\n", sum(positions));
+#ifdef DEBUG
     print(positions);
+#endif
 
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);

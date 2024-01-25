@@ -13,9 +13,9 @@ typedef struct {
 } Point;
 
 typedef struct {
-    double * __restrict__ x;
-    double * __restrict__ y;
-    double * __restrict__ z;
+    double *x;
+    double *y;
+    double *z;
 } Points;
 
 Points alloc_points(int n)
@@ -34,12 +34,15 @@ void free_points(Points p)
     free(p.z);
 }
 
-void init(Points positions, double *masses, int n)
+void init(Points positions, Points velocities, double *masses, int n)
 {
     for (int i = 0; i < n; i++) {
-        positions.x[i] = (double)rand() / RAND_MAX;
-        positions.y[i] = (double)rand() / RAND_MAX;
-        positions.z[i] = (double)rand() / RAND_MAX;
+        positions.x[i] = i;
+        positions.y[i] = 2.0 * i;
+        positions.z[i] = 3.0 * i;
+        velocities.x[i] = 0.0;
+        velocities.y[i] = 0.0;
+        velocities.z[i] = 0.0;
         masses[i] = 1.0;
     }
 }
@@ -49,37 +52,33 @@ double pow3(double x)
     return x * x * x;
 }
 
+/* accel[i] = sum_j m[j] (pos[i] - pos[j]) / ||pos[i] - pos[j]||^3 */
 /* 18 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
     /* TODO: block this to avoid L1 misses */
     for (int i = 0; i < n; i++) {
-        accel.x[i] = 0.0;
-        accel.y[i] = 0.0;
-        accel.z[i] = 0.0;
+        double ax = 0.0;
+        double ay = 0.0;
+        double az = 0.0;
         /* Loop body is (worst case n != 0) 18 flops */
         for (int j = 0; j < n; j++) {
-            Point buf;
-            buf.x = positions.x[i] - positions.x[j];
-            buf.y = positions.y[i] - positions.y[j],
-            buf.z = positions.z[i] - positions.z[j];
+            double bufx = positions.x[j] - positions.x[i];
+            double bufy = positions.y[j] - positions.y[i];
+            double bufz = positions.z[j] - positions.z[i];
             /* n = ||positions[i] - positions[j]||^3 */
-            double n = pow3(sqrt(buf.x * buf.x +
-                                 buf.y * buf.y +
-                                 buf.z * buf.z));
-            if (n == 0) {
-                buf.x = 0.0;
-                buf.y = 0.0;
-                buf.z = 0.0;
-            } else {
-                buf.x *= masses[j] / n;
-                buf.y *= masses[j] / n;
-                buf.z *= masses[j] / n;
+            double n = pow3(sqrt(bufx * bufx +
+                                 bufy * bufy +
+                                 bufz * bufz));
+            if (n != 0.0) {
+                ax += bufx * masses[j] / n;
+                ay += bufy * masses[j] / n;
+                az += bufz * masses[j] / n;
             }
-            accel.x[i] += buf.x;
-            accel.y[i] += buf.y;
-            accel.z[i] += buf.z;
         }
+        accel.x[i] = ax;
+        accel.y[i] = ay;
+        accel.z[i] = az;
     }
 }
 
@@ -119,8 +118,6 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    srand(314159);
-
     int n = atoi(argv[1]);
     int iterations = atoi(argv[2]);
 
@@ -129,12 +126,12 @@ int main(int argc, char **argv)
     Points accel = alloc_points(n);
     double *masses = (double *)malloc(n * sizeof(double));
 
-    init(positions, masses, n);
+    init(positions, velocities, masses, n);
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
     for (int i = 0; i < iterations; i++) {
-        advance(positions, velocities, masses, accel, 0.1, n);
+        advance(positions, velocities, masses, accel, 0.01, n);
     }
     gettimeofday(&tv2, NULL);
     double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
@@ -144,9 +141,11 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
-    printf("%lf\n", (21.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
-    fprintf(stderr, "First body is (%lf, %lf, %lf)\n", 
-                    positions.x[0], positions.y[0], positions.z[0]);
+    printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    fprintf(stderr, "Bodies\n");
+    for (int i = 0; i < n; i++) {
+        fprintf(stderr, "(%e, %e, %e)\n", positions.x[i], positions.y[i], positions.z[i]);
+    }
 
     free_points(positions);
     free_points(velocities);
