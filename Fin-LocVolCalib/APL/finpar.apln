@@ -19,7 +19,7 @@ value←{strikes←⍵
 	imp←{idt d mv←⍺ ⋄ u←⍵ ⋄ u{⍺⌹(-¯1+⍳≢⍵)⌽⍉(≢⍵)↑0 idt 0-⍤¯1+/d×⍤2⊢⍵}⍤¯1⊢mv×⍤1⊢0.5 0.25}
 	rollback←{now next←⍺ ⋄ res←⍵ ⋄ idt←÷next-now
 		mvy←X Y 2⍴0,nn←nu×nu
-		mvx←0,,[1.5]*2×(y∘.+beta×⍟x)-0.5×nn×now
+		mvx←0,[1.5]*(2×y∘.+beta×⍟x)-nn×now
 		u←⊃idt 0.5+.×res(dx mvx exp res)
 		u←idt dx mvx imp u+⍉v←dy mvy exp ⍉res
 		⍉idt dy mvy imp ⊃idt ¯0.5+.×(⍉u) v
