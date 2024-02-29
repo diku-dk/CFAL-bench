@@ -1,0 +1,46 @@
+:Namespace finpar
+
+⍝ Small
+cnt X Y T s0 t alpha nu beta←16 32 256 256 0.03 5 0.2 0.6 0.5
+
+⍝ Medium
+⍝ Large
+
+value←{strikes←⍵
+	time←2,⌿(t×⍳T)÷T-1
+	x←s0+(sx×⍳X)-sx×xi←⌊s0÷sx←X÷⍨20×alpha×s0×t*0.5
+	y←(⍟alpha)+(sy×⍳Y)-(yi←Y÷2)×sy←Y÷⍨10×nu×t*0.5
+	dx dy←{
+		q←÷/ul←2-/⌽{⍵}⌺3⊢⍵ ⋄ q2←2÷ul
+		z←((-q)(q-qr)(qr←÷/⌽ul),[1.5]⍥↑(1⌷⍉q2)(+/-q2)(0⌷⍉q2))÷[1]+/ul
+		z[;0,¯1+≢⍵;]←⍉2 2 3⍴0(-÷⊃ul)(÷⊃ul)0 0 0(-÷⊃⌽⊢/ul)(÷⊃⌽⊢/ul)0 0 0 0
+	z}¨x y
+	exp←{d mv←⍺ ⋄ res←⍵ ⋄ res{+⌿(⍉{⍵}⌺3⊢⍺)×+/d×⍤2⊢⍵}⍤¯1⊢mv×⍤1⊢1 0.5}
+	imp←{idt d mv←⍺ ⋄ u←⍵ ⋄ u{⍺⌹(-¯1+⍳≢⍵)⌽⍉(≢⍵)↑0 idt 0-⍤¯1+/d×⍤2⊢⍵}⍤¯1⊢mv×⍤1⊢0.5 0.25}
+	rollback←{now next←⍺ ⋄ res←⍵ ⋄ idt←÷next-now
+		mvy←X Y 2⍴0,nn←nu×nu
+		mvx←0,[1.5]*(2×y∘.+beta×⍟x)-nn×now
+		u←⊃idt 0.5+.×res(dx mvx exp res)
+		u←idt dx mvx imp u+⍉v←dy mvy exp ⍉res
+		⍉idt dy mvy imp ⊃idt ¯0.5+.×(⍉u) v
+	}
+	{yi xi⌷⊃rollback⌿time,⊂Y X⍴0⌈x-⍵}¨strikes
+}
+
+Run←{
+	⎕←'Initializing data...'
+	strikes←0.001×⍳cnt
+	
+	⎕←'Warming up...'
+	_←value strikes
+	
+	⎕←'Running MG...'
+	start←24 60 60 1000⊥¯4↑⎕TS
+	⎕←res←value strikes
+	end←24 60 60 1000⊥¯4↑⎕TS
+	
+	⎕←'FinPar time elapsed: ',(⍕(end-start)÷1000),'secs'
+	1:shy←res
+}
+
+:EndNamespace
