@@ -1,7 +1,7 @@
 CC = gcc
 FLAGS = -Ofast -march=native -mtune=native -Wall -Wextra
 DBUG_FLAGS = -fsanitize=address -fsanitize=undefined -g
-FLAGS += $(DBUG_FLAGS)
+# FLAGS += $(DBUG_FLAGS)
 LFLAGS = -lm -lblis64
 
 .PHONY: all clean
