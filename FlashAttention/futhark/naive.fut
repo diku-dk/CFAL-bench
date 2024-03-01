@@ -30,9 +30,9 @@ def matmul [m][n][k] (a: [m][k]real) (b: [k][n]real) : [m][n]real =
   matmulT a (transpose b)
 
 def oneIter [d][m] (K: [m*d][d]real) (V: [m*d][d]real) (Qi: [d][d]real) : [d][d]real =
-  let P_block = matmulT Qi K |> opaque  -- : [d][m*d]real 
-  let P_block = P_block |> stabilize |> exp_mat |> scale |> opaque
-  in  matmul P_block V  |> opaque      -- : [d][d]real
+  let P_block = matmulT Qi K |> opaque -- : [d][m*d]real 
+  let P_block = P_block |> stabilize |> exp_mat |> scale 
+  in  matmul P_block V      -- : [d][d]real
 
 def FlashAttention [d][m] 
         (Q: [m][d][d]real) 
@@ -56,7 +56,7 @@ entry main1 (m:i64) (d:i64) : real =
   let K = replicate d 1.0 |> replicate (m*d)
   let V = replicate d 1.0 |> replicate (m*d)
   
-  let O = FlashAttention Q K V
+  let O = FlashAttention Q K V  |> opaque
    
   let O_flat = flatten (flatten O)
   in ( L2 O_flat ) - (real_sqrt (real_i64 (m*d*d)))
