@@ -14,6 +14,17 @@ float rand_float(void) {
     return (float)random() / (float)INT32_MAX * 2 - 1;
 }
 
+unsigned int device_random(void) {
+    FILE *f = fopen("/dev/urandom", "rb");
+    unsigned int x;
+    size_t nread = fread(&x, 1, sizeof x, f);
+    if (nread < sizeof x) {
+        fprintf(stderr, "WARNING: Failed to read a random seed\n");
+    }
+    fclose(f);
+    return x;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 4) {
@@ -25,6 +36,8 @@ int main(int argc, char **argv)
 
     const int d = atoi(argv[1]);
     const int N = atoi(argv[2]);
+
+    srandom(device_random());
 
     enum Mode mode;
     if (strcmp(argv[3], "-one") == 0) {
