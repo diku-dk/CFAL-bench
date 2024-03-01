@@ -1,0 +1,37 @@
+:Namespace flash_attention
+
+N d←16384 64
+
+flash_attn←{Q K V←⍵ ⋄ ⍺←⊢ ⋄ M←⍺⊣14×2*20
+	N d←⍴Q ⋄ Br←d⌊Bc←⌈M÷4×d ⋄ Tr←⌈N÷Br ⋄ Tc←⌈N÷Bc
+	Q←Tr Br d⍴Q ⋄ K←Tc Bc d⍴K ⋄ V←Tc Bc d⍴V
+	O←Tr Br d⍴0 ⋄ l←Tr Br⍴0 ⋄ m←Tr Br⍴⌈⌿⍬ ⋄ Olm←l,m,O
+	diag←(,¨⍨⍳Br)∘{x⊣x[⍺]←⍵⊣x←Br Br⍴0}
+	K{Kj←⍺ ⋄ Vj←⍵
+		Q{Qi←⍺ ⋄ Oi←2↓[1]⍵ ⋄ li←⍵[;0] ⋄ mi←⍵[;1]
+			Sij←Qi+.×⍉Kj ⋄ mij←⌈/Sij ⋄ Pij←*Sij-[0]mij
+			li∆←(li×ei←*mi-mi∆)+(+/Pij)×eij←*mij-mi∆←mi⌈mij
+			li∆,mi∆,(diag ÷li∆)+.×(((diag li)+.×ei)+.×Oi)+(eij+.×Pij)+.×Vj
+		}⍤2⊢Olm
+	}⍤2⊢V
+}
+
+Run←{
+	⎕←'Initializing data...'
+	data←N d∘⍴¨1 1 1
+	
+	⎕←'Warming up...'
+	_←flash_attn data
+	
+	⎕←'Running MG...'
+	start←24 60 60 1000⊥¯4↑⎕TS
+	res←flash_attn data
+	end←24 60 60 1000⊥¯4↑⎕TS
+	⎕←(0.5*⍨+⌿×⍨,res)-0.5*⍨N×d
+	
+	
+	⎕←'Flash Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
+	1:shy←res
+}
+
+:EndNamespace
