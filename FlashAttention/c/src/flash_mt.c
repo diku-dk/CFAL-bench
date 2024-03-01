@@ -58,7 +58,7 @@ void exp_arr(REAL *x, int size)
 void matmul(REAL *a, REAL *b, REAL *c, int m, int k, int n)
 {
     cblas_gemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-               n, m, k, 1.0, a, k, b, n, 0.0, c, n);
+               m, n, k, 1.0, a, k, b, n, 0.0, c, n);
 }
 
 /* A is m x k, b is n x k */
