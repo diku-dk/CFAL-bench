@@ -1,12 +1,11 @@
 use Array: all;
 use Benchmarking: all;
 use StdIO: all;
+use CommandLine: all;
+use String: {strcmp, strtoi, strtof};
 
 #define REAL float
 #define tor tof
-
-#define N 2048
-#define d 128
 
 inline 
 REAL maximum(REAL[.] x)
@@ -23,7 +22,7 @@ REAL[m, n] stabilise(REAL[m, n] x)
 }
 
 inline
-REAL[*] exp(REAL[*] X)
+REAL[d:shp] exp(REAL[d:shp] X)
 {
   return {iv -> Math::exp(X[iv])};
 }
@@ -48,9 +47,8 @@ REAL[m, n] scale(REAL[m, n] x)
 }
 
 inline
-REAL[., ., .] FlashAttention(REAL[., ., .] Q, REAL[N, d] K, REAL[N, d] V)
+REAL[Nd, d, d] FlashAttention(REAL[Nd, d, d] Q, REAL[N, d] K, REAL[N, d] V) | (Nd == N / d)
 {
-  Kt = {[i, j] -> K[j, i]};
   Vt = {[i, j] -> V[j, i]}; /* This is done for performance */
   return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
 }
@@ -60,20 +58,39 @@ REAL L2(REAL[*] x)
   return Math::sqrt(sum(x * x));
 }
 
+noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
+
 int main()
 {
+  if (argc() != 5) {
+    printf("%s -mt <n> <d> <N>\n", argv(0));
+    N = 0;
+    d = 0;
+  } else {
+    d, unused = strtoi(argv(3), 10);
+    N, unused = strtoi(argv(4), 10);
+    if (mod(N, d) != 0) {
+      fprintf(stderr, "Please make sure d | N\n");
+      d = 0;
+      N = 0;
+    }
+  }
+
+  fprintf(stderr, "Running with d = %d, N = %d\n", d, N);
+
   /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
      Multiplying that with V gives all 1s again.
      Taking the L2 norm of this is sqrt(d * N) */
 //  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
-  Q = {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]};
-  K = {[i, j] -> tor(1) | [i, j] < [N, d]};
-  V = {[i, j] -> tor(1) | [i, j] < [N, d]};
+  Q = id({[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]});
+  K = id({[i, j] -> tor(1) | [i, j] < [N, d]});
+  V = id({[i, j] -> tor(1) | [i, j] < [N, d]});
 
   i_flash = getInterval("flash", 1);
   start(i_flash);
 
   O = FlashAttention(Q, K, V);
+  print(shape(O));
 
   end(i_flash);
   time, unit = returnResultUnit(i_flash);
