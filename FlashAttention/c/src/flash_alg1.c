@@ -7,13 +7,15 @@
  
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include <sys/time.h>
 
-double
-L2(double *x, size_t c)
+float
+L2(float *x, size_t c)
 {
-	double sum;
+	float sum;
 	
 	sum = 0;
 	
@@ -24,9 +26,9 @@ L2(double *x, size_t c)
 }
 
 int
-flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
+flash_attention(float *O, float *Q, float *K, float *V, int N, int d, int M)
 {
-	double *l, *m, *Pij;
+	float *l, *m, *Pij;
 	int Br, Bc, Tr, Tc;
 	
 	Bc = M / (4 * d);
@@ -34,26 +36,26 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 	Tr = N / Br;
 	Tc = N / Bc;
 	
-	if ((l = calloc(N, sizeof(double))) == NULL)
+	if ((l = calloc(N, sizeof(float))) == NULL)
 		return 1;
 	
-	if ((m = calloc(N, sizeof(double))) == NULL)
+	if ((m = calloc(N, sizeof(float))) == NULL)
 		return 1;
 	
-	if ((Pij = calloc(Bc, sizeof(double))) == NULL)
+	if ((Pij = calloc(Bc, sizeof(float))) == NULL)
 		return 1;
 	
 	for (int i = 0; i < N; i++)
 		m[i] = -INFINITY;
 	
 	for (int j = 0; j < Tc; j++) {
-		double *Kj, *Vj;
+		float *Kj, *Vj;
 		
 		Kj = K + j * Bc * d;
 		Vj = V + j * Bc * d;
 		
 		for (int i = 0; i < Tr; i++) {
-			double *Oi, *Qi, *mi, *li;
+			float *Oi, *Qi, *mi, *li;
 			
 			Oi = O + i * Br * d;
 			Qi = Q + i * Br * d;
@@ -61,7 +63,7 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 			li = l + i * Br;
 			
 			for (int ii = 0; ii < Br; ii++) {
-				double sum, max, li_new, mi_new, eij, eli;
+				float sum, max, li_new, mi_new, eij, eli;
 				
 				max = -INFINITY;
 
@@ -69,7 +71,7 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 					sum = 0;
 					
 					for (int kk = 0; kk < d; kk++) {
-						double x, y;
+						float x, y;
 						
 						x = Qi[ii * d + kk];
 						y = Kj[jj * d + kk];
@@ -84,7 +86,7 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 				sum = 0;
 
 				for (int jj = 0; jj < Bc; jj++) {
-					double *x = &Pij[jj];
+					float *x = &Pij[jj];
 					
 					sum += *x = exp(*x - max);
 				}
@@ -101,7 +103,7 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 					Oi[ii * d + kk] *= eli;
 				
 				for (int jj = 0; jj < Bc; jj++) {
-					double x = eij * Pij[jj];
+					float x = eij * Pij[jj];
 
 					for (int kk = 0; kk < d; kk++) {
 						int ik = ii * d + kk;
@@ -128,46 +130,73 @@ int main(int argc, char **argv)
 {
 	struct timeval ts, te;
 	size_t cnt;
-	double *Q, *K, *V, *O, dur;
+	float *Q, *K, *V, *O, dur;
 	int N, d, M;
-	
-	if (argc != 4) {
-		printf("Usage: N d M\n");
+
+	if (argc != 3 && argc != 4) {
+		fprintf(stderr, "Usage:\n");
+		fprintf(stderr, "  %s d N M  Compute with matrices filled with ones\n", argv[0]);
+		fprintf(stderr, "  %s M -io  Read matrices from stdin and write O to stdout\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	N = atoi(argv[1]);
-	d = atoi(argv[2]);
-	M = atoi(argv[3]);
-	
+	bool io_arrays = false;
+	if (argc == 3) {
+		if (strcmp(argv[2], "-io") != 0) {
+			fprintf(stderr, "Invalid argument '%s'\n", argv[1]);
+			return EXIT_FAILURE;
+		}
+		io_arrays = true;
+	}
+
+	if (io_arrays) {
+		M = atoi(argv[1]);
+		scanf("%d %d", &d, &N);
+	} else {
+		d = atoi(argv[1]);
+		N = atoi(argv[2]);
+		M = atoi(argv[3]);
+	}
+
+    if (N % d != 0) {
+        fprintf(stderr, "d must divide N\n");
+        return EXIT_FAILURE;
+    }
+
 	cnt = N * d;
-	
-	printf("Initializing data...");
-	
-	if ((Q = calloc(cnt, sizeof(double))) == NULL)
-		goto mem_failure;
-	
-	if ((K = calloc(cnt, sizeof(double))) == NULL)
-		goto mem_failure;
-	
-	if ((V = calloc(cnt, sizeof(double))) == NULL)
+
+	fprintf(stderr, "Initializing data...");
+
+	if ((Q = calloc(cnt, sizeof(float))) == NULL)
 		goto mem_failure;
 
-	if ((O = calloc(cnt, sizeof(double))) == NULL)
+	if ((K = calloc(cnt, sizeof(float))) == NULL)
+		goto mem_failure;
+
+	if ((V = calloc(cnt, sizeof(float))) == NULL)
+		goto mem_failure;
+
+	if ((O = calloc(cnt, sizeof(float))) == NULL)
 		goto mem_failure;
 	
-	for (size_t i = 0; i < cnt; i++) {
-		Q[i] = K[i] = V[i] = 1;
+	if (io_arrays) {
+		for (int i = 0; i < d * N; i++) scanf("%f", &Q[i]);
+		for (int i = 0; i < d * N; i++) scanf("%f", &K[i]);
+		for (int i = 0; i < d * N; i++) scanf("%f", &V[i]);
+	} else {
+		for (size_t i = 0; i < cnt; i++) {
+			Q[i] = K[i] = V[i] = 1;
+		}
 	}
 	
-	printf("done.\n");
-	printf("Warming up...");
+	fprintf(stderr, "done.\n");
+	fprintf(stderr, "Warming up...");
 	
 	if (flash_attention(O, Q, K, V, N, d, M))
 		goto attn_failure;
 	
-	printf("done.\n");	
-	printf("Running flash_attention...");
+	fprintf(stderr, "done.\n");	
+	fprintf(stderr, "Running flash_attention...");
 	
 	gettimeofday(&ts, NULL);
 	
@@ -176,13 +205,26 @@ int main(int argc, char **argv)
 	
 	gettimeofday(&te, NULL);
 	
-	printf("done.\n");
+	fprintf(stderr, "done.\n");
 	
 	dur = (double)(te.tv_usec - ts.tv_usec) / 1e6 + 
 		      (double)(te.tv_sec - ts.tv_sec);
 
-	printf("L2 norm is %lf (should be %lf)\n", L2(O, cnt), sqrt(cnt));
-	printf("Duration: %lf\n", dur);
+	if (io_arrays) {
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < d; j++) {
+				if (j > 0) putchar(' ');
+				printf("%f", Q[d * i + j]);
+			}
+			putchar('\n');
+		}
+	} else {
+		fprintf(stderr, "L2 norm is %lf (should be %lf)\n", L2(O, cnt), sqrt(cnt));
+	}
+
+    fprintf(stderr,
+            "Compute rate: %lf Gflops/s\n", 
+            2.0 * N * N * (d + 1) / dur / 1e9);
 	
 	free(Q);
 	free(K);
