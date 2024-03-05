@@ -62,10 +62,12 @@ REAL L2(REAL *x, int elems)
 void Attention(REAL *Q, REAL *K, REAL *V, REAL *S, REAL *O, 
                int d, int N)
 {
-    // Q K :: N x d
+    // Q, K, V :: N x d
     // S = Q * K^T :: N x N
     matmulT(Q, K, S, N, d, N);
-    softmax(S, d, N);  // P is in S now
+    // S' := P = softmax(S) :: N x N
+    softmax(S, N, N);  // P is in S now
+    // O = P * V :: N x d
     matmul(S, V, O, N, N, d);
 }
 
