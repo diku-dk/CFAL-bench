@@ -34,8 +34,6 @@ flash_attention(double *O, double *Q, double *K, double *V, int N, int d, int M)
 	Tr = N / Br;
 	Tc = N / Bc;
 	
-	printf("Tr: %d Br: %d Tc: %d Bc: %d\n", Tr, Br, Tc, Bc);
-	
 	if ((l = calloc(N, sizeof(double))) == NULL)
 		return 1;
 	
