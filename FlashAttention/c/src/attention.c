@@ -75,8 +75,8 @@ int main(int argc, char **argv)
 {
     if (argc != 2 && argc != 3) {
         fprintf(stderr, "Usage:\n");
-        fprintf(stderr, "  %s d N         Compute with matrices filled with ones\n", argv[0]);
-        fprintf(stderr, "  %s -random     Read matrices from stdin and write O to stdout\n", argv[0]);
+        fprintf(stderr, "  %s d N    Compute with matrices filled with ones\n", argv[0]);
+        fprintf(stderr, "  %s -io    Read matrices from stdin and write O to stdout\n", argv[0]);
         return EXIT_FAILURE;
     }
 
