@@ -6,6 +6,7 @@
 
 enum Mode {
     MODE_ONE,
+    MODE_ID,
     MODE_RANDOM,
 };
 
@@ -25,11 +26,27 @@ unsigned int device_random(void) {
     return x;
 }
 
+void write_mat(int N, int d, enum Mode mode) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < d; j++) {
+            if (j > 0) putchar(' ');
+            switch (mode) {
+                case MODE_ONE: printf("1"); break;
+                case MODE_ID: if (i == j) printf("1.0"); else printf("0.0"); break;
+                case MODE_RANDOM: printf("%f", rand_float()); break;
+            }
+        }
+        putchar('\n');
+    }
+    putchar('\n');
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 4) {
         fprintf(stderr, "Usage:\n");
         fprintf(stderr, "  %s d N -one        Generate matrices filled with ones\n", argv[0]);
+        fprintf(stderr, "  %s d N -id         Generate identity matrices\n", argv[0]);
         fprintf(stderr, "  %s d N -random     Generate random matrices\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -39,11 +56,13 @@ int main(int argc, char **argv)
 
     srandom(device_random());
 
-    enum Mode mode;
+    enum Mode modeQ, modeK, modeV;
     if (strcmp(argv[3], "-one") == 0) {
-        mode = MODE_ONE;
+        modeQ = modeK = modeV = MODE_ONE;
+    } else if (strcmp(argv[3], "-id") == 0) {
+        modeQ = modeK = modeV = MODE_ID;
     } else if (strcmp(argv[3], "-random") == 0) {
-        mode = MODE_RANDOM;
+        modeQ = modeK = modeV = MODE_RANDOM;
     } else {
         fprintf(stderr, "Invalid mode\n");
         return EXIT_FAILURE;
@@ -52,18 +71,7 @@ int main(int argc, char **argv)
     printf("%d %d\n\n", d, N);
 
     // generate Q, K, V, all of dimensions N x d (rows x cols).
-
-    for (int mat_i = 0; mat_i < 3; mat_i++) {
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < d; j++) {
-                if (j > 0) putchar(' ');
-                switch (mode) {
-                    case MODE_ONE: printf("1"); break;
-                    case MODE_RANDOM: printf("%f", rand_float()); break;
-                }
-            }
-            putchar('\n');
-        }
-        putchar('\n');
-    }
+    write_mat(N, d, modeQ);
+    write_mat(N, d, modeK);
+    write_mat(N, d, modeV);
 }
