@@ -129,7 +129,7 @@ int main(int argc, char **argv)
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < d; j++) {
                 if (j > 0) putchar(' ');
-                printf("%f", Q[d * i + j]);
+                printf("%f", O[d * i + j]);
             }
             putchar('\n');
         }
