@@ -17,7 +17,7 @@ L2(double *x, size_t c)
 	
 	sum = 0;
 	
-	for (size_t i = 0, sum = 0; i < c; i++)
+	for (size_t i = 0; i < c; i++)
 		sum += x[i] * x[i];
 	
 	return sqrt(sum);
