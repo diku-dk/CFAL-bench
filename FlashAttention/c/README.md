@@ -23,6 +23,8 @@ mode by passing `-io` instead of `d` and `N` to an attention implementation.
   the paper's "Algorithm 0" (standard attention) and "Algorithm 1"
   (FlashAttention).
 - `flash_mt`: Multithreaded version of `flash` using OpenMP.
+- `flash_alg1`: Implementation of Algorithm 1, the actual Flash Attention
+  algorithm, by Aaron.
 - `attention`: Straightforward implementation of "Algorithm 0" (standard
   attention). Turns out to be faster than `flash` (on CPU).
 
