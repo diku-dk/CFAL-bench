@@ -1,0 +1,53 @@
+:Namespace flash_attention
+
+⎕IO ⎕CT←0
+
+⍝ Requires 12G workspace for naive attention
+N d←(20×2*10) 64
+
+L2←{(0.5*⍨+⌿×⍨,⍵)-0.5*⍨×⌿⍺}
+
+attn←{Q K V←⍵ ⋄ (fx÷[0]+/fx←*S-[0]⌈/S←Q+.×⍉K)+.×V}
+
+flash_attn←{Q K V←⍵ ⋄ ⍺←⊢ ⋄ M←⍺⊣2*19
+	N d←⍴Q ⋄ Br←d⌊Bc←⌈M÷4×d ⋄ Tr←⌈N÷Br ⋄ Tc←⌈N÷Bc
+	Q←Tr Br d⍴Q ⋄ K←Tc Bc d⍴K ⋄ V←Tc Bc d⍴V
+	O←Tr Br d⍴0 ⋄ l←Tr Br⍴0 ⋄ m←Tr Br⍴⌈⌿⍬
+	N d⍴O⊣{j←⍵ ⋄ Kj←K[j;;] ⋄ Vj←V[j;;]
+		0⊣{i←⍵ ⋄ Oi←O[i;;] ⋄ Qi←Q[i;;] ⋄ mi←m[i;] ⋄ li←l[i;]
+			lij←+/Pij←*Sij-[0]mij←⌈/Sij←Qi+.×⍉Kj
+			li∆←(eli←li×*mi-mi∆)+lij×eij←*mij-mi∆←mi⌈mij
+			O[i;;]←li∆÷[0]⍨(eli×[0]Oi)+eij×[0]Pij+.×Vj
+			l[i;]←li∆ ⋄ m[i;]←mi∆	
+		0}¨⍳Tr
+	}¨⍳Tc
+}
+
+Run←{
+	⎕←'Initializing data...'
+	data←N d∘⍴¨1 1 1
+	
+	⎕←''
+	⎕←'Running naive version...'
+	start←24 60 60 1000⊥¯4↑⎕TS
+	res←attn data
+	end←24 60 60 1000⊥¯4↑⎕TS
+	⎕←'Naive L2: ',⍕N d L2 res
+	⎕←'Naive Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
+		
+	⎕←''
+	⎕←'Warming up...'
+	_←flash_attn data
+	
+	⎕←''
+	⎕←'Running Flash Attention...'
+	start←24 60 60 1000⊥¯4↑⎕TS
+	res←flash_attn data
+	end←24 60 60 1000⊥¯4↑⎕TS
+	⎕←'Flash Attention L2: ',⍕N d L2 res
+	⎕←'Flash Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
+	
+	1:shy←res
+}
+
+:EndNamespace
