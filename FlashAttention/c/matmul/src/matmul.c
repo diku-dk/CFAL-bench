@@ -22,6 +22,7 @@
  *
  * For zen2, 4.0 GHz: 114 Gflops/s on bin/matmul 256 128 128 100000
  *                    114 Gflops/s on bin/matmul 256 128 256 100000
+ *                    112 Gflops/s on bin/matmul 256 64 256 100000
  *
  * Peak performance is 128 Gflops/s, so this is about 90%
  * TODO: I don't see why this cannot be 98% as well. Probably messed something
@@ -34,7 +35,7 @@
 
 #define MR 6
 #define NR 16
-#define KC 128
+#define KC 64
 
 float maxf(float a, float b)
 {
