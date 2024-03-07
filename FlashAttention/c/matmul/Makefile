@@ -4,7 +4,7 @@ DBUG_FLAGS = -fsanitize=address -fsanitize=undefined -g
 # FLAGS += $(DBUG_FLAGS)
 LFLAGS = -lm -lopenblas64
 
-TARGETS = kernel
+TARGETS = kernel kernel_optimal_zen2 kernel_unpacked matmul
 BINARIES = $(patsubst %,bin/%,$(TARGETS))
 
 .PHONY: all clean
