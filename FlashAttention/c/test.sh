@@ -17,6 +17,7 @@ attentiono=$(mktemp)
 flasho=$(mktemp)
 alg1o=$(mktemp)
 blas_alg1o=$(mktemp)
+custom_alg1o=$(mktemp)
 
 make -j
 
@@ -26,6 +27,7 @@ bin/attention -io < "$inputf" > "$attentiono"
 bin/flash -io < "$inputf" > "$flasho"
 bin/flash_alg1 "$M" -io < "$inputf" > "$alg1o"
 bin/blas_alg1 "$M" -io < "$inputf" > "$blas_alg1o"
+bin/custom_alg1 "$M" -io < "$inputf" > "$custom_alg1o"
 
 printf "Attention vs flash\n"
 bin/compare "$d" "$M" "$attentiono" "$flasho"
@@ -35,3 +37,6 @@ bin/compare "$d" "$M" "$attentiono" "$alg1o"
 
 printf "Attention vs blas_alg1\n"
 bin/compare "$d" "$M" "$attentiono" "$blas_alg1o"
+
+printf "Attention vs custom_alg1\n"
+bin/compare "$d" "$M" "$attentiono" "$custom_alg1o"

@@ -222,10 +222,13 @@ int main(int argc, char **argv)
 		fprintf(stderr, "L2 norm is %lf (should be %lf)\n", L2(O, cnt), sqrt(cnt));
 	}
 
+    /* QK^t is 2N^2d flops, so is PV. softmax(S) (row-wise)
+     * exp(S[i]) / sum_j exp(P[i, j] - max(P[i])) 
+     * is N * (N + 4N) = 5 N^2 flops, but exp is more expensive. */
     fprintf(stderr,
             "Compute rate: %lf Gflops/s\n", 
-            2.0 * N * N * (d + 1) / dur / 1e9);
-	
+            (4.0 * d + 5.0) * N * N / dur / 1e9);
+
 	free(Q);
 	free(K);
 	free(V);

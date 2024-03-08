@@ -1,3 +1,7 @@
+/**
+ * Custom matmul implementation.
+ **/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -5,6 +9,7 @@
 #include <math.h>
 #include <cblas.h>
 #include <sys/time.h>
+#include "matmul/include/matmul.h"
 
 #define REAL float
 #define exp expf
@@ -16,13 +21,6 @@ void SetOne(REAL *x, int elems)
     for (int i = 0; i < elems; i++) {
         x[i] = 1;
     }
-}
-
-/* A is m x k, b is n x k */
-void matmulT(REAL *a, REAL *b, REAL *c, int m, int k, int n)
-{
-    cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-               m, n, k, 1.0, a, k, b, k, 0.0, c, n);
 }
 
 REAL L2(REAL *x, int elems)
@@ -85,16 +83,20 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
     int Tr = ceildiv(N, Br);
     int Tc = ceildiv(N, Bc);
 
-    fprintf(stderr, "Br = %d, Bc = %d, d = %d\n", Br, Bc, d);
+    if (Br % 2 != 0 || Bc % KC != 0 || d % NR != 0) {
+        fprintf(stderr, "Br = %d, Bc = %d, d = %d not good\n", Br, Bc, d);
+        abort();
+    }
 
     memset(O, 0, N * d * sizeof(REAL));
-    REAL *l = calloc(N, sizeof(REAL));
-    REAL *m = malloc(N * sizeof(REAL));
-    REAL *mij = malloc(Br * sizeof(REAL));
-    REAL *lij = malloc(Br * sizeof(REAL));
+    REAL *Kjt    = malloc(d * Bc * sizeof(REAL));
+    REAL *l      = calloc(N, sizeof(REAL));
+    REAL *m      = malloc(N * sizeof(REAL));
+    REAL *mij    = malloc(Br * sizeof(REAL));
+    REAL *lij    = malloc(Br * sizeof(REAL));
     REAL *mi_new = malloc(Br * sizeof(REAL));
     REAL *li_new = malloc(Br * sizeof(REAL));
-    REAL *Pij = malloc(Bc * Br * sizeof(REAL));
+    REAL *Pij    = malloc(Bc * Br * sizeof(REAL));
 
     for (int i = 0; i < N; i++) {
         m[i] = -REAL_MAX;
@@ -102,6 +104,14 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
 
     for (int j = 0; j < Tc; j++) {
         REAL *Kj = K + j * Bc * d;
+        /* We could implement a matmulT, but the transpose is
+         * amortised over Tr matmuls, so will likely not bring a
+         * measurable improvement. */
+        for (int a = 0; a < d; a++) {
+            for (int b = 0; b < Bc; b++) {
+                Kjt[a * Bc + b] = Kj[b * d + a];
+            }
+        }
         REAL *Vj = V + j * Bc * d;
         for (int i = 0; i < Tr; i++) {
             REAL *Qi = Q + i * Br * d;
@@ -109,7 +119,8 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
             REAL *li = l + i * Br;
             REAL *mi = m + i * Br;
 
-            matmulT(Qi, Kj, Pij, Br, d, Bc);
+            memset(Pij, 0, Bc * Br * sizeof(REAL));
+            matmul(Qi, Kjt, Pij, Br, d, Bc);
 
             rowmax(Pij, mij, Br, Bc);
 
@@ -140,8 +151,7 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
                 }
             }
 
-            cblas_gemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                       Br, d, Bc, 1.0, Pij, Bc, Vj, d, 1.0, Oi, d);
+            matmul(Pij, Vj, Oi, Br, Bc, d);
 
             for (int a = 0; a < Br; a++) {
                 REAL scale = 1.0 / li_new[a];
@@ -154,6 +164,15 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
             memcpy(li, li_new, Br * sizeof(REAL));
         }
     }
+
+    free(Kjt);
+    free(l);
+    free(m);
+    free(mij);
+    free(lij);
+    free(mi_new);
+    free(li_new);
+    free(Pij);
 }
 
 int main(int argc, char **argv)
