@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <cblas.h>
+#include <float.h>
 #include <sys/time.h>
 
 #define REAL float

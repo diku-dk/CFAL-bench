@@ -9,6 +9,7 @@
 #include <math.h>
 #include <cblas.h>
 #include <sys/time.h>
+#include <float.h>
 #include <omp.h>
 #include "matmul/include/matmul.h"
 
