@@ -4,7 +4,7 @@ DBUG_FLAGS = -fsanitize=address -fsanitize=undefined -g
 # FLAGS += $(DBUG_FLAGS)
 LFLAGS = -lm -lopenblas64
 
-TARGETS = generate compare flash flash_mt attention flash_alg1 blas_alg1 custom_alg1
+TARGETS = generate compare flash flash_mt attention flash_alg1 blas_alg1 custom_alg1 custom_alg1_mt
 BINARIES = $(patsubst %,bin/%,$(TARGETS))
 
 .PHONY: all clean seq mt alg1
@@ -28,6 +28,9 @@ bin/matmul.o: matmul/src/matmul.c
 
 bin/custom_alg1: src/custom_alg1.c bin/matmul.o
 	$(CC) $(FLAGS) $^ -o $@ $(LFLAGS)
+
+bin/custom_alg1_mt: src/custom_alg1_mt.c bin/matmul.o
+	$(CC) $(FLAGS) $^ -o $@ $(LFLAGS) -fopenmp
 
 clean:
 	$(RM) bin/*
