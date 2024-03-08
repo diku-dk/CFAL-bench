@@ -29,10 +29,17 @@
  * something up in the streaming from L1. Can prefetch handle the
  * strided access?
  *
- * For zen3, 3.7 GHz: 
+ * For zen2, 3.7 GHz: 102 Gflops/s on bin/test 256 128 128 100000
+ *                    94 Gflops/s on bin/test 256 128 256 100000
+ *                    93 Gflops/s on bin/test 256 64 256 100000
  *                    
- *                    
+ * TODO: this is only 86% of peak, optimise for zen3. Why is this 
+ *       slower? Same cache size, same instruction set, better
+ *       prefetcher and branch prediction, reduced latency for 
+ *       broadcast
  *
+ * Note: frequency scaling is off, but thermal throttling can occur 
+ * 
  *
  **/
 
