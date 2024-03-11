@@ -19,6 +19,7 @@ alg1o=$(mktemp)
 blas_alg1o=$(mktemp)
 custom_alg1o=$(mktemp)
 custom_alg1o_mt=$(mktemp)
+custom_alg1o_mt_outer=$(mktemp)
 
 make -j
 
@@ -45,3 +46,7 @@ bin/compare "$d" "$M" "$attentiono" "$custom_alg1o"
 printf "Attention vs custom_alg1_mt\n"
 OMP_NUM_THREADS=4 bin/custom_alg1_mt "$M" -io < "$inputf" > "$custom_alg1o_mt"
 bin/compare "$d" "$M" "$attentiono" "$custom_alg1o_mt"
+
+printf "Attention vs custom_alg1_mt_outer\n"
+OMP_NUM_THREADS=4 bin/custom_alg1_mt_outer "$M" -io < "$inputf" > "$custom_alg1o_mt_outer"
+bin/compare "$d" "$M" "$attentiono" "$custom_alg1o_mt_outer"
