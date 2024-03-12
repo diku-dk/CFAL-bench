@@ -2,6 +2,9 @@
  * Custom matmul implementation, multithreaded,
  * and inverted loop order so the outer loop can
  * be parallelised.
+ *
+ * TODO: incorrect implementation, have a look at the
+ * algorithm.
  **/
 
 #include <stdio.h>
@@ -136,6 +139,7 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
     
                 memset(Pij, 0, Bc * Br * sizeof(REAL));
                 matmul(Qi, Kjt, Pij, Br, d, Bc);
+                printf("L2(Pij) (j = %d): %f\n", j, L2(Pij, Br * Bc));
     
                 rowmax(Pij, mij, Br, Bc);
     
@@ -180,7 +184,7 @@ void FlashAttention(REAL *Q /* in N x d */, REAL *K /* in N x d */,
             }
         }
     
-        free(Kjt);
+        free(Kt);
         free(l);
         free(m);
         free(mij);

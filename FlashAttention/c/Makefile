@@ -32,7 +32,7 @@ bin/custom_alg1: src/custom_alg1.c bin/matmul.o
 bin/custom_alg1_mt: src/custom_alg1_mt.c bin/matmul.o
 	$(CC) $(FLAGS) $^ -o $@ $(LFLAGS) -fopenmp
 
-bin/custom_alg1_mt_outer: src/custom_alg1_mt.c bin/matmul.o
+bin/custom_alg1_mt_outer: src/custom_alg1_mt_outer.c bin/matmul.o
 	$(CC) $(FLAGS) $^ -o $@ $(LFLAGS) -fopenmp
 
 clean:
