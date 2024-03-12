@@ -1,0 +1,146 @@
+use Array: all;
+use Benchmarking: all;
+use StdIO: all;
+use CommandLine: all;
+use String: {strcmp, strtoi, strtof};
+
+#define REAL float
+#define tor tof
+#define REAL_MAX 3.40282346638528859811704183484516925e+38F
+
+noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
+
+inline
+REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
+{
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [k]): A[i, p] * B[j, p];
+                    }: fold(+, tor(0))
+                  | [i, j] < [m, n]};
+}
+
+inline
+REAL[m, n] matmul(REAL[m, k] A, REAL[k, n] B)
+{
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [k]): A[i, p] * B[p, j];
+                    }: fold(+, tor(0))
+                  | [i, j] < [m, n]};
+}
+
+inline 
+REAL maximum(REAL[n] x)
+{
+  return with {
+    ([0] <= iv < [n]): x[iv];
+  }: fold(max, x[0]);
+}
+
+inline 
+REAL[m] maximum(REAL[m, n] x)
+{
+  return {iv -> maximum(x[iv]) | iv < [m]};
+}
+
+inline
+REAL[d:shp] exp(REAL[d:shp] x)
+{
+  return {iv -> Math::exp(x[iv])};
+}
+
+inline 
+REAL[m], REAL, REAL exp_e(REAL[m] x)
+{
+  this_max = maximum(x);
+  fx = {iv -> exp(x[iv] - this_max)};
+  return (fx, this_max, sum(fx));
+}
+
+inline
+int ceildiv(int a, int b)
+{
+  return (a + b - 1) / b;
+}
+
+inline
+REAL[N, d] FlashAttention(REAL[N, d] Q, REAL[N, d] K, REAL[N, d] V, int M)
+{
+  Bc = ceildiv(M, 4 * d);
+  Br = min(Bc, d);
+
+  printf("Br = %d, Bc = %d, d = %d\n", Br, Bc, d);
+
+  Qb = reshape([N / Br, Br, d], Q);
+  Kb = reshape([N / Bc, Bc, d], K);
+  Vb = reshape([N / Bc, Bc, d], V);
+
+  O  = {iv -> tor(0)    | iv < [N / Br, Br, d]};
+  m = {iv -> -REAL_MAX | iv < [N, Br]};
+  l = {iv -> tor(0)    | iv < [N, Br]};
+
+  for (j = 0; j < N / Bc; j++) {
+    for (i = 0; i < N / Br; i++) {
+      Pij, mij, lij = {iv -> (exp_e(matmulT(Qb[i], Kb[j])[iv])) | iv < [Br]};
+      mi_new = max(m[i], mij);
+      li_new = exp(m[i] - mi_new) * l[i] + exp(mij - mi_new) * lij;
+  
+      O[i] = {iv -> l[i][iv] * exp(m[i][iv] - mi_new[iv]) * O[i][iv] | iv < [Br]};
+  
+      Pij = {iv -> exp(mij[iv] - mi_new[iv]) * Pij[iv] | iv < [Br]};
+  
+      O[i] = O[i] + matmul(Pij, Vb[j]);
+      O[i] = {iv -> O[i][iv] / li_new[iv] | iv < [Br]};
+  
+      m[i] = mi_new;
+      l[i] = li_new;
+    }
+  }
+
+  return reshape([N, d], O);
+}
+
+REAL L2(REAL[*] x)
+{
+  return Math::sqrt(sum(x * x));
+}
+
+int main()
+{
+  if (argc() != 6) {
+    printf("%s -mt <n> <d> <N> <M>\n", argv(0));
+    N = 0;
+    d = 0;
+    M = 0;
+  } else {
+    d, unused = strtoi(argv(3), 10);
+    N, unused = strtoi(argv(4), 10);
+    M, unused = strtoi(argv(5), 10);
+    Bc = ceildiv(M, 4 * d);
+    Br = min(Bc, d);
+    if ((N % Br != 0) || (N % Bc != 0)) {
+      printf("Please make sure Br, Bc | N\n");
+    }
+  }
+
+  Q = id({iv -> tor(1) | iv < [N, d]});
+  K = id({iv -> tor(1) | iv < [N, d]});
+  V = id({iv -> tor(1) | iv < [N, d]});
+
+  i_flash = getInterval("flash", 1);
+  start(i_flash);
+
+  O = FlashAttention(Q, K, V, M);
+  print(shape(O));
+
+  end(i_flash);
+  time, unit = returnResultUnit(i_flash);
+
+  printf("L2 norm of output is %lf, should be %lf\n", 
+              L2(O), Math::sqrt(tor(d * N)));
+  printf("Compute rate: %f Gflops / %s\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+
+  return 0;
+}
