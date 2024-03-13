@@ -1,3 +1,5 @@
+/* TODO IO handling of arbitrary input matrices */
+
 use Array: all;
 use Benchmarking: all;
 use StdIO: all;
@@ -76,26 +78,23 @@ REAL[N, d] FlashAttention(REAL[N, d] Q, REAL[N, d] K, REAL[N, d] V, int M)
   Kb = reshape([N / Bc, Bc, d], K);
   Vb = reshape([N / Bc, Bc, d], V);
 
-  O  = {iv -> tor(0)    | iv < [N / Br, Br, d]};
-  m = {iv -> -REAL_MAX | iv < [N, Br]};
-  l = {iv -> tor(0)    | iv < [N, Br]};
+  O = {iv -> tor(0)    | iv < [N / Br, Br, d]};
+  m = {iv -> -REAL_MAX | iv < [N / Br, Br]};
+  l = {iv -> tor(0)    | iv < [N / Br, Br]};
 
   for (j = 0; j < N / Bc; j++) {
-    for (i = 0; i < N / Br; i++) {
-      Pij, mij, lij = {iv -> (exp_e(matmulT(Qb[i], Kb[j])[iv])) | iv < [Br]};
-      mi_new = max(m[i], mij);
-      li_new = exp(m[i] - mi_new) * l[i] + exp(mij - mi_new) * lij;
-  
-      O[i] = {iv -> l[i][iv] * exp(m[i][iv] - mi_new[iv]) * O[i][iv] | iv < [Br]};
-  
-      Pij = {iv -> exp(mij[iv] - mi_new[iv]) * Pij[iv] | iv < [Br]};
-  
-      O[i] = O[i] + matmul(Pij, Vb[j]);
-      O[i] = {iv -> O[i][iv] / li_new[iv] | iv < [Br]};
-  
-      m[i] = mi_new;
-      l[i] = li_new;
-    }
+    Pj, mj, lj = {[i, a] -> (exp_e(matmulT(Qb[i], Kb[j])[a])) 
+                         | [i, a] < [N / Br, Br]};
+    m_new = max(m, mj);
+    l_new = exp(m - m_new) * l + exp(mj - m_new) * lj;
+    O  = {[i, a] -> l[i, a] * exp(m[i, a] - m_new[i, a]) * O[i, a]
+                 | [i, a] < [N / Br, Br]};
+    Pj = {iv -> exp(mj[iv] - m_new[iv]) * Pj[iv] 
+                 | iv < [N / Br, Br]};
+    O  = {iv -> O[iv] + matmul(Pj[iv], Vb[j]) | iv < [N / Br]};
+    O  = {[i, a, b] -> O[i, a, b] / l_new[i, a]};
+    m  = m_new;
+    l  = l_new;
   }
 
   return reshape([N, d], O);
@@ -132,7 +131,6 @@ int main()
   start(i_flash);
 
   O = FlashAttention(Q, K, V, M);
-  print(shape(O));
 
   end(i_flash);
   time, unit = returnResultUnit(i_flash);
