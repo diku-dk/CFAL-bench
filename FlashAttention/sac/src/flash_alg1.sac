@@ -12,7 +12,7 @@ use String: {strcmp, strtoi, strtof};
 
 noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
 
-inline
+noinline
 REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
 {
 //  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
@@ -22,7 +22,7 @@ REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
                   | [i, j] < [m, n]};
 }
 
-inline
+noinline
 REAL[m, n] matmul(REAL[m, k] A, REAL[k, n] B)
 {
 //  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
@@ -83,8 +83,13 @@ REAL[N, d] FlashAttention(REAL[N, d] Q, REAL[N, d] K, REAL[N, d] V, int M)
   l = {iv -> tor(0)    | iv < [N / Br, Br]};
 
   for (j = 0; j < N / Bc; j++) {
+#if 0
     Pj, mj, lj = {[i, a] -> (exp_e(matmulT(Qb[i], Kb[j])[a])) 
                          | [i, a] < [N / Br, Br]};
+#else /* See issue 2395 */
+    Pj, mj, lj = {[i] -> {[a] -> (exp_e(matmulT(Qb[i], Kb[j])[a])) | [a] < [Br]}
+                      | [i] < [N / Br]};
+#endif
     m_new = max(m, mj);
     l_new = exp(m - m_new) * l + exp(mj - m_new) * lj;
     O  = {[i, a] -> l[i, a] * exp(m[i, a] - m_new[i, a]) * O[i, a]
