@@ -34,7 +34,7 @@ Run←{
 	⎕←'Warming up...'
 	_←value strikes
 	
-	⎕←'Running MG...'
+	⎕←'Running FinPar...'
 	start←24 60 60 1000⊥¯4↑⎕TS
 	⎕←res←value strikes
 	end←24 60 60 1000⊥¯4↑⎕TS
