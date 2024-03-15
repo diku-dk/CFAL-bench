@@ -1,0 +1,36 @@
+:Namespace quickhull
+
+⎕CT←0
+
+dataset←'../input/1M_rectangle_16384.dat'
+
+qhull←{L←⍵[⍋⊣/⍵;] ⋄ R←1⌽(≢L)↑1 1 ⋄ K←(+⍀R)-1
+	msk←¯1=×-/((1⊖R1)-R1)[K;]×⌽R1[K;]-L⊣R1←R⌿L
+	L←(L⌿⍨~msk)⍪⊖msk⌿L ⋄ R←(≢L)↑R⌿⍨~msk		
+	{⍵[⍋⍵;]}L⌿⍨{R←⍵ ⋄ K←(+⍀R)-1
+		D←(-/D[K;]×⌽R1[K;]-L)÷(0.5*⍨+/×⍨D←(1⊖R1)-R1←R⌿L)[K]
+		R∨←M=⌈⍀M←⍋M[⍋K[M←⍋D]]
+		L R⌿⍨←⊂0≤D
+	R}⍣≡R
+}
+
+Run←{
+	⎕←'Initializing data...'
+	points←⍎⍤1↑⊃⎕NGET dataset 1
+	
+	⎕←'Warming up...'
+	_←qhull points
+	
+	⎕←'Running QuickHull...'
+	start←24 60 60 1000⊥¯4↑⎕TS
+	⎕←≢res←qhull points
+	end←24 60 60 1000⊥¯4↑⎕TS
+	
+	⎕←20↑res
+	
+	⎕←'QuickHull time elapsed: ',(⍕(end-start)÷1000),'secs'
+	1:shy←res
+	
+}
+
+:EndNamespace
