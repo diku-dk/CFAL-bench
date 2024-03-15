@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include <cblas.h>
 #include <sys/time.h>
@@ -57,7 +59,7 @@ void exp_arr(REAL *x, int size)
 void matmul(REAL *a, REAL *b, REAL *c, int m, int k, int n)
 {
     cblas_gemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-               n, m, k, 1.0, a, k, b, n, 0.0, c, n);
+               m, n, k, 1.0, a, k, b, n, 0.0, c, n);
 }
 
 /* A is m x k, b is n x k */
@@ -92,19 +94,34 @@ void FlashAttention(REAL *Q, REAL *K, REAL *V, REAL *O, REAL *P_block,
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
-        printf("Usage: d N\n");
+    if (argc != 2 && argc != 3) {
+        fprintf(stderr, "Usage:\n");
+        fprintf(stderr, "  %s d N    Compute with matrices filled with ones\n", argv[0]);
+        fprintf(stderr, "  %s -io    Read matrices from stdin and write O to stdout\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    int d = atoi(argv[1]);
-    int N = atoi(argv[2]);
+    bool io_arrays = false;
+    if (argc == 2) {
+        if (strcmp(argv[1], "-io") != 0) {
+            fprintf(stderr, "Invalid argument '%s'\n", argv[1]);
+            return EXIT_FAILURE;
+        }
+        io_arrays = true;
+    }
+
+    int d, N;
+    if (io_arrays) {
+        scanf("%d %d", &d, &N);
+    } else {
+        d = atoi(argv[1]);
+        N = atoi(argv[2]);
+    }
 
     if (N % d != 0) {
-        printf("d must divide N\n");
+        fprintf(stderr, "d must divide N\n");
         return EXIT_FAILURE;
     }
-
 
     REAL *Q = malloc(d * N * sizeof(REAL));
     REAL *K = malloc(d * N * sizeof(REAL));
@@ -112,9 +129,15 @@ int main(int argc, char **argv)
     REAL *O = malloc(d * N * sizeof(REAL));
     REAL *P_block = malloc(d * N * sizeof(REAL));
 
-    SetOne(Q, d * N);
-    SetOne(K, d * N);
-    SetOne(V, d * N);
+    if (io_arrays) {
+        for (int i = 0; i < d * N; i++) scanf("%f", &Q[i]);
+        for (int i = 0; i < d * N; i++) scanf("%f", &K[i]);
+        for (int i = 0; i < d * N; i++) scanf("%f", &V[i]);
+    } else {
+        SetOne(Q, d * N);
+        SetOne(K, d * N);
+        SetOne(V, d * N);
+    }
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
@@ -123,9 +146,24 @@ int main(int argc, char **argv)
     double duration = (double)(tv2.tv_usec - tv1.tv_usec) / 1e6 + 
                       (double)(tv2.tv_sec - tv1.tv_sec);
 
-    printf("L2 norm is %lf (should be %lf)\n", L2(O, d * N), sqrt(N * d));
-    printf("Compute rate: %lf Gflops/s\n", 
-            2.0 * N * N * (d + 1) / duration / 1e9);
+    if (io_arrays) {
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < d; j++) {
+                if (j > 0) putchar(' ');
+                printf("%f", O[d * i + j]);
+            }
+            putchar('\n');
+        }
+    } else {
+        fprintf(stderr, "L2 norm is %lf (should be %lf)\n", L2(O, d * N), sqrt(N * d));
+    }
+
+    /* QK^t is 2N^2d flops, so is PV. softmax(S) (row-wise)
+     * exp(S[i]) / sum_j exp(P[i, j] - max(P[i])) 
+     * is N * (N + 4N) = 5 N^2 flops, but exp is more expensive. */
+    fprintf(stderr,
+            "Compute rate: %lf Gflops/s\n", 
+            (4.0 * d + 5.0) * N * N / duration / 1e9);
 
     free(Q);
     free(K);
