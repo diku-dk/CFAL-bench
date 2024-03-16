@@ -15,3 +15,6 @@ __pycache__/
 nbody-naive/accelerate/nbody-naive/.stack-work/*
 MG/accelerate/.stack-work/*
 quickhull/accelerate/.stack-work/*
+*.o
+Fin-LocVolCalib/baseline-FinPar/OrigCpp/Debug.txt
+Fin-LocVolCalib/baseline-FinPar/OrigCpp/VolCalib
