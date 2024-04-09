@@ -1,16 +1,15 @@
-{-# LANGUAGE TypeApplications #-}
 module Main where
 import Data.Array.Accelerate
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
--- import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
+import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
 
 main :: Prelude.IO ()
-main = defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+main = defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
   where
-    makeInput' = runN @CPU.Native makeInput
+    makeInput' = CPU.runN makeInput
     input256 = makeInput' $ fromList Z [256]
     input512 = makeInput' $ fromList Z [512]
 
