@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeApplications #-}
 module Main where
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
-import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
+-- import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 
@@ -9,14 +10,14 @@ import Quickhull
 
 main :: IO ()
 main = do
-  inputs <- mapM load ["1M_rectangle_16384", "1M_circle_16384", "1M_quadratic_2147483648"]
+  inputs <- mapM load ["tiny"]--["1M_rectangle_16384", "1M_circle_16384", "1M_quadratic_2147483648"]
 
-  let quickhullCPU = CPU.runN quickhull
-  let quickhullGPU = GPU.runN quickhull
+  let quickhullCPU = A.runN @CPU.Native quickhull
+  -- let quickhullGPU = GPU.runN quickhull
+  -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel quickhull
+  -- mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU)]) inputs
 
-  mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU), ("GPU", quickhullGPU)]) inputs
-
-  defaultMain [backend "CPU" quickhullCPU inputs, backend "GPU" quickhullGPU inputs]
+  defaultMain [backend "CPU" quickhullCPU inputs]--, backend "GPU" quickhullGPU inputs]
   where
     backend name quickhull' inputs
       = bgroup name

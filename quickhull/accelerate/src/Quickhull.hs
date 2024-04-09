@@ -2,7 +2,7 @@
 
 module Quickhull (quickhull, Point) where
 
-import Data.Array.Accelerate
+import Data.Array.Accelerate hiding (scanr, scanr1, scanl, scanl', scanr')
 import Data.Array.Accelerate.Debug.Trace
 import qualified Prelude
 
@@ -239,3 +239,13 @@ nonNormalizedDistance (T2 (T2 x1 y1) (T2 x2 y2)) (T2 x y) = nx * x + ny * y - c
     nx = y1 - y2
     ny = x2 - x1
     c  = nx * x1 + ny * y1
+
+scanr1 f = reverse . scanl1 (flip f) . reverse
+scanl' f x xs = T2 (oneOver x $ map (f x) $ scanl1 f xs) (fold f x xs)
+oneOver x xs = 
+  let (sh ::. sz) = shape xs
+      sh' = sh ::. 1
+      x' = generate sh' (const x)
+      xs' = backpermute (sh ::. (sz-1)) Prelude.id xs
+  in x' ++ xs'
+
