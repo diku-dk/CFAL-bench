@@ -28,7 +28,7 @@ In order to suggest a new benchmark, please do perform the following steps:
 | ----------- | ----------- | ----------------- | ------------------- | ---------- | --- | ------ | ------- | --- |
 | MG          | done        | GPU, Fortran, SAC | VERY LIKELY         | YES        | YES | YES    | YES     | YES |
 | nbody-naive | done        | Seq C             | under consideration | YES        | YES | YES    | YES     | YES |
-| Fin-LocVolC | done        | GPU,OMP, Haskell  | under consideration |            | YES | Almost | YES     | YES |
+| LocVolCalib | done        | GPU,OMP, Haskell  | under consideration |            | YES | Almost | YES     | YES |
 | FFT         | done        |                   |                     |            |     |        |         |     |
 | Quickhull   | done        | qhull             |                     | YES        | YES |        | YES     | Multiple |
 | FlashAttention | done     | Seq/MC C?         |                     |            | YES | YES    |         | YES |
