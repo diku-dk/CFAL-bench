@@ -1,6 +1,7 @@
 import dace
 import numpy as np
 import numpy.typing as npt
+from timeit import repeat
 
 
 def nbody_python(pos: npt.NDArray[np.float64],
@@ -181,4 +182,22 @@ if __name__ == "__main__":
     sdfg_opt(pos=pos_dace_opt, vel=vel_dace_opt, mass=mass, dt=dt, N=num_particles, iterations=num_iterations)
     print("Position error (optimized):", relerror(pos_dace_opt, pos_ref))
     print("Velocity error (optimized):", relerror(vel_dace_opt, vel_ref))
+
+    # Benchmark
+    num_particles = 10000
+    num_iterations = 10
+    pos = rng.random((num_particles, 3))
+    vel = rng.random((num_particles, 3))
+    mass = rng.random((num_particles, ))
+    dt = 0.01
+
+    func = sdfg_opt.compile()
+    runtimes = repeat(lambda: func(pos=pos, vel=vel, mass=mass, dt=dt, N=num_particles, iterations=num_iterations),
+                      number=1, repeat=10)
+    median_time = np.median(runtimes)
+    min_time = np.min(runtimes)
+    flops = (18.0 * num_particles * num_particles + 12.0 * num_particles) * num_iterations / (1e9 * median_time)
+    print(f"Runtime: median {median_time} s ({flops} Gflop/s), min {min_time} s", flush=True)
+    print()
+
 
