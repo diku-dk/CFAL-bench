@@ -19,3 +19,4 @@ quickhull/accelerate/.stack-work/*
 *.o
 Fin-LocVolCalib/baseline-FinPar/OrigCpp/Debug.txt
 Fin-LocVolCalib/baseline-FinPar/OrigCpp/VolCalib
+FlashAttention/accelerate/.stack-work/*
