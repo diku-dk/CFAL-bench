@@ -23,4 +23,5 @@ All floating-point arithmetic should be in double precision.
 
 ## Reference CUDA version
 https://github.com/NVIDIA/cuda-samples/tree/master/Samples/5_Domain_Specific/nbody
+https://developer.download.nvidia.com/compute/cuda/1.1-Beta/x86_website/projects/nbody/doc/nbody_gems3_ch31.pdf
 
