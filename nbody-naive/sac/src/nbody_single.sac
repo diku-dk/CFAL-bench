@@ -1,0 +1,64 @@
+use Array: all;
+use Math: all;
+use StdIO: all;
+use Benchmarking: all;
+
+inline
+double[3] acc(double[3] x, double[3] y, double m)
+{
+    dir = y - x;
+    factor = (sum(dir * dir) == 0d) ? 
+          0d : m / (sum(dir * dir) * sqrt(sum(dir * dir)));
+    return dir * factor;
+}
+
+noinline
+double[N, 3] acc(double[N, 3] positions, double[N] ms)
+{
+    acc = {iv -> with {
+                    ([0] <= jv < [N]): acc(positions[iv], positions[jv], ms[jv]);
+                 }: fold(+, [0d, 0d, 0d])
+               | iv < [N]};
+    return acc;
+}
+
+inline
+double[N, 3], double[N, 3]
+advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
+        double dt)
+{
+  accelerations = acc(positions, masses);
+
+  velocities += accelerations * dt;
+  positions += velocities * dt;
+
+  return (positions, velocities);
+}
+
+int main()
+{
+    itime = getInterval("time", 1);
+    start(itime);
+
+    positions = {[i] -> [tod(i), tod(2 * i), tod(3 * i)] | [i] < [N]};
+    velocities = genarray([N, 3], 0d);
+    masses = {[i] -> 1d | [i] < [N]};
+
+    for (t = 0; t < ITER; t++) {
+      positions, velocities = advance(positions, velocities, masses, 0.01);
+    }
+
+    end(itime);
+
+    fprintf(stderr, "Sum is %lf\n", sum(positions));
+#ifdef DEBUG
+    print(positions);
+#endif
+
+    time, unit = returnResultUnit(itime);
+    fprintf(stderr, "This took %f%s.\n", time, unit);
+    printf("%f\n", 
+        (18.0 * tod(N) * tod(N) + 12.0 * tod(N)) * tod(ITER) / 1e9 / time);
+
+    return 0;
+}
