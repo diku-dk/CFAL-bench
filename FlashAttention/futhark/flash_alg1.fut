@@ -33,7 +33,7 @@ def dotprod [d] (as: [d]real) (bs: [d]real) : real =
 
 def FlashAttention [d][N]
         (M : i64)
-        (O: [N][d]real)
+        -- (O: [N][d]real)
         (Q: [N][d]real) 
         (K: [N][d]real) 
         (V: [N][d]real) 
@@ -46,21 +46,23 @@ def FlashAttention [d][N]
   
   let ms = replicate Tr (replicate Br real_lowest)
   let ls = replicate Tr (replicate Br real_zero)
-  -- let Os_new = replicate Tr (replicate Br (replicate d real_zero))
-  let O  = (O :> [Tr*Br][d]real) |> unflatten
+  -- let Os_new = replicate (Tr*Br) (replicate d real_zero))
+  -- let O  = (O :> [Tr*Br][d]real) |> unflatten
+  let O = replicate d real_zero |> replicate Br |> replicate Tr
 
   -- j = 0 .. Tc-1 must be a sequential loop 
   -- dictated by the computation of mi and li
   let (ms', ls', O') =
-    loop (ms, ls, O) for j < Tc do
+    loop (ms, ls, O)
+    for j < Tc do
       let f (mi: [Br]real) (li: [Br]real) (Oi: [Br][d]real) i =
         -- ToDo: copy Kj, Vj, Oi, Qi to shared memory
-        -- let Oi = O[i*Br : i*(Br+1)] :> [Br][d]real
-        let Qi = Q[i*Br : i*(Br+1)] :> [Br][d]real
+        -- let Oi = O[i*Br : (i+1)*Br] :> [Br][d]real
+        let Qi = Q[i*Br : (i+1)*Br] :> [Br][d]real
 
         -- can Kj and Vj be used from LL$ instead of shared memory
-        let Kj = K[j*Bc : j*(Bc+1)] :> [Bc][d]real
-	let Vj = V[j*Bc : j*(Bc+1)] :> [Bc][d]real
+        let Kj = K[j*Bc : (j+1)*Bc] :> [Bc][d]real
+        let Vj = V[j*Bc : (j+1)*Bc] :> [Bc][d]real
         
         in
          imap4 mi li Oi (iota Br)
@@ -79,7 +81,7 @@ def FlashAttention [d][N]
               for k < d/Bc do #[unsafe]
                 let acc_chunk = imap2 Oii[k*Bc : (k+1)*Bc] (iota ((k+1)*Bc - k*Bc))
                   (\ elmOi kk -> 
-                      let acc = #[sequential] map2 (\ pij vjk -> eij*pij*vjk) Pij (Vj[:, k*Bc + kk])
+                      let acc = #[sequential] map2 (\ pij vjk -> eij*pij*vjk) xs (Vj[:, k*Bc + kk])  -- was Pij instead of xs
                              |> #[sequential] reduce (+) 0
                       in #[unsafe] (elmOi * eli + acc) / li_new
                   )
@@ -110,6 +112,49 @@ def FlashAttention [d][N]
   let ls = (flatten ls') :> [N]real
   let O''= (flatten  O') :> [N][d]real
   in  (ms, ls, O'')
+
+entry query_sizes [n][d] (M: i64) (_Q: [n][d]real) (_K: [n][d]real) (_V: [n][d]real) : (i64,i64,i64,i64,i64,i64,i64) =
+  let Bc = M / (4 * d)
+  let Br = i64.min d Bc   -- d < Bc ? d : Bc;
+  let Tr = n / Br
+  let Tc = n / Bc
+  in  (M, n, d, Bc, Br, Tr, Tc)
+
+entry mk_input (n:i64) (d:i64) : (i64, [n][d]real, [n][d]real, [n][d]real) =
+  let tile = 16
+  let M = tile * 4 * d
+  let Q = replicate d 1.0 |> replicate n
+  let K = replicate d 1.0 |> replicate n
+  let V = replicate d 1.0 |> replicate n
+  in  (M, Q, K, V)
+
+
+def L2 [n] (xs: [n]real) : real =
+    map (\x -> x*x) xs
+    |> reduce (+) 0.0
+    |> real_sqrt
+
+--
+-- ==
+-- entry: flashalg1
+-- "Class 8192-128" script input { (mk_input 8192i64 128i64) }
+-- output { 0.0f32 }
+-- "Class 16384-128" script input { (mk_input 16384i64 128i64) }
+-- output { 0.0f32 }
+-- "Class 8192-64" script input { (mk_input 8192i64 64i64) }
+-- output { 0.0f32 }
+-- "Class 16384-64" script input { (mk_input 16384i64 64i64) }
+-- output { 0.0f32 }
+
+entry flashalg1 [n][d] (M: i64) (Q: [n][d]real) (K: [n][d]real) (V: [n][d]real) : real =
+  let (_, _, O) = FlashAttention M Q K V
+  let O_flat = flatten O
+  in ( L2 O_flat ) - (real_sqrt (real_i64 (n*d)))
+
+entry debug [n][d] (M: i64) (Q: [n][d]real) (K: [n][d]real) (V: [n][d]real) =
+  let (ms, ls, O) = FlashAttention M Q K V
+  in  O -- (ms, ls)
+
 
 -----------------------------
 --- The C implementation: ---
