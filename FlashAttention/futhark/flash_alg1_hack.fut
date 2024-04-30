@@ -24,6 +24,9 @@ def dotprod [d] (as: [d]real) (bs: [d]real) : real =
   #[sequential] map2 (*) as bs |> 
   #[sequential] reduce (+) 0
 
+def glb2shm [n][m] (arr: [n][m]real) : [n][m]real =
+  let arr' = copy arr
+  in  if (m < opaque(1)) then let arr'[0,0] = real_zero in arr' else arr'
 ------------------------
 --- In-Progress Work ---
 ------------------------
@@ -56,61 +59,58 @@ def FlashAttention [d][N]
         -- ToDo: copy Kj, Vj, Oi, Qi to shared memory
         -- let Oi = O[i*Br : (i+1)*Br] :> [Br][d]real
         let Qi = Q[i*Br : (i+1)*Br] :> [Br][d]real
+        -- let Qi = glb2shm (Q[i*Br : (i+1)*Br] :> [Br][d]real)
 
         -- can Kj and Vj be used from LL$ instead of shared memory
         let Kj = K[j*Bc : (j+1)*Bc] :> [Bc][d]real
-        let Vj = V[j*Bc : (j+1)*Bc] :> [Bc][d]real
+        -- let Kj = glb2shm  (K[j*Bc : (j+1)*Bc] :> [Bc][d]real)
         
         let Pijs = tabulate_2d Br Bc 
                     (\ ii jj -> #[unsafe] dotprod Qi[ii, 0:d] Kj[jj, 0:d] ) |> opaque
         
-        let (maxs, Pijs) = imap Pijs
-            (\ Pij -> let max = reduce real_max real_lowest Pij
-                      let xs  = map (\x -> real_exp (x - max)) Pij
-                      in  (max, xs)
-            ) |> unzip |> opaque
-            
-        let sums = imap Pijs (reduce (+) 0) |> opaque
-        
-        let (mi, li, eijs, elis) = imap4 mi li maxs sums
-          (\ mii lii max sum ->
-            let mi_new = real_max max mii
-            let eij = real_exp (max - mi_new)
-            let eli = lii * (real_exp (mii - mi_new))
-            let li_new = eli + sum * eij
-            in  (mi_new, li_new, eij, eli)
-          ) |> unzip4 |> opaque
-        
---        let (mi, li, eijs, elis, Pijs) = imap4 mi li Pijs (iota Br)
---          (\ mii lii Pij _ii ->
---            let max = reduce real_max real_lowest Pij
---            let xs  = imap Pij (\x -> real_exp (x - max))
---            let sum = reduce (+) 0 xs
+--        let (maxs, Pijs) = imap Pijs
+--            (\ Pij -> let max = reduce real_max real_lowest Pij
+--                      let xs  = map (\x -> real_exp (x - max)) Pij
+--                      in  (max, xs)
+--            ) |> unzip |> opaque
+--            
+--        let sums = imap Pijs (reduce (+) 0) |> opaque
+--        
+--        let (mi, li, eijs, elis) = imap4 mi li maxs sums
+--          (\ mii lii max sum ->
 --            let mi_new = real_max max mii
 --            let eij = real_exp (max - mi_new)
 --            let eli = lii * (real_exp (mii - mi_new))
 --            let li_new = eli + sum * eij
---            in  (mi_new, li_new, eij, eli, xs)
---          ) |> unzip5 |> opaque
+--            in  (mi_new, li_new, eij, eli)
+--          ) |> unzip4 |> opaque
+        
+        let (mi, li, eijs, elis, Pijs) = imap4 mi li Pijs (iota Br)
+          (\ mii lii Pij _ii ->
+            let max = reduce real_max real_lowest Pij
+            let xs  = imap Pij (\x -> real_exp (x - max))
+            let sum = reduce (+) 0 xs
+            let mi_new = real_max max mii
+            let eij = real_exp (max - mi_new)
+            let eli = lii * (real_exp (mii - mi_new))
+            let li_new = eli + sum * eij
+            in  (mi_new, li_new, eij, eli, xs)
+          ) |> unzip5 |> opaque
+
+        let Vj = V[j*Bc : (j+1)*Bc] :> [Bc][d]real
+        -- let Vj = glb2shm (V[j*Bc : (j+1)*Bc] :> [Bc][d]real)
           
         let Oi_new =
           loop (Oi_new) = copy Oi
           for k < d/Bc do #[unsafe]
             let mkOi li_new eij eli Oii Pij = 
-              imap2 (Oii[k*Bc : (k+1)*Bc] :> [Bc]real) Pij
-                (\ elmOi pij -> elmOi + pij * li_new)
-            let acc_chunk = map5 mkOi maxs eijs elis Oi Pijs
-            -- BUG: replacing `maxs` with `mi` in the line above explodes
-            -- the shared-emmory usage from some 6K to 532K 
-            -- (for no apparent good reason as `mi` has small size `Br`)
-
---              imap2 (Oii[k*Bc : (k+1)*Bc] :> [Bc]real) (iota Bc)
---                    (\ elmOi kk -> 
---                      let acc = #[sequential] map2 (\ pij vjk -> eij*pij*vjk) Pij (Vj[:, k*Bc + kk])
---                             |> #[sequential] reduce (+) 0
---                      in #[unsafe] (elmOi * eli + acc) / li_new
---                    ) 
---            let acc_chunk = map5 mkOi li eijs elis Oi Pijs
+              imap2 (Oii[k*Bc : (k+1)*Bc] :> [Bc]real) (iota Bc)
+                    (\ elmOi kk -> 
+                      let acc = #[sequential] map2 (\ pij vjk -> eij*pij*vjk) Pij (Vj[:, k*Bc + kk])
+                             |> #[sequential] reduce (+) 0
+                      in #[unsafe] (elmOi * eli + acc) / li_new
+                    ) 
+            let acc_chunk = map5 mkOi li eijs elis Oi Pijs
             let Oi_new[:, k*Bc : (k+1)*Bc] = acc_chunk
             in  Oi_new
             -- 
@@ -163,5 +163,5 @@ entry flashalg1 [n][d] (M: i64) (Q: [n][d]real) (K: [n][d]real) (V: [n][d]real) 
 
 entry debug [n][d] (M: i64) (Q: [n][d]real) (K: [n][d]real) (V: [n][d]real) =
   let (ms, ls, O) = FlashAttention M Q K V
-  in  O -- (ms, ls)
+  in  (ms, ls, O)
 
