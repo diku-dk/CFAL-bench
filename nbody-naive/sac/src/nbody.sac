@@ -1,14 +1,19 @@
-use Array: all;
+use Array: all except {zero, sel};
+import Array: {zero, sel};
 use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 
-#define DEBUG 1
+struct Body {
+  double x;
+  double y;
+  double z;
+};
 
 inline
-double l2norm(double x, double y, double z)
+double l2norm(struct Body b)
 {
-    return sqrt(x * x + y * y + z * z);
+    return sqrt(b.x * b.x + b.y * b.y + b.z * b.z);
 }
 
 inline
@@ -18,55 +23,63 @@ double pow3(double x)
 }
 
 inline
-double, double, double acc(double x, double y, double z, 
-                           double x2, double y2, double z2, 
-                           double m)
+struct Body sub(struct Body a, struct Body b)
 {
-   dirx = x2 - x;
-   diry = y2 - y;
-   dirz = z2 - z;
-   factor = (l2norm(dirx, diry, dirz) == 0d) ? 
-        0d : m / pow3(l2norm(dirx, diry, dirz));
-   return (dirx * factor, diry * factor, dirz * factor);
-}
-
-noinline
-double[N], double[N], double[N] 
-acc_v(double[N] px, double[N] py, double[N] pz, 
-      double[N] pxs, double[N] pys, double[N] pzs, double[N] ms)
-{
-   ax, ay, az =  with {
-                   (. <= [i] <= .) {
-                     x, y, z = with {
-                                 ([0] <= [j] < [N]) {
-                                   bx, by, bz = acc(px[i], py[i], pz[i], 
-                                                    pxs[j], pys[j], pzs[j], 
-                                                    ms[j]);
-                                  } : (bx, by, bz);
-                               }: (fold (+, 0.0), fold (+, 0.0), fold (+, 0.0));
-                   }: (x, y, z);
-                 }: (genarray([N], 0.0), genarray([N], 0.0), genarray([N], 0.0));
-   return (ax, ay, az);
+  res = Body {a.x - b.x, a.y - b.y, a.z - b.z};
+  return res;
 }
 
 inline
-double[N, 3], double[N, 3]
-advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
+struct Body add(struct Body a, struct Body b)
+{
+  res = Body {a.x + b.x, a.y + b.y, a.z + b.z};
+  return res;
+}
+
+inline
+struct Body mul(double n, struct Body b)
+{
+  res = Body {n * b.x, n * b.y, n * b.z};
+  return res;
+}
+
+inline
+struct Body acc(struct Body b1, struct Body b2,
+                           double m)
+{
+   dir = sub(b2, b1);
+   factor = (l2norm(dir) == 0d) ? 
+        0d : m / pow3(l2norm(dir));
+   return mul(factor, dir);
+}
+
+noinline
+struct Body[N]
+acc_v(struct Body[N] px, double[N] ms)
+{
+  return with {(. <= iv <= .): with {
+                              ([0] <= jv < [N]): acc(px[iv], px[jv], ms[jv]);
+                               }: fold(add, Body {0d, 0d, 0d});
+              }: genarray([N], zero(Body {0d, 0d, 0d}));
+}
+
+inline
+struct Body[N], struct Body[N]
+advance(struct Body[N] positions, struct Body[N] velocities, double[N] masses,
         double dt)
 {
-  /* Why do I need to rename positions2? */
-  positions2 = transpose(positions);
+  acc = acc_v(positions, masses);
 
-  accelx, accely, accelz = acc_v(positions2[0], positions2[1], positions2[2],
-                                 positions2[0], positions2[1], positions2[2],
-                                 masses);
+  velocities = with {
+                  (. <= iv <= .): add(velocities[iv], 
+                                      mul(dt, acc[iv]));
+               }: genarray([N], zero(Body {0d, 0d, 0d}));
 
-  positions = transpose(positions2);
+  positions =  with {
+                  (. <= iv <= .): add(positions[iv], 
+                                      mul(dt, velocities[iv]));
+               }: genarray([N], zero(Body {0d, 0d, 0d}));
 
-  accelerations = {iv -> [accelx[iv], accely[iv], accelz[iv]]};
-
-  velocities += accelerations * dt;
-  positions += velocities * dt;
 
   return (positions, velocities);
 }
@@ -76,8 +89,10 @@ int main()
     itime = getInterval("time", 1);
     start(itime);
 
-    positions = {[i] -> [tod(i), tod(2 * i), tod(3 * i)] | [i] < [N]};
-    velocities = genarray([N, 3], 0d);
+    velocities = with {}: genarray([N], zero(Body {0d, 0d, 0d}));
+    positions = with {
+                  (. <= [i] <= .): Body {tod(i), tod(2 * i), tod(3 * i)};
+               }: genarray([N], zero(Body {0d, 0d, 0d}));
     masses = {[i] -> 1d | [i] < [N]};
 
     for (t = 0; t < ITER; t++) {
@@ -86,10 +101,7 @@ int main()
 
     end(itime);
 
-    fprintf(stderr, "Sum is %lf\n", sum(positions));
-#ifdef DEBUG
-    print(positions);
-#endif
+    fprintf(stderr, "Sum is %lf\n", positions[0].x);
 
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
