@@ -1,7 +1,7 @@
 CC     = gcc
 FORT   = gfortran
 FLAGS  = -Ofast -march=native -mtune=native
-LFLAGS = -lm
+LFLAGS = -lm -fopenmp
 
 all: bin/nbody_c bin/nbody_f90
 
