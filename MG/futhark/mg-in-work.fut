@@ -36,16 +36,6 @@ def relaxSAC (n: i64) (n': i64) (f: i32->i32) (getElm: i32->i32->i32->real)
     in #[sequential] #[unroll] sum (map2 (*) flat_weights (flatten_3d hood))
   in tabulate_3d' n n n f
 
-def P [n] (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
-  flatten_3d (relaxSAC n (2*n) (\x->2*x+1) (getElmFlat a) [1/2, 1/4, 1/8, 1/16]) 
--- -- Or a bit more efficient and longer:
---  let f ijl =
---     let (i',j',l') = unflatInd ijl (i32.i64 n) (i32.i64 n)
---     let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
---     let hood = hood_3d (2*n) (getElmFlat a) i j l
---     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
---  in map f (iota (n*n*n))
-
 def coarse2fine [n] (z: [n][n][n]real) =
   tabulate_3d' (2*n) (2*n) (2*n) (get8thElm3d z)
 
@@ -56,11 +46,13 @@ def Qslow [n] (a: [n][n][n]real) =
 --- NAS-like implementation ---
 -------------------------------
 
-def relaxNAS (n: i64) (_n: i64) (_f: i32->i32) (getElm: i32->i32->i32->real)
-             (ws: [4]real) : *[n][n][n]real =
-  let nm1= (i32.i64 n) - 1
-  let iterBody (i3: i32) (i2: i32) : [n]real =
-      let f (i1: i32) = #[unsafe]
+def relaxNAS (n': i64) (n: i64) (iF: i32->i32) (getElm: i32->i32->i32->real)
+             (ws: [4]real) : *[n'][n'][n']real =
+  let (nm1, nm1') = ( (i32.i64 n) - 1, (i32.i64 n') - 1 )
+  let iterBody (i3': i32) (i2': i32) : [n']real =
+      let (i3, i2) = (iF i3', iF i2')
+      let f (i1': i32) = 
+           let i1 = iF i1' in
            (  getElm i3 ((i2-1) & nm1) i1 +
               getElm i3 ((i2+1) & nm1) i1 +
               getElm ((i3-1) & nm1) i2 i1 +
@@ -71,15 +63,16 @@ def relaxNAS (n: i64) (_n: i64) (_f: i32->i32) (getElm: i32->i32->i32->real)
               getElm ((i3+1) & nm1) ((i2-1) & nm1) i1 +
               getElm ((i3+1) & nm1) ((i2+1) & nm1) i1
            )
-      let g u1s u2s (i1: i32) = #[unsafe]
+      let g u1s u2s (i1': i32) = 
+           let i1 = iF i1' in #[unsafe]
            ( ws[0] * ( getElm i3 i2 i1 ) +
-             ws[1] * ( getElm i3 i2 ((i1-1) & nm1) + getElm i3 i2 ((i1+1) & nm1) + u1s[i1] ) +
-             ws[2] * ( u2s[i1] + u1s[(i1-1) & nm1] + u1s[(i1+1) & nm1] ) +
-             ws[3] * ( u2s[(i1-1) & nm1] + u2s[(i1+1) & nm1] )
+             ws[1] * ( getElm i3 i2 ((i1-1) & nm1) + getElm i3 i2 ((i1+1) & nm1) + u1s[i1'] ) +
+             ws[2] * ( u2s[i1'] + u1s[(i1'-1) & nm1'] + u1s[(i1'+1) & nm1'] ) +
+             ws[3] * ( u2s[(i1'-1) & nm1'] + u2s[(i1'+1) & nm1'] )
            )
-      let (u1s, u2s) = unzip (tabulate' n f)
-      in  tabulate' n (g u1s u2s)
-  in  tabulateIntra_2d n n iterBody
+      let (u1s, u2s) = unzip (tabulate' n' f)
+      in  tabulate' n' (g u1s u2s)
+  in  tabulateIntra_2d n' n' iterBody
 
 -------------------------------
 --- CORE ALGORITHMIC PIECES ---
@@ -88,6 +81,18 @@ def relaxNAS (n: i64) (_n: i64) (_f: i32->i32) (getElm: i32->i32->i32->real)
 -- the type of the generic relaxation computational kernel:
 type^ relaxT = (n: i64) -> i64 -> (i32 -> i32) -> 
                (i32->i32->i32->real) -> [4]real -> *[n][n][n]real
+
+def P [n] (relaxKer: relaxT) (a: [(n*2)*(n*2)*(n*2)]real) : *[n*n*n]real =
+  flatten_3d (relaxSAC n (2*n) (\x->2*x+1) (getElmFlat a) [1/2, 1/4, 1/8, 1/16])
+-- -- Or a bit more efficient and longer:
+--  let weights = gen_weights [1/2, 1/4, 1/8, 1/16]
+--  let f ijl =
+--     let (i',j',l') = unflatInd ijl (i32.i64 n) (i32.i64 n)
+--     let (i, j, l) = (2*i'+1, 2*j'+1, 2*l'+1)
+--     let hood = hood_3d (2*n) (getElmFlat a) i j l
+--     in  #[sequential] #[unroll] sum (map2 (*) (flatten_3d weights) (flatten_3d hood))
+--  in map f (iota (n*n*n))
+
 
 def Q [n] (relaxKer: relaxT) (a: [n][n][n]real) : [2*n][2*n][2*n]real =
   relaxKer (2*n) (2*n) id (get8thElm3d a) [1,1/2,1/4,1/8]
@@ -109,14 +114,14 @@ def M [n] (relaxKer: relaxT) (wS: [4]real) (r: [n][n][n]real) : [n][n][n]real =
   -- fill in rss
   let nd2 = n / 2
   let r_flat = ( flatten (flatten r) ) |> sized ( (nd2*2) * (nd2*2) * (nd2*2) )
-  let rss[0: nd2*nd2*nd2] = P r_flat
+  let rss[0: nd2*nd2*nd2] = P relaxKer r_flat
   let (off, m2, rss) =
     loop (off, m, rss) = (0i64, n/2, rss)
     for _k < count do
       let (off', m') = (off + m*m*m, m / 2)
       let r  = rss[off: off + m*m*m]
             |> sized ((m'*2)*(m'*2)*(m'*2))
-      let rss[off': off' + m'*m'*m'] = P r
+      let rss[off': off' + m'*m'*m'] = P relaxKer r
       in  (off', m', rss)
 
   -- base case of M
