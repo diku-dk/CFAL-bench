@@ -1,4 +1,5 @@
 #include <math.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -56,6 +57,7 @@ double pow3(double x)
 /* 18 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
+    #pragma omp parallel for
     for (int i = 0; i < n; i++) {
         double ax = 0.0;
         double ay = 0.0;
@@ -89,6 +91,7 @@ void advance(Points positions, Points velocities, double *masses,
 {
     accelerateAll(accel, positions, masses, n);
 
+    #pragma omp parallel for
     for (int i = 0; i < n; i++) {
         velocities.x[i] += accel.x[i] * dt;
         velocities.y[i] += accel.y[i] * dt;
