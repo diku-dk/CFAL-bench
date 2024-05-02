@@ -86,3 +86,16 @@ and then the `futhark` command will work if `$HOME/.local/bin` is in
 `$PATH`. Then you simply use `futhark bench prog.fut` where `prog.fut`
 is the Futhark program in question. Pass `--backend=multicore` or
 `--backend=cuda` as appropriate.
+
+## SaC / OpenMP
+
+I also have a `${HOME}/.local` directory for locally installed stuff. I compiled
+`variance` from `util` and copy both this program and the `bench_...` scripts
+to the path. 
+
+Before benchmarking, it is important to compile the programs on cn132 via a 
+batch script or `srun`.
+
+Then it is a matter of `sbatch bench_omp.sh ...` or 
+`sbatch bench_sac_mt.sh ...` to run the benchmarks. If the scripts are run 
+without arguments, they print their usage.
