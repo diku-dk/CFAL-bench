@@ -1,14 +1,16 @@
 #!/bin/bash
 
 #SBATCH --account=csmpi
-#SBATCH --partition=csmpi_fpga_short
+#SBATCH --partition=csmpi_fpga_long
 #SBATCH --cpus-per-task=32
-#SBATCH --output=bench_omp.out
+#SBATCH --output=bench_sac_mt.out
+#SBATCH --time=1:00:00
+#SBATCH --mem=0
 
 # If the script is used improperly, prints a short explanation
 # and exits
 if [ "$#" -lt 5 ]; then
-    printf 'Usage: bench_sac.sh BINARY RUNS OUT_DIR OUT_NAME P ARGS\n\n' >&2
+    printf 'Usage: bench_sac_mt.sh BINARY RUNS OUT_DIR OUT_NAME P ARGS\n\n' >&2
     printf '\tBINARY: SaC program to benchmark\n' >&2
     printf '\t        Assumes only GFLOPS/s is printed to stdout\n\n' >&2
     printf '\tRUNS: How often to run the benchmark\n\n' >&2

@@ -1,9 +1,11 @@
 #!/bin/bash
 
 #SBATCH --account=csmpi
-#SBATCH --partition=csmpi_fpga_short
+#SBATCH --partition=csmpi_fpga_long
 #SBATCH --cpus-per-task=32
 #SBATCH --output=bench_omp.out
+#SBATCH --time=1:00:00
+#SBATCH --mem=0
 
 # If the script is used improperly, prints a short explanation
 # and exits
