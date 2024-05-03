@@ -46,8 +46,8 @@ __global__ void alg1Ker ( int d, int N, int j
   const int Br = blockDim.y;
   const int Bc = blockDim.x;
 
-  float* Kj   = (float*)sh_mem_char;   // [Bc][d]
-  float* Vj   = Kj   + Bc*d;          // [Bc][d]
+  float* Kj   = (float*)sh_mem_char;  // [Bc][d]
+  float* Vj   = Kj;                   // [Bc][d]  (shares the space of Kj)
   float* Qi   = Vj   + Bc*d;          // [Br][d]
   float* Pij  = Qi   + Br*d;          // [Br][Bc]
   float* maxs = Pij  + Br*Bc;         // [Br]
@@ -68,14 +68,16 @@ __global__ void alg1Ker ( int d, int N, int j
     maxs[tid] = -INFINITY;
   }  
 
-  // copy Kj, Vj from global to shared memory
+  // copy Kj from global to shared memory; 
+  // can be optimized a bit by normalizing the loop
   for (int t = tid; t < Bc*d; t+=Br*Bc) {
     int64_t glb_ind = j * Bc * d + t;
     Kj[t] = K[glb_ind];
-    Vj[t] = V[glb_ind];
+    //Vj[t] = V[glb_ind];
   }
   
   // copy Qi from global to shared memory
+  // can be optimized a bit by normalizing the loop
   for (int t = tid; t < Br*d; t+=Br*Bc) {
     int64_t glb_ind = i * Br * d + t;
     Qi[t] = Q[glb_ind];
@@ -133,6 +135,12 @@ __global__ void alg1Ker ( int d, int N, int j
     li_sh[ii] = li_new;
     es[ii] = eij;
     el[ii] = eli;
+  }
+
+  // copy Vj from global to shared memory
+  for (int t = tid; t < Bc*d; t+=Br*Bc) {
+    int64_t glb_ind = j * Bc * d + t;
+    Vj[t] = V[glb_ind];
   }
   __syncthreads();
 
@@ -202,7 +210,7 @@ flash_attention(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, floa
     // setup execution parameters
     dim3 block(Bc, Br, 1);
     dim3 grid (Tr,  1, 1);
-    const size_t shmem_size = (2*Bc*d + Br*d + Br*Bc + 5*Br) * sizeof(float);
+    const size_t shmem_size = (Bc*d + Br*d + Br*Bc + 5*Br) * sizeof(float);
     
     cudaFuncSetAttribute(alg1Ker, cudaFuncAttributeMaxDynamicSharedMemorySize, 65536);
     
