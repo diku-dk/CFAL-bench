@@ -30,5 +30,5 @@ In order to suggest a new benchmark, please do perform the following steps:
 | nbody-naive | done        | Seq C             | YES                 | YES        | YES | YES    | YES     | YES |
 | LocVolCalib | done        | GPU,OMP, Haskell  | YES                 |            | YES | Almost | YES     | YES |
 | Quickhull   | done        | qhull             | YES                 | YES        | YES |        | YES     | Multiple |
-| FlashAttention | done     | Seq/MC C?         | YES                 |            | YES | YES    |         | YES |
+| FlashAttention | done     | Seq/MC C?         | YES                 | YES        | YES | YES    |         | YES |
 
