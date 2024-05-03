@@ -70,11 +70,13 @@ __global__ void alg1Ker ( int d, int N, int j
 
   // copy Kj from global to shared memory;
   // can be optimized a bit by normalizing the loop
-  // ToDo: keep Kj in transpose form or pad it will result in 2x speedup
+  // Kj is padded to avoid very expensive bank conflicts in mmm. 
   for (int t = tid; t < Bc*d; t+=Br*Bc) {
     int64_t glb_ind = j * Bc * d + t;
-    Kj[t] = K[glb_ind];
-    //Vj[t] = V[glb_ind];
+    int q = t / d;
+    int r = t - q*d; 
+    Kj[q*(d+1) + r] = K[glb_ind];
+    //Kj[t] = K[glb_ind];
   }
 
   // copy Qi from global to shared memory
@@ -103,7 +105,7 @@ __global__ void alg1Ker ( int d, int N, int j
     for (int kk = 0; kk < d; kk++) {
       pij +=
         Qi[ii * d + kk] *
-        Kj[jj * d + kk] ;
+        Kj[jj*(d+1) + kk]; //Kj[jj * d + kk] ;
     }
   }
 
@@ -191,11 +193,7 @@ L2(float *x, size_t c)
 __host__ int
 flash_attention(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, float *V_d, int N, int d, int M)
 {
-        int Br, Bc, Tr, Tc;
-
-#if 0
-    float* m_h = (float*)malloc(N*sizeof(float));
-#endif
+    int Br, Bc, Tr, Tc;
 
     Bc = M / (4 * d);
     Br = d < Bc ? d : Bc;
@@ -211,24 +209,12 @@ flash_attention(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, floa
     // setup execution parameters
     dim3 block(Bc, Br, 1);
     dim3 grid (Tr,  1, 1);
-    const size_t shmem_size = (Bc*d + Br*d + Br*Bc + 5*Br) * sizeof(float);
+    const size_t shmem_size = (Bc*(d+1) + Br*d + Br*Bc + 5*Br) * sizeof(float);
 
     cudaFuncSetAttribute(alg1Ker, cudaFuncAttributeMaxDynamicSharedMemorySize, 65536);
 
     for (int j = 0; j < Tc; j++) {
         alg1Ker<<<grid, block, shmem_size>>>( d, N, j, Q_d, K_d, V_d, O_d, l_d, m_d );
-#if 0
-        if(j==0) {
-            cudaDeviceSynchronize();
-            cudaMemcpy(m_h, m_d, N*sizeof(float), cudaMemcpyDeviceToHost);
-            printf("Debug j=%d, ms are:\n", j);
-
-            for(int q=0; q<1024; q++) {
-                printf("  %f", m_h[q]);
-            }
-            printf("\n\n");
-        }
-#endif
     }
     //cudaDeviceSynchronize();
 
@@ -237,71 +223,72 @@ flash_attention(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, floa
 
 int main(int argc, char **argv)
 {
-        struct timeval ts, te;
-        size_t cnt;
-        float *Q, *K, *V, *O, dur;
-        int N, d, M;
+        
+    struct timeval ts, te;
+    size_t cnt;
+    float *Q, *K, *V, *O, dur;
+    int N, d, M;
 
-        if (argc != 3 && argc != 4) {
-                fprintf(stderr, "Usage:\n");
-                fprintf(stderr, "  %s d N M  Compute with matrices filled with ones\n", argv[0]);
-                fprintf(stderr, "  %s M -io  Read matrices from stdin and write O to stdout\n", argv[0]);
+    if (argc != 3 && argc != 4) {
+        fprintf(stderr, "Usage:\n");
+        fprintf(stderr, "  %s d N M  Compute with matrices filled with ones\n", argv[0]);
+        fprintf(stderr, "  %s M -io  Read matrices from stdin and write O to stdout\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    bool io_arrays = false;
+    if (argc == 3) {
+        if (strcmp(argv[2], "-io") != 0) {
+                fprintf(stderr, "Invalid argument '%s'\n", argv[1]);
                 return EXIT_FAILURE;
         }
+        io_arrays = true;
+    }
 
-        bool io_arrays = false;
-        if (argc == 3) {
-                if (strcmp(argv[2], "-io") != 0) {
-                        fprintf(stderr, "Invalid argument '%s'\n", argv[1]);
-                        return EXIT_FAILURE;
-                }
-                io_arrays = true;
-        }
-
-        if (io_arrays) {
-                M = atoi(argv[1]);
-                scanf("%d %d", &d, &N);
-        } else {
-                d = atoi(argv[1]);
-                N = atoi(argv[2]);
-                M = atoi(argv[3]);
-        }
+    if (io_arrays) {
+        M = atoi(argv[1]);
+        scanf("%d %d", &d, &N);
+    } else {
+        d = atoi(argv[1]);
+        N = atoi(argv[2]);
+        M = atoi(argv[3]);
+    }
 
     if (N % d != 0) {
         fprintf(stderr, "d must divide N\n");
         return EXIT_FAILURE;
     }
 
-        cnt = N * d;
+    cnt = N * d;
 
-        fprintf(stderr, "Initializing data...");
+    fprintf(stderr, "Initializing data...");
 
-        if ((Q = (float*)calloc(cnt, sizeof(float))) == NULL)
-                goto mem_failure;
+    if ((Q = (float*)calloc(cnt, sizeof(float))) == NULL)
+        goto mem_failure;
 
-        if ((K = (float*)calloc(cnt, sizeof(float))) == NULL)
-                goto mem_failure;
+    if ((K = (float*)calloc(cnt, sizeof(float))) == NULL)
+        goto mem_failure;
 
-        if ((V = (float*)calloc(cnt, sizeof(float))) == NULL)
-                goto mem_failure;
+    if ((V = (float*)calloc(cnt, sizeof(float))) == NULL)
+        goto mem_failure;
 
-        if ((O = (float*)calloc(cnt, sizeof(float))) == NULL)
-                goto mem_failure;
+    if ((O = (float*)calloc(cnt, sizeof(float))) == NULL)
+        goto mem_failure;
 
-        if (io_arrays) {
-                for (int i = 0; i < d * N; i++) scanf("%f", &Q[i]);
-                for (int i = 0; i < d * N; i++) scanf("%f", &K[i]);
-                for (int i = 0; i < d * N; i++) scanf("%f", &V[i]);
-        } else {
-                for (size_t i = 0; i < cnt; i++) {
-                        Q[i] = K[i] = V[i] = 1;
-                }
+    if (io_arrays) {
+        for (int i = 0; i < d * N; i++) scanf("%f", &Q[i]);
+        for (int i = 0; i < d * N; i++) scanf("%f", &K[i]);
+        for (int i = 0; i < d * N; i++) scanf("%f", &V[i]);
+    } else {
+        for (size_t i = 0; i < cnt; i++) {
+            Q[i] = K[i] = V[i] = 1;
         }
+    }
 
-        fprintf(stderr, "done.\n");
+    fprintf(stderr, "done.\n");
 
-        {
-            float *Q_d, *K_d, *V_d, *O_d, *m_d, *l_d;
+    {
+        float *Q_d, *K_d, *V_d, *O_d, *m_d, *l_d;
 
         cudaSetDevice(0);
 
@@ -320,43 +307,43 @@ int main(int argc, char **argv)
 
         fprintf(stderr, "Warming up...");
 
-            flash_attention(m_d, l_d, O_d, Q_d, K_d, V_d, N, d, M);
-                cudaDeviceSynchronize();
-            gpuAssert( cudaPeekAtLastError() );
+        flash_attention(m_d, l_d, O_d, Q_d, K_d, V_d, N, d, M);
+        cudaDeviceSynchronize();
+        gpuAssert( cudaPeekAtLastError() );
 
-            fprintf(stderr, "done.\n");
-            fprintf(stderr, "Running flash_attention...");
+        fprintf(stderr, "done.\n");
+        fprintf(stderr, "Running flash_attention...");
 
-            gettimeofday(&ts, NULL);
+        gettimeofday(&ts, NULL);
 
-                for(int i=0; i<GPU_RUNS; i++) {
+        for(int i=0; i<GPU_RUNS; i++) {
             flash_attention(m_d, l_d, O_d, Q_d, K_d, V_d, N, d, M);
         }
         cudaDeviceSynchronize();
         gpuAssert( cudaPeekAtLastError() );
 
-            gettimeofday(&te, NULL);
+        gettimeofday(&te, NULL);
 
-            fprintf(stderr, "done.\n");
+        fprintf(stderr, "done.\n");
 
-            dur = (double)(te.tv_usec - ts.tv_usec) / 1e6 +
+        dur = (double)(te.tv_usec - ts.tv_usec) / 1e6 +
                           (double)(te.tv_sec - ts.tv_sec);
         dur = dur / GPU_RUNS;
 
         cudaMemcpy(O, O_d, cnt*sizeof(float), cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
 
-            if (io_arrays) {
-                    for (int i = 0; i < N; i++) {
-                        for (int j = 0; j < d; j++) {
-                                if (j > 0) putchar(' ');
-                                printf("%f", O[d * i + j]);
-                        }
-                        putchar('\n');
-                    }
-            } else {
-                    fprintf(stderr, "L2 norm is %lf (should be %lf)\n", L2(O, cnt), sqrt(cnt));
+        if (io_arrays) {
+            for (int i = 0; i < N; i++) {
+                for (int j = 0; j < d; j++) {
+                    if (j > 0) putchar(' ');
+                    printf("%f", O[d * i + j]);
+                }
+                putchar('\n');
             }
+        } else {
+            fprintf(stderr, "L2 norm is %lf (should be %lf)\n", L2(O, cnt), sqrt(cnt));
+        }
 
         /* QK^t is 2N^2d flops, so is PV. softmax(S) (row-wise)
          * exp(S[i]) / sum_j exp(P[i, j] - max(P[i]))
@@ -373,15 +360,14 @@ int main(int argc, char **argv)
         cudaFree(l_d);
     }
 
-        free(Q);
-        free(K);
-        free(V);
-        free(O);
+    free(Q);
+    free(K);
+    free(V);
+    free(O);
 
-        return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 
 mem_failure:
         printf("Failed to allocate memory.\n");
         return EXIT_FAILURE;
-
 }
