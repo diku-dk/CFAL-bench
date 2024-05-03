@@ -70,6 +70,7 @@ __global__ void alg1Ker ( int d, int N, int j
 
   // copy Kj from global to shared memory; 
   // can be optimized a bit by normalizing the loop
+  // ToDo: keep Kj in transpose form or pad it will result in 2x speedup
   for (int t = tid; t < Bc*d; t+=Br*Bc) {
     int64_t glb_ind = j * Bc * d + t;
     Kj[t] = K[glb_ind];
