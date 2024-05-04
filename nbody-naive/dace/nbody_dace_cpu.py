@@ -152,10 +152,64 @@ def nbody_dace(pos: dace.float64[N, 3],
 #                 vel_out[1] = tmp1
 #                 vel_out[2] = tmp2
 
+
 @dace.program
-def nbody_dace_opt(pos_mass: dace.float64[N, 4],
+def nbody_dace_opt(pos: dace.float64[N, 3],
                    vel: dace.float64[N, 3],
+                   mass: dace.float64[N],
                    dt: dace.float64):
+    
+    accel = np.empty((N, 3), dtype=np.float64)
+
+    for _ in range(iterations):
+
+        for i in dace.map[0:N]:
+            # tmp = np.zeros((3, ), dtype=np.float64)
+            tmp = dace.define_local([3], dtype=dace.float64, storage=dace.StorageType.Register)
+            tmp[:] = 0.0
+            posi = pos[i]
+            for j in dace.map[0:N] @ dace.ScheduleType.Sequential:
+                posj = pos[j]
+                with dace.tasklet:
+                    pos_i << posi[0:3]
+                    pos_j << posj[0:3]
+                    mass_in << mass[j]
+                    tmp_in << tmp[0:3]
+                    tmp_out >> tmp[0:3]
+                    dist0 = pos_j[0] - pos_i[0]
+                    dist1 = pos_j[1] - pos_i[1]
+                    dist2 = pos_j[2] - pos_i[2]
+                    dist_sq = dist0*dist0 + dist1*dist1 + dist2*dist2
+                    inv_dist = 1.0 / dace.math.sqrt(dist_sq + 1e-9)
+                    inv_dist3 = inv_dist * inv_dist * inv_dist
+                    tmp_out[0] = tmp_in[0] + dist0 * mass_in * inv_dist3
+                    tmp_out[1] = tmp_in[1] + dist1 * mass_in * inv_dist3
+                    tmp_out[2] = tmp_in[2] + dist2 * mass_in * inv_dist3
+            accel[i] = tmp
+
+        for i in dace.map[0:N]:
+            with dace.tasklet:
+                acc_in << accel[i, 0:3]
+                dt_in << dt
+                pos_in << pos[i, 0:3]
+                vel_in << vel[i, 0:3]
+                pos_out >> pos[i, 0:3]
+                vel_out >> vel[i, 0:3]
+                tmp0 = vel_in[0] + dt_in * acc_in[0]
+                tmp1 = vel_in[1] + dt_in * acc_in[1]
+                tmp2 = vel_in[2] + dt_in * acc_in[2]
+                pos_out[0] = pos_in[0] + dt_in * tmp0
+                pos_out[1] = pos_in[1] + dt_in * tmp1
+                pos_out[2] = pos_in[2] + dt_in * tmp2
+                vel_out[0] = tmp0
+                vel_out[1] = tmp1
+                vel_out[2] = tmp2
+
+
+@dace.program
+def nbody_dace_opt2(pos_mass: dace.float64[N, 4],
+                    vel: dace.float64[N, 3],
+                    dt: dace.float64):
     
     accel = np.empty((N, 3), dtype=np.float64)
 
@@ -234,27 +288,29 @@ if __name__ == "__main__":
 
     # Run optimized DaCe implementation
     sdfg_opt = nbody_dace_opt.to_sdfg(simplify=True)
-    pos_dace_opt = np.empty((num_particles, 4), dtype=np.float64)
-    pos_dace_opt[:, :3] = pos
-    pos_dace_opt[:, 3] = mass
-    # pos_dace_opt = pos.copy()
+    # pos_dace_opt = np.empty((num_particles, 4), dtype=np.float64)
+    # pos_dace_opt[:, :3] = pos
+    # pos_dace_opt[:, 3] = mass
+    pos_dace_opt = pos.copy()
     vel_dace_opt = vel.copy()
-    sdfg_opt(pos_mass=pos_dace_opt, vel=vel_dace_opt, dt=dt, N=num_particles, iterations=num_iterations)
+    # sdfg_opt(pos_mass=pos_dace_opt, vel=vel_dace_opt, dt=dt, N=num_particles, iterations=num_iterations)
+    sdfg_opt(pos=pos_dace_opt, vel=vel_dace_opt, mass=mass, dt=dt, N=num_particles, iterations=num_iterations)
     print("Position error (optimized):", relerror(pos_dace_opt[:, 0:3], pos_ref))
     print("Velocity error (optimized):", relerror(vel_dace_opt, vel_ref))
 
     # Benchmark
-    num_particles = 10000
+    num_particles = 50000
     num_iterations = 10
-    # pos = rng.random((num_particles, 3))
-    pos_mass = rng.random((num_particles, 4))
+    pos = rng.random((num_particles, 3))
+    # pos_mass = rng.random((num_particles, 4))
     vel = rng.random((num_particles, 3))
-    # mass = rng.random((num_particles, ))
+    mass = rng.random((num_particles, ))
     dt = 0.01
 
     func = sdfg_opt.compile()
-    runtimes = repeat(lambda: func(pos_mass=pos_mass, vel=vel, dt=dt, N=num_particles, iterations=num_iterations),
-                      number=1, repeat=20)
+    
+    runtimes = repeat(lambda: func(pos=pos, vel=vel, mass=mass, dt=dt, N=num_particles, iterations=num_iterations),
+                      number=1, repeat=10)
     median_time = np.median(runtimes)
     min_time = np.min(runtimes)
     flops = (18.0 * num_particles * num_particles + 12.0 * num_particles) * num_iterations / (1e9 * median_time)
