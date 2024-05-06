@@ -107,7 +107,7 @@ int main()
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
     printf("%f\n", 
-        (18.0 * tod(N) * tod(N) + 12.0 * tod(N)) * tod(ITER) / 1e9 / time);
+        (19.0 * tod(N) * tod(N) + 12.0 * tod(N)) * tod(ITER) / 1e9 / time);
 
     return 0;
 }

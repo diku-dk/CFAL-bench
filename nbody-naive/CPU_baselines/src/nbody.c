@@ -56,7 +56,7 @@ double pow3(double x)
 }
 
 /* accel[i] = sum_j m[j] (pos[i] - pos[j]) / ||pos[i] - pos[j]||^3 */
-/* 18 n^2 flops */
+/* 19 n^2 flops */
 void accelerateAll(Points accel, Points positions, double *masses, int n)
 {
     #pragma omp parallel for
@@ -64,7 +64,8 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
         double ax = 0.0;
         double ay = 0.0;
         double az = 0.0;
-        /* Loop body is (worst case n != 0) 18 flops */
+        /* Loop body is 19 flops (assuming masses[j] / norm is computed
+         * only once) */
         for (int j = 0; j < n; j++) {
             double bufx = positions.x[j] - positions.x[i];
             double bufy = positions.y[j] - positions.y[i];
@@ -85,7 +86,7 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
 
 /* Advances the n-bodies in place. accel is a buffer, does not need to be
  * initialized.
- * 18n^2 + 12n flops */
+ * 19n^2 + 12n flops */
 void advance(Points positions, Points velocities, double *masses,
              Points accel, double dt, int n)
 {
@@ -149,7 +150,7 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
-    printf("%lf\n", (18.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
+    printf("%lf\n", (19.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
 
     free_points(positions);
     free_points(velocities);
