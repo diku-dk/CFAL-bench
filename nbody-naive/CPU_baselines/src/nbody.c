@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <sys/time.h>
 
+#define EPSILON2 0x1p-53
+
 #define min(a, b) ((a) < (b) ? a : b)
 
 typedef struct {
@@ -70,12 +72,10 @@ void accelerateAll(Points accel, Points positions, double *masses, int n)
             /* norm = ||positions[i] - positions[j]||^3 */
             double norm = pow3(sqrt(bufx * bufx +
                                     bufy * bufy +
-                                    bufz * bufz));
-            if (norm != 0.0) {
-                ax += bufx * masses[j] / norm;
-                ay += bufy * masses[j] / norm;
-                az += bufz * masses[j] / norm;
-            }
+                                    bufz * bufz) + EPSILON2);
+            ax += bufx * masses[j] / norm;
+            ay += bufy * masses[j] / norm;
+            az += bufz * masses[j] / norm;
         }
         accel.x[i] = ax;
         accel.y[i] = ay;

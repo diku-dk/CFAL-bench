@@ -4,6 +4,8 @@ use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 
+#define EPSILON2 0x1p-53
+
 struct Body {
   double x;
   double y;
@@ -48,8 +50,7 @@ struct Body acc(struct Body b1, struct Body b2,
                            double m)
 {
    dir = sub(b2, b1);
-   factor = (l2norm(dir) == 0d) ? 
-        0d : m / pow3(l2norm(dir));
+   factor = m / pow3(l2norm(dir) + EPSILON2);
    return mul(factor, dir);
 }
 
