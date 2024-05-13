@@ -33,7 +33,7 @@ __device__ __forceinline__ float atomicMaxFloat (float * addr, float value) {
 
 __global__ void alg1Ker ( int d, int N, int Tc
                         , float* Q, float* K, float* V
-                        , float* O
+                        , float* O, float* ms, float* ls
 ) {
   // shared memory size: (2*Bc*d + Br*d + Br*Bc + 5*Br) * sizeof(float)
   extern __shared__ char sh_mem_char[];
@@ -46,17 +46,20 @@ __global__ void alg1Ker ( int d, int N, int Tc
   const int Br = blockDim.y;
   const int Bc = blockDim.x;
 
-  float* Kj   = (float*)sh_mem_char;  // [Bc][d]
-  float* Vj   = Kj;                   // [Bc][d]  (shares the space of Kj)
-  float* Qi   = Vj   + Bc*d;          // [Br][d]
-  float* Oi   = Qi   + Br*d;          // [Br][d]
+  float* Oi   = (float*)sh_mem_char;  // [Br][d]
+  float* Qi   = Oi   + Br*d;          // [Br][d]
   float* Pij  = Qi   + Br*d;          // [Br][Bc]
-  float* maxs = Pij  + Br*Bc;         // [Br]
+  
+  float* Kj   = Pij  + Br*Bc;         // [Bc][d+1]
+  float* Vj   = Kj;                   // [Bc][d]
+
+  float* maxs = Kj  + Bc*(d+1);       // [Br]
+
   float* sums = maxs + Br;            // [Br]
   float* es   = sums + Br;            // [Br]
   float* el   = es   + Br;            // [Br]
   float* li   = el   + Br;            // [Br]
-  float* mi   = el   + Br;            // [Br]
+  float* mi   = li   + Br;            // [Br]
 
   int i  = blockIdx.x;
   int ii = threadIdx.y; // ii < Br
@@ -64,14 +67,10 @@ __global__ void alg1Ker ( int d, int N, int Tc
 
   const int tid = ii*Bc + jj;
 
-//#if 0
-
-  // initialize maxs, sums
-  if(tid < Br) {
-    mi[tid] = -INFINITY;
-    li[tid] = 0;
-    sums[tid] = 0;
-    maxs[tid] = -INFINITY;
+  // initialize mi, li
+  for (int t = tid; t < Br; t+=Br*Bc) {
+    mi[t]   = -INFINITY;
+    li[t]   = 0;
   }
 
   // copy Qi from global to shared memory
@@ -85,7 +84,13 @@ __global__ void alg1Ker ( int d, int N, int Tc
   __syncthreads();
 
   for (int j = 0; j < Tc; j++) {
-  
+
+    // initialize maxs, sums
+    for (int t = tid; t < Br; t+=Br*Bc) {
+      sums[t] = 0;
+      maxs[t] = -INFINITY;
+    }
+
     // copy Kj from global to shared memory;
     // can be optimized a bit by normalizing the loop
     // Kj is padded to avoid very expensive bank conflicts in mmm. 
@@ -126,7 +131,7 @@ __global__ void alg1Ker ( int d, int N, int Tc
     __syncthreads();
 
     if(tid < Br) {
-      int ii = tid;
+      const int ii = tid;
       float mi_old = mi[ii];
       float mx = maxs[ii];
       float mi_new = (mi_old > mx) ? mi_old : mx;
@@ -139,6 +144,9 @@ __global__ void alg1Ker ( int d, int N, int Tc
       es[ii] = eij;
       el[ii] = eli;
     }
+    __syncthreads();
+
+    Pij[ii*Bc+jj] = es[ii]*pij;
 
     // copy Vj from global to shared memory
     for (int t = tid; t < Bc*d; t+=Br*Bc) {
@@ -157,15 +165,15 @@ __global__ void alg1Ker ( int d, int N, int Tc
 
       for(int jjj = 0; jjj < Bc; jjj++) {
         int jk = jjj * d + kk;
-        float x = es[ii] * Pij[ii*Bc + jjj];
+        // float x = es[ii] * Pij[ii*Bc + jjj];
+        float x = Pij[ii*Bc + jjj];
         oi_ik += x * Vj[jk]; // map Vj in shared memory
       }
 
-      Oi[ik] = oi_ik / li[ii]; // this should update the global memory
+      Oi[ik] = oi_ik / li[ii];
     }
     __syncthreads();
   }
-//#endif
   
   // copy Oi back to global memory
   for (int t = tid; t < Br*d; t+=Br*Bc) {
@@ -173,6 +181,12 @@ __global__ void alg1Ker ( int d, int N, int Tc
     O[glb_ind] = Oi[t];
   }
 
+  // copy ms, ls back to global memory
+  for (int t = tid; t < Br; t+=Br*Bc) {
+    int64_t glb_ind = i * Br + t;
+    ms[glb_ind] = mi[t];
+    ls[glb_ind] = li[t];
+  }
 }
 
 __global__ void initKer ( float* m_d, float* l_d, int N ) {
@@ -210,20 +224,30 @@ flash_attention(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, floa
     Tr = N / Br;
     Tc = N / Bc;
 
-    // iniatialize m with -INFINITY and l with zero (both have size N)
-//    initKer<<<(N+255)/256, 256>>>(m_d, l_d, N);
-
-    // initialize O to zeros
-//    cudaMemset((void**)&O_d, 0, N*d*sizeof(float));
-
     // setup execution parameters
     dim3 block(Bc, Br, 1);
     dim3 grid (Tr,  1, 1);
     const size_t shmem_size = (Bc*(d+1) + 2*Br*d + Br*Bc + 6*Br) * sizeof(float);
     //printf("\nShared memory size: %d, Bc=%d, Br=%d, Tc: %d, Tr: %d, d: %d, N: %d\n", shmem_size, Bc, Br, Tc, Tr, d, N);
 
-    alg1Ker<<<grid, block, shmem_size>>>( d, N, Tc, Q_d, K_d, V_d, O_d );
+    alg1Ker<<<grid, block, shmem_size>>>( d, N, Tc, Q_d, K_d, V_d, O_d, m_d, l_d );
     //cudaDeviceSynchronize();
+
+#if 0
+    {
+        float* m_h = (float*) malloc(N*sizeof(float));
+        cudaMemcpy(m_h, m_d, N*sizeof(float), cudaMemcpyDeviceToHost);
+        {
+            printf("(N,d,Br,Bc,Tr,Tc)=(%d,%d,%d,%d,%d,%d), ms:\n    ", N,d,Br,Bc,Tr,Tc);
+            for(int q=0; q<Br; q++) {
+                printf(", %f", m_h[q]);
+            }
+            printf("\n");
+        }
+
+        free(m_h);
+    }
+#endif
 
     return 0;
 }
@@ -297,7 +321,7 @@ int main(int argc, char **argv)
     {
         float *Q_d, *K_d, *V_d, *O_d, *m_d, *l_d;
 
-        cudaSetDevice(0);
+        cudaSetDevice(1);
 
         // allocate memory on device
         cudaMalloc((void**) &Q_d, cnt*sizeof(float));
