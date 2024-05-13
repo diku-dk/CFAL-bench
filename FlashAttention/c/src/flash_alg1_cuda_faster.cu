@@ -35,13 +35,8 @@ __global__ void alg1Ker ( int d, int N, int Tc
                         , float* Q, float* K, float* V
                         , float* O, float* ms, float* ls
 ) {
-  // shared memory size: (2*Bc*d + Br*d + Br*Bc + 5*Br) * sizeof(float)
+  // shared memory size: (Bc*(d+1) + 2*Br*d + Br*Bc + 6*Br) * sizeof(float)
   extern __shared__ char sh_mem_char[];
-
-  // ToDo: declare shared-memory arrays:
-  //   maxs[Br], sums[Br], Pij[Br][Bc], li_sh[Br], es[Br], el[Br]
-  //   Qi_sh[Br][d], Kj_sh[Bc][d], Vj_sh[Bc][d]
-  //  Global-memory Arrays: mi[Br], li[Br], Oi[Br][d] (result arrays, RAW)
 
   const int Br = blockDim.y;
   const int Bc = blockDim.x;
@@ -93,7 +88,7 @@ __global__ void alg1Ker ( int d, int N, int Tc
 
     // copy Kj from global to shared memory;
     // can be optimized a bit by normalizing the loop
-    // Kj is padded to avoid very expensive bank conflicts in mmm. 
+    // Kj is padded to avoid very expensive bank conflicts in mmm.
     for (int t = tid; t < Bc*d; t+=Br*Bc) {
       int64_t glb_ind = j * Bc * d + t;
       int q = t / d;
@@ -101,7 +96,6 @@ __global__ void alg1Ker ( int d, int N, int Tc
       Kj[q*(d+1) + r] = K[glb_ind];
       //Kj[t] = K[glb_ind];
     }
-
     __syncthreads();
 
     ////////////////////////////////////
@@ -119,13 +113,12 @@ __global__ void alg1Ker ( int d, int N, int Tc
     ////////////////////////
     // reductions
     ////////////////////////
-
     atomicMaxFloat(&maxs[ii], pij);
     __syncthreads();
 
     {
       pij = exp(pij - maxs[ii]);
-      Pij[ii*Bc + jj] = pij;
+      //Pij[ii*Bc + jj] = pij;
       atomicAdd(&sums[ii], pij);
     }
     __syncthreads();
@@ -165,9 +158,9 @@ __global__ void alg1Ker ( int d, int N, int Tc
 
       for(int jjj = 0; jjj < Bc; jjj++) {
         int jk = jjj * d + kk;
-        // float x = es[ii] * Pij[ii*Bc + jjj];
         float x = Pij[ii*Bc + jjj];
-        oi_ik += x * Vj[jk]; // map Vj in shared memory
+        float y = Vj[jk];
+        oi_ik += x * y;
       }
 
       Oi[ik] = oi_ik / li[ii];
@@ -186,14 +179,6 @@ __global__ void alg1Ker ( int d, int N, int Tc
     int64_t glb_ind = i * Br + t;
     ms[glb_ind] = mi[t];
     ls[glb_ind] = li[t];
-  }
-}
-
-__global__ void initKer ( float* m_d, float* l_d, int N ) {
-  int64_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-  if(gid < N) {
-    m_d[gid] = -INFINITY;
-    l_d[gid] = 0.0;
   }
 }
 
