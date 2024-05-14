@@ -10,6 +10,17 @@
 make -C MG/futhark run_multicore
 make -C MG/futhark run_cuda
 
+echo MG CPU GFLOP/s
+./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class A' 3.625
+./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class B' 18.125
+./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class C' 145.0
+
+echo MG GPU GFLOP/s
+echo MG CPU GFLOP/s
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class A' 3.625
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class B' 18.125
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class C' 145.0
+
 make -C LocVolCalib/futhark run_ispc
 make -C LocVolCalib/futhark run_cuda
 
