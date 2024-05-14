@@ -16,20 +16,21 @@ to provide a time limit, a partition, a core count, and some resources
 (specifically, whether you want a GPU). The partition is mandatory,
 but the others have defaults. I find that the `csmpi_fpga_short`
 partition is the most useful (allows jobs up to 30 minutes). This runs
-a command (`ls`) with a ten minute timeout on csmpi_fpga_short:
+a command (`ls`) with a ten minute timeout on `csmpi_fpga_short`:
 
 ```
 $ srun -t 10:00 -p csmpi_fpga_short ls
 ```
 
-I can also run my ls with 32 cores (seemingly the capacity of the nodes
-in the csmpi_fpga_short partition):
+I can also run `ls` with 32 cores (seemingly the capacity of the nodes
+in the `csmpi_fpga_short` partition):
 
 ```
 $ srun -t 10:00 -p csmpi_fpga_short -c 32 ls
 ```
 
-And perhaps more interestingly, I can ask to be allocated a GPU:
+And perhaps more interestingly, I can ask to be allocated a GPU,
+listing my files at breakneck speed:
 
 ```
 $ srun -t 10:00 -p csmpi_fpga_short --gres=gpu:nvidia_a30:1 ls
