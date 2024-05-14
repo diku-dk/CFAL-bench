@@ -7,19 +7,21 @@
 #
 # $ srun -t 10:00 -p csmpi_fpga_short -c 32 --gres=gpu:nvidia_a30:1 ./benchmark_futhark.sh
 
+set -e
+
 make -C MG/futhark run_multicore
 make -C MG/futhark run_cuda
 
 echo MG CPU GFLOP/s
-./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class A' 3.625
-./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class B' 18.125
-./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut 'class C' 145.0
+./futhark-time2flops.py MG/futhark/mg_multicore.json mg.fut:mgNAS 'Class A' 3.625
+./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut:mgNAS 'Class B' 18.125
+./futhark-time2flops.py mg/futhark/mg_multicore.json mg.fut:mgNAS 'Class C' 145.0
 
 echo MG GPU GFLOP/s
 echo MG CPU GFLOP/s
-./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class A' 3.625
-./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class B' 18.125
-./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut 'class C' 145.0
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut:mgNAS 'Class A' 3.625
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut:mgNAS 'Class B' 18.125
+./futhark-time2flops.py mg/futhark/mg_cuda.json mg.fut:mgNAS 'Class C' 145.0
 
 make -C LocVolCalib/futhark run_ispc
 make -C LocVolCalib/futhark run_cuda
