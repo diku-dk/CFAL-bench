@@ -6,7 +6,7 @@ data/%:
 
 # Cheat CFLAGS.
 CFLAGS='-Ofast -march=native -mtune=native'
-BENCHMARK=LocVolCalib
+BENCHMARK=quickhull
 
 .PHONY: run_multicore run_ispc run_cuda
 
