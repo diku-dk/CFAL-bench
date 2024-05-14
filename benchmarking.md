@@ -73,7 +73,9 @@ programs were in PATH:
 export PATH=$HOME/.local/bin:$PATH
 ```
 
-## Futhark (draft)
+## Futhark
+
+### Setup
 
 Grab an appropriate Futhark compiler tarball, e.g.
 
@@ -84,9 +86,25 @@ unpack it, enter the directory, and run
   $ make PREFIX=$HOME/.local
 
 and then the `futhark` command will work if `$HOME/.local/bin` is in
-`$PATH`. Then you simply use `futhark bench prog.fut` where `prog.fut`
-is the Futhark program in question. Pass `--backend=multicore` or
-`--backend=cuda` as appropriate.
+`$PATH`.
+
+You should also install [ISPC](https://ispc.github.io/ispc.html) in
+order for the `ispc` backend to work. Download
+
+  https://github.com/ispc/ispc/releases/download/v1.23.0/ispc-v1.23.0-linux.tar.gz
+
+and unpack it and copy the `bin/ispc` program to somewhere in your
+`PATH`.
+
+### Automatic benchmarking
+
+[`benchmark_futhark.sh`](benchmark_futhark.sh).
+
+### Manual benchmarking
+
+Use `futhark bench prog.fut` where `prog.fut` is the Futhark program
+in question. Pass `--backend=multicore` or `--backend=cuda` or
+`--backend=ispc` as appropriate.
 
 ## SaC / OpenMP
 
