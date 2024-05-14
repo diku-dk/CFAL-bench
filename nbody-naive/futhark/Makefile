@@ -5,4 +5,4 @@ FUTHARK_BACKEND?=multicore
 .PHONY: run
 
 run:
-	CFLAGS=$(CFLAGS) futhark bench --backend=multicore nbody.fut --json nbody.json
+	CFLAGS=$(CFLAGS) futhark bench --backend=$(FUTHARK_BACKEND) nbody.fut --json nbody.json
