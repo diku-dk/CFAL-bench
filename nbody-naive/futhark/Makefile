@@ -1,8 +1,13 @@
 # Cheat CFLAGS.
 CFLAGS='-Ofast -march=native -mtune=native'
-FUTHARK_BACKEND?=multicore
 
-.PHONY: run
+.PHONY: run_multicore run_ispc run_cuda
 
-run:
-	CFLAGS=$(CFLAGS) futhark bench --backend=$(FUTHARK_BACKEND) nbody.fut --json nbody.json
+run_multicore:
+	CFLAGS=$(CFLAGS) futhark bench --backend=multicore nbody.fut --json nbody_multicore.json
+
+run_ispc:
+	CFLAGS=$(CFLAGS) futhark bench --backend=ispc nbody.fut --json nbody_ispc.json
+
+run_cuda:
+	CFLAGS=$(CFLAGS) futhark bench --backend=cuda nbody.fut --json nbody_cuda.json
