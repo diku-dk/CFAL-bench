@@ -7,6 +7,9 @@
 #
 # $ srun -t 10:00 -p csmpi_fpga_short -c 32 --gres=gpu:nvidia_a30:1 ./benchmark_futhark.sh
 
+make -C MG/futhark run_multicore
+make -C MG/futhark run_cuda
+
 make -C LocVolCalib/futhark run_ispc
 make -C LocVolCalib/futhark run_cuda
 
