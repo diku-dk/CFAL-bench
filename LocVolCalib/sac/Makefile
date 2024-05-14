@@ -1,5 +1,5 @@
-SAC = ~/repos/sac2c/build_wlir/sac2c_d
-SAC_FLAGS = -Xc -Ofast -d cccall #-profile m#-maxwlur 8 #-check c -ecc 
+SAC = sac2c_p
+SAC_FLAGS = #-Xc -Ofast  #-profile m#-maxwlur 8 #-check c -ecc 
 CC = gcc
 CFLAGS = -Ofast -march=native -mtune=native -Wall -Wextra -Werror
 
@@ -13,13 +13,13 @@ float: seq_float mt_float cuda_float
 
 seq: bin/small_seq bin/medium_seq bin/large_seq
 mt: bin/small_mt bin/medium_mt bin/large_mt
-mt: SAC_FLAGS += -t mt_pth -minmtsize 12
+mt: SAC_FLAGS += -t mt_pth -minmtsize 8
 cuda: bin/small_cuda bin/medium_cuda bin/large_cuda
 cuda: SAC_FLAGS = -t cuda -Xc -O3 -noemrl -profile c
 
 seq_float: bin/small_seq_float bin/medium_seq_float bin/large_seq_float
 mt_float: bin/small_mt_float bin/medium_mt_float bin/large_mt_float
-mt_float: SAC_FLAGS += -t mt_pth -minmtsize 12
+mt_float: SAC_FLAGS += -t mt_pth -minmtsize 8
 cuda_float: bin/small_cuda_float bin/medium_cuda_float bin/large_cuda_float
 cuda_float: SAC_FLAGS = -t cuda -Xc -O3
 
