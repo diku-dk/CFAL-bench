@@ -150,6 +150,7 @@ int main(int argc, char **argv)
                     "This took %lfs.\n"
                     "Compute rate in Gflops/s: ",
                     n, iterations, duration);
+    fflush(stderr);
     printf("%lf\n", (19.0 * n * n + 12.0 * n) * iterations / 1e9 / duration);
 
     free_points(positions);
