@@ -4,13 +4,14 @@ extra-deps:
 - ../../../accelerate
 - ../../../accelerate-llvm/accelerate-llvm
 - ../../../accelerate-llvm/accelerate-llvm-native
+
 # - github: acceleratehs/accelerate
-#   commit: 17466411109170c4e4361d9980f1cded0eb85efb
+#   commit: 5ceb2da5d9ddc4ea0a5705d46bf4de9321ba17da
 # - github: acceleratehs/accelerate-llvm
 #   commit: 2b5d69448557e89002c0179ea1aaf59bb757a6e3
 #   subdirs: 
-#   - accelerate-llvm
-#   - accelerate-llvm-native
+#     - accelerate-llvm
+#     - accelerate-llvm-native
 #   - accelerate-llvm-ptx
 # - cuda-0.11.0.1
 # - nvvm-0.10.0.1

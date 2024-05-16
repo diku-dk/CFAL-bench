@@ -6,9 +6,18 @@ import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
+import Control.Concurrent
+import System.IO
 
 main :: Prelude.IO ()
-main = defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+main = do
+  setNumCapabilities 1
+  -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel (mg 4 (1,2,3,4))
+  Prelude.print $ Prelude.length $ Prelude.show input256
+  -- hFlush stderr Prelude.>> hFlush stdout
+  Prelude.print $ runN @CPU.Native (mg 4 weightsA) (fromList Z [4]) input256 (fromList (Z :. 256 :.  256 :.  256) $ Prelude.repeat 0)
+  -- mg 4 (1,2,3,4) (4, 256, input256)
+  -- defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
   where
     makeInput' = runN @CPU.Native makeInput
     input256 = makeInput' $ fromList Z [256]
@@ -107,6 +116,9 @@ mg n weights iter v = unit . l2 . zipWith (-) v . a . asnd . awhile
     in T2 i' $ zipWith (+) u r'
   )
   . T2 (unit 0)
+
+awhile' ::  Arrays a => (Acc a -> Acc (Scalar Bool)) -> (Acc a -> Acc a) -> Acc a -> Acc a
+awhile' cond step init = step $ step $ step $ step $ step $ step init
 
 makeInput :: Acc (Scalar Int) -> Acc (Array3 Double)
 makeInput n = generate (Z_ ::. the n ::. the n ::. the n) $ \idx ->

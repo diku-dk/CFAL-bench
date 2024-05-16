@@ -5,48 +5,48 @@
 
 packages:
 - completed:
-    name: llvm-hs
-    pantry-tree:
-      sha256: 21f74a6f51fae6c0a0fcf3e6620a59f341289ac743998b41ed3276fd1b7d8862
-      size: 12716
-    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
     size: 9802201
     subdir: llvm-hs
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
+    name: llvm-hs
     version: 15.0.0
+    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
+    pantry-tree:
+      size: 12716
+      sha256: 21f74a6f51fae6c0a0fcf3e6620a59f341289ac743998b41ed3276fd1b7d8862
   original:
     subdir: llvm-hs
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
 - completed:
-    name: llvm-hs-pure
-    pantry-tree:
-      sha256: b512f9e5f8f2b3e3a06bad2fa5ff053a83d817798c7efcd47e254e68c842169d
-      size: 2712
-    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
     size: 9802201
     subdir: llvm-hs-pure
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
+    name: llvm-hs-pure
     version: 15.0.0
+    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
+    pantry-tree:
+      size: 2712
+      sha256: b512f9e5f8f2b3e3a06bad2fa5ff053a83d817798c7efcd47e254e68c842169d
   original:
     subdir: llvm-hs-pure
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
 - completed:
     hackage: OptDir-0.0.4@sha256:7a59a4e225a1ea402b82377c9057cf258e45d9d7913b2edd010f7ae8b9e4f8af,861
     pantry-tree:
-      sha256: 1acdb5033f2f1750e622fb4a2bf5f5de5eac9d3129a61c3b92bfed17f64d6607
       size: 256
+      sha256: 1acdb5033f2f1750e622fb4a2bf5f5de5eac9d3129a61c3b92bfed17f64d6607
   original:
     hackage: OptDir-0.0.4
 - completed:
     hackage: bytestring-encoding-0.1.2.0@sha256:e1d2700b1c13ccda4eb561a413e9fa1d7675cef41c709472e9817fb89c1d1c53,2049
     pantry-tree:
-      sha256: 4475d86eeb63941b7601b4715aad228114225eac828a77c7d8aeb4c655dd1119
       size: 715
+      sha256: 4475d86eeb63941b7601b4715aad228114225eac828a77c7d8aeb4c655dd1119
   original:
     hackage: bytestring-encoding-0.1.2.0
 snapshots:
 - completed:
-    sha256: 23bb9bb355bfdb1635252e120a29b712f0d5e8a6c6a65c5ab5bd6692f46c438e
     size: 640457
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/7.yaml
+    sha256: 23bb9bb355bfdb1635252e120a29b712f0d5e8a6c6a65c5ab5bd6692f46c438e
   original: lts-21.7

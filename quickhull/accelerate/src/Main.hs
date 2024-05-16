@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
@@ -11,7 +12,12 @@ import Quickhull
 main :: IO ()
 main = do
   inputs <- mapM load ["tiny"]--["1M_rectangle_16384", "1M_circle_16384", "1M_quadratic_2147483648"]
+  let f = A.fold1 @A.DIM1 (\(A.T2 (x :: A.Exp Int) (y :: A.Exp Int)) (A.T2 a b) -> A.T2 (a+x) (b*y))
 
+  -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel $ f 
+  -- putStrLn "hi"
+  -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel quickhull
+  print $ A.runN @CPU.Native (A.map (\(A.T2 x y) -> x+y) . f) $ A.fromList (A.Z A.:. 30 A.:. 3) $ zip [0..] [1..]
   let quickhullCPU = A.runN @CPU.Native quickhull
   -- let quickhullGPU = GPU.runN quickhull
   -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel quickhull
