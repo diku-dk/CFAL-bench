@@ -3,7 +3,7 @@
 module Main where
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
-import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
+-- import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 
@@ -23,9 +23,7 @@ main = do
   -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel quickhull
   -- mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU)]) inputs
 
-  mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU), ("GPU", quickhullGPU)]) inputs
-
-  defaultMain [backend "CPU" quickhullCPU inputs, backend "GPU" quickhullGPU inputs]
+  defaultMain [backend "CPU" quickhullCPU inputs]--, backend "GPU" quickhullGPU inputs]
   where
     backend name quickhull' inputs
       = bgroup name

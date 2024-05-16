@@ -1,10 +1,14 @@
+{-# LANGUAGE TypeApplications #-}
 module Main where
 import NBody
-import Data.Array.Accelerate (fromList, Z(..))
+import Data.Array.Accelerate
 import Data.Array.Accelerate.LLVM.Native as CPU
-import Data.Array.Accelerate.LLVM.PTX    as GPU
+-- import Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
+import Debug.Trace
+import Physics (pointmass)
+import Input (gen_input)
 
 -- read input, run accelerate, benchmark
 main :: IO ()
