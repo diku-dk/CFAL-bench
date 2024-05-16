@@ -9,16 +9,16 @@ module Physics where
 import Data.Array.Accelerate
 
 data ThreeDoubles = Three_ Double Double Double
-  deriving (Generic, Elt, Show)
+  deriving (Generic, Elt)
 
 type Mass = Double
 type Position = ThreeDoubles
 type Acceleration = ThreeDoubles
 type Velocity = ThreeDoubles
 data PointMass = PointMass_ Position Mass
-  deriving (Generic, Elt, Show)
+  deriving (Generic, Elt)
 data Body = Body_ Position Mass Velocity
-  deriving (Generic, Elt, Show)
+  deriving (Generic, Elt)
 
 mkPatterns [''ThreeDoubles, ''PointMass, ''Body]
 

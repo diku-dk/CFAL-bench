@@ -1,4 +1,4 @@
-resolver: lts-21.7
+resolver: lts-21.4
 
 extra-deps:
 - ../../../accelerate
@@ -20,6 +20,3 @@ extra-deps:
   subdirs:
     - llvm-hs
     - llvm-hs-pure
-- ../../../haskell-MIP/MIP
-- OptDir-0.0.4
-- bytestring-encoding-0.1.2.0

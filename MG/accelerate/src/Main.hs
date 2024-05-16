@@ -1,8 +1,7 @@
-{-# LANGUAGE TypeApplications #-}
 module Main where
 import Data.Array.Accelerate
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
--- import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
+import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
@@ -18,8 +17,9 @@ main = do
   Prelude.print $ runN @CPU.Native (mg 4 weightsA) (fromList Z [4]) input256 (fromList (Z :. 256 :.  256 :.  256) $ Prelude.repeat 0)
   -- mg 4 (1,2,3,4) (4, 256, input256)
   -- defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+  defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
   where
-    makeInput' = runN @CPU.Native makeInput
+    makeInput' = CPU.runN makeInput
     input256 = makeInput' $ fromList Z [256]
     input512 = makeInput' $ fromList Z [512]
 
