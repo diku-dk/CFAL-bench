@@ -1746,6 +1746,187 @@ extern "C" __global__ void __launch_bounds__(({BM} * {BN}) / ({TM} * {TN}), 1)
 '''
 
 
+kernel_code_12 = '''
+extern "C" __global__ void __launch_bounds__(({BM} * {BN}) / ({TM} * {TN}), 1)
+    sgemm2DBlocktiling(int M, int N, int K,
+                       const float *origA, const float *origB, float *origC, const float *origD) {{
+  // const int cRow = blockIdx.y;
+  // const int cCol = blockIdx.x;
+  const int cRow = blockIdx.x;
+
+  const int totalResultsBlocktile = {BM} * {BN};
+  // A thread is responsible for calculating TM*TN elements in the blocktile
+  const int numThreadsBlocktile = totalResultsBlocktile / ({TM} * {TN});
+
+  // ResultsPerBlock / ResultsPerThread == ThreadsPerBlock
+  assert(numThreadsBlocktile == blockDim.x);
+
+  // BN/TN are the number of threads to span a column
+  const int threadCol = threadIdx.x % ({BN} / {TN});
+  const int threadRow = threadIdx.x / ({BN} / {TN});
+
+  // allocate space for the current blocktile in smem
+  __shared__ float As[{BM} * {BK} * {mul}];
+  __shared__ float Bs[{BK} * {BN}];
+  // float *Cs = As;
+  __shared__ float Cs[{BM} * {BN}];
+  float *Ds = Bs;  // BN x BK
+  float Os[{TM} * {TN} * {mul}] = {{0.0}};
+
+  const float *A;
+  const float *B;
+  float *C;
+  const float *D;
+
+  int blocksM = M / {BM};
+  int blocksN = N / {BN};
+
+  // calculating the indices that this thread will load into SMEM
+  const int innerRowA = threadIdx.x / {BK};
+  const int innerColA = threadIdx.x % {BK};
+  // calculates the number of rows of As that are being loaded in a single step
+  // by a single block
+  const int strideA = numThreadsBlocktile / {BK};
+  const int innerRowB = threadIdx.x / {BN};
+  const int innerColB = threadIdx.x % {BN};
+  // for both As and Bs we want each load to span the full column-width, for
+  // better GMEM coalescing (as opposed to spanning full row-width and iterating
+  // across columns)
+  const int strideB = numThreadsBlocktile / {BN};
+  const int innerRowD = threadIdx.x / {BK};
+  const int innerColD = threadIdx.x % {BK};
+  const int strideD = numThreadsBlocktile / {BK};
+
+  A = origA + cRow * {BM} * K;
+  float *curAs = As;
+  for (int bkIdx = 0; bkIdx < K; bkIdx += {BK}) {{
+    // populate the SMEM caches
+    for (int loadOffset = 0; loadOffset < {BM}; loadOffset += strideA) {{
+      curAs[(innerRowA + loadOffset) * {BK} + innerColA] =
+          A[(innerRowA + loadOffset) * K + innerColA];
+    }}
+    A += {BK};     // move BK columns to right
+    curAs += {BM} * {BK};
+  }}
+
+  for (int cCol = 0; cCol < blocksN; ++cCol) {{
+  
+  A = origA;
+  B = origB;
+  C = origC;
+  D = origD;
+
+  // Move blocktile to beginning of A's row and B's column
+  A += cRow * {BM} * K;
+  B += cCol * {BN};
+  C += cRow * {BM} * K;
+  D += cCol * {BN} * K;
+
+  // allocate thread-local cache for results in registerfile
+  float threadResults[{TM} * {TN}] = {{0.0}};
+  // register caches for As and Bs
+  float regM[{TM}] = {{0.0}};
+  float regN[{TN}] = {{0.0}};
+
+  curAs = As;
+  // outer-most loop over block tiles
+  for (int bkIdx = 0; bkIdx < K; bkIdx += {BK}) {{
+    // populate the SMEM caches
+    for (int loadOffset = 0; loadOffset < {BK}; loadOffset += strideB) {{
+      Bs[(innerRowB + loadOffset) * {BN} + innerColB] =
+          B[(innerRowB + loadOffset) * N + innerColB];
+    }}
+    __syncthreads();
+
+    // advance blocktile
+    B += {BK} * N; // move BK rows down
+
+    // calculate per-thread results
+    for (int dotIdx = 0; dotIdx < {BK}; ++dotIdx) {{
+      // block into registers
+      for (int i = 0; i < {TM}; ++i) {{
+        regM[i] = curAs[(threadRow * {TM} + i) * {BK} + dotIdx];
+      }}
+      for (int i = 0; i < {TN}; ++i) {{
+        regN[i] = Bs[dotIdx * {BN} + threadCol * {TN} + i];
+      }}
+      for (int resIdxM = 0; resIdxM < {TM}; ++resIdxM) {{
+        for (int resIdxN = 0; resIdxN < {TN}; ++resIdxN) {{
+          threadResults[resIdxM * {TN} + resIdxN] +=
+              regM[resIdxM] * regN[resIdxN];
+        }}
+      }}
+    }}
+
+    curAs += {BM} * {BK};
+    __syncthreads();
+  }}
+
+  // write out to SMEM
+  for (int resIdxM = 0; resIdxM < {TM}; ++resIdxM) {{
+    for (int resIdxN = 0; resIdxN < {TN}; ++resIdxN) {{
+      Cs[(threadRow * {TM} + resIdxM) * {BN} + threadCol * {TN} + resIdxN] =
+          threadResults[resIdxM * {TN} + resIdxN];
+    }}
+  }}
+
+  float *curOs = Os;
+
+  // outer-most loop over block tiles
+  for (int bkIdx = 0; bkIdx < K; bkIdx += {BK}) {{
+    // populate the SMEM caches
+    for (int loadOffset = 0; loadOffset < {BK}; loadOffset += strideD) {{
+      Ds[(innerRowD + loadOffset) * {BK} + innerColD] =
+          D[(innerRowD + loadOffset) * K + innerColD];
+    }}
+    __syncthreads();
+
+    // advance blocktile
+    D += {BK};     // move BK columns to right
+
+    // calculate per-thread results
+    for (int dotIdx = 0; dotIdx < {BN}; ++dotIdx) {{
+      // block into registers
+      for (int i = 0; i < {TM}; ++i) {{
+        regM[i] = Cs[(threadRow * {TM} + i) * {BN} + dotIdx];
+      }}
+      for (int i = 0; i < {TN}; ++i) {{
+        regN[i] = Ds[dotIdx * {BK} + threadCol * {TN} + i];
+      }}
+      for (int resIdxM = 0; resIdxM < {TM}; ++resIdxM) {{
+        for (int resIdxN = 0; resIdxN < {TN}; ++resIdxN) {{
+          curOs[resIdxM * {TN} + resIdxN] += regM[resIdxM] * regN[resIdxN];
+        }}
+      }}
+    }}
+
+    curOs += {TM} * {TN};
+    __syncthreads();
+  }}
+
+  __syncthreads();
+
+  }} // cCol
+
+  // write out the results
+  C = origC;
+  C += cRow * {BM} * K;
+  float *curOs = Os;
+  for (int bkIdx = 0; bkIdx < K; bkIdx += {BK}) {{
+    for (int resIdxM = 0; resIdxM < {TM}; ++resIdxM) {{
+      for (int resIdxN = 0; resIdxN < {TN}; ++resIdxN) {{
+        C[(threadRow * {TM} + resIdxM) * K + threadCol * {TN} + resIdxN] =
+            curOs[resIdxM * {TN} + resIdxN];
+      }}
+    }}
+    C += {BK};     // move BK columns to right
+    curOs += {TM} * {TN};
+  }}
+
+}}
+'''
+
+
 def rel_error(val, ref):
     return cp.linalg.norm(val - ref) / cp.linalg.norm(ref)
 
@@ -1758,8 +1939,8 @@ if __name__ == "__main__":
 
     # M, N, K = 1024, 1024, 1024
     # M, N, K = 2048, 2048, 2048
-    M, N, K = 8192, 8192, 128
-    # M, N, K, = 16384, 16384, 128
+    # M, N, K = 8192, 8192, 128
+    M, N, K, = 16384, 16384, 128
     A_host = rng.random((M, K)).astype(np.float32)
     B_host = rng.random((K, N)).astype(np.float32)
     C_host = rng.random((M, N)).astype(np.float32)
@@ -1838,6 +2019,64 @@ if __name__ == "__main__":
     BM, BN, BK = 64, 64, 64
     TM, TN = 4, 4
     code_4 = kernel_code_10.format(BM=BM, BN=BN, BK=BK, TM=TM, TN=TN, mul=int(math.ceil(K / BK)))
+    kernel_4 = cp.RawKernel(code_4, "sgemm2DBlocktiling")
+
+    gridDim = (math.ceil(M / BM), )
+    blockDim = ((BM * BN) // (TM * TN), )
+    print(gridDim, blockDim)
+    val = cp.zeros_like(ref)
+    kernel_4(gridDim, blockDim, (M, N, K, A_dev, B_dev, val, D_dev))
+    cp.cuda.Stream.null.synchronize()
+
+    print(rel_error(val, ref))
+    print(cp.allclose(val, ref))
+
+    def _func():
+        kernel_4(gridDim, blockDim, (M, N, K, A_dev, B_dev, val, D_dev))
+        cp.cuda.Stream.null.synchronize()
+      
+    runtimes = []
+    for _ in range(50):
+        start = time.time()
+        _func()
+        runtimes.append(time.time() - start)
+    flops = 4 * M * N * K
+    gflops_s = flops / (1e9 * np.median(runtimes))
+    runtime = np.median(runtimes) * 1000
+    print(f"Runtime: {runtime:.2f} ms, Gflops/s: {gflops_s:.2f}")
+
+    BM, BN, BK = 32, 32, 32
+    TM, TN = 2, 2
+    code_4 = kernel_code_10.format(BM=BM, BN=BN, BK=BK, TM=TM, TN=TN, mul=int(math.ceil(K / BK)))
+    kernel_4 = cp.RawKernel(code_4, "sgemm2DBlocktiling")
+
+    gridDim = (math.ceil(M / BM), )
+    blockDim = ((BM * BN) // (TM * TN), )
+    print(gridDim, blockDim)
+    val = cp.zeros_like(ref)
+    kernel_4(gridDim, blockDim, (M, N, K, A_dev, B_dev, val, D_dev))
+    cp.cuda.Stream.null.synchronize()
+
+    print(rel_error(val, ref))
+    print(cp.allclose(val, ref))
+
+    def _func():
+        kernel_4(gridDim, blockDim, (M, N, K, A_dev, B_dev, val, D_dev))
+        cp.cuda.Stream.null.synchronize()
+      
+    runtimes = []
+    for _ in range(50):
+        start = time.time()
+        _func()
+        runtimes.append(time.time() - start)
+    flops = 4 * M * N * K
+    gflops_s = flops / (1e9 * np.median(runtimes))
+    runtime = np.median(runtimes) * 1000
+    print(f"Runtime: {runtime:.2f} ms, Gflops/s: {gflops_s:.2f}")
+
+    BM, BN, BK = 32, 32, 32
+    TM, TN = 2, 2
+    code_4 = kernel_code_12.format(BM=BM, BN=BN, BK=BK, TM=TM, TN=TN, mul=int(math.ceil(K / BK)))
     kernel_4 = cp.RawKernel(code_4, "sgemm2DBlocktiling")
 
     gridDim = (math.ceil(M / BM), )
