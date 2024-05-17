@@ -1,5 +1,5 @@
 hull: hull.cpp
-	g++ hull.cpp -O3 -o hull -pthread
+	g++ hull.cpp -O3 -o hull -pthread -Wall
 
 .PHONY: run
 

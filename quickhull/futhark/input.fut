@@ -35,7 +35,13 @@ module words : {
      |> map (\(i,(x,_)) -> ([],i-x+1,x)))
 }
 
-def points_from_string (s: []u8) : [][2]f64 =
-  let (get, ws) = words.words s
-  in tabulate (length ws / 2) (\i -> [f64.i32 (atoi (get ws[i*2])),
-                                      f64.i32 (atoi (get ws[i*2+1]))])
+def MiB : i64 = 1024*1024
+
+def points_from_string [n] (s: [n]u8) : [n/8][2]f64 =
+  let num bs = f64.u32(  (u32.u8 bs[3]<<24)
+                       | (u32.u8 bs[2]<<16)
+                       | (u32.u8 bs[1]<<8)
+                       | (u32.u8 bs[0]))
+  let point i = [num (take 4 s[i*8:]),
+                 num (take 4 s[i*8+4:])]
+  in tabulate (n/8) point

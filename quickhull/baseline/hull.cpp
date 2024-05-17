@@ -162,27 +162,20 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::vector<int> nums;
+  std::ifstream is(argv[1], std::ifstream::ate | std::ifstream::binary);
 
-  std::ifstream is(argv[1]);
+  ssize_t n = is.tellg() / 8;
 
-  while (1) {
-    int x;
-    if (is >> x) {
-      nums.push_back(x);
-    } else {
-      break;
-    }
-  };
-
-  int n = nums.size() / 2;
-
-  if (n*2 != nums.size()) {
-    std::cerr << "Did not read even number of integers." << std::endl;
+  if (n*8 != is.tellg()) {
+    std::cerr << "Size of points file is not divisible by 8." << std::endl;
     return 1;
   }
 
   std::cout << "Input has " << n << " points." << std::endl;
+
+  is.seekg(0, std::ios::beg);
+  std::vector<int> nums(n*2);
+  is.read((char*)nums.data(), n*8);
 
   auto points = parlay::sequence<point>::uninitialized(n);
 
@@ -192,12 +185,11 @@ int main(int argc, char** argv) {
 
   // XXX: no validation, but a few manual checks suggest that it's
   // correct.
-  int hull_size;
+  size_t hull_size;
   {
     auto hull_is = hull(points);
     hull_size = hull_is.size();
-    std::cout << "Hull size: " << std::flush;
-    std::cout << hull_size << std::endl;
+    std::cout << "Hull size: " << hull_size << std::endl;
   }
 
   const int runs = 10;
