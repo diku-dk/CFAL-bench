@@ -56,9 +56,9 @@ k=10, n=100000:    1118006μs (95% CI: [ 1115029.3,  1121371.4])
 Sometimes you have to wait for a little bit, but it seems like the
 cluster is not heavily used.
 
-One slight subtletely is that the user accounts to not have properly
-configured environment variables for running CUDA. I found it necessary
-to add the following to `$HOME/.profile`:
+One slight subtlety is that the user accounts do not have properly
+configured environment variables for running CUDA. I found it
+necessary to add the following to `$HOME/.profile`:
 
 ```
 export LIBRARY_PATH=/usr/local/cuda/lib64
