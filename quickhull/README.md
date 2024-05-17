@@ -43,3 +43,9 @@ way.
   124576 points.
 - `100M_quadratic`, similar but larger. The convex hull has 548157
   points.
+
+The input files are in a binary. Each point is represented as a pair
+of 32-bit integers in little-endian format, for a total of 8 bytes per
+point. You can read these files straight into memory, but note that
+Quickhull itself requires double-precision floats, so you'll have to
+convert them afterwards.
