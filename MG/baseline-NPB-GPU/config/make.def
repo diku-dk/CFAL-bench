@@ -20,8 +20,7 @@
 #---------------------------------------------------------------------------
 # This is the compiler used for CUDA programs
 #---------------------------------------------------------------------------
-#COMPUTE_CAPABILITY = -gencode arch=compute_61,code=sm_61
-COMPUTE_CAPABILITY = 
+COMPUTE_CAPABILITY = -gencode arch=compute_80,code=sm_80
 
 OPENMP = -Xcompiler -fopenmp -lgomp
 

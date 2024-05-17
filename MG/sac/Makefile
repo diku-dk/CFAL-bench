@@ -4,8 +4,8 @@ CUDA_LPATH := host/cuda
 
 DYLIB := so                          # adjust to your system (e.g. so)
 
-SAC2C := ~/sac2c/build/sac2c_d                  # may need to adjust if sac2c is not in your PATH
-SAC2CFLAGS := -dcccall -maxwlur 27 -v3 # when changing you may want to include -check c
+SAC2C := ~/repos/sac2c/build_CFAL/sac2c_d                  # may need to adjust if sac2c is not in your PATH
+SAC2CFLAGS := -dcccall -maxwlur 27 -v3 -noSRP -noSOP # when changing you may want to include -check c
 
 all: seq test mt cuda
 
