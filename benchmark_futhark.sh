@@ -1,11 +1,17 @@
 #!/bin/sh
+#SBATCH --partition=csmpi_fpga_short
+#SBATCH --job-name=cfal-futhark
+#SBATCH --time=10:00
+#SBATCH --cpus-per-task=32
+#SBATCH --gres=gpu:nvidia_a30:1
+#SBATCH --mem=64G
 #
 # Run all Futhark benchmarks. Assumes 'futhark' is on PATH and is
 # operational with the 'cuda', 'multicore', and 'ispc' backends.
 #
 # You can submit this script as a slurm job. On the shared system, do:
 #
-# $ srun -t 10:00 -p csmpi_fpga_short -c 32 --gres=gpu:nvidia_a30:1 ./benchmark_futhark.sh
+# $ sbatch ./benchmark_futhark.sh
 
 set -e
 
