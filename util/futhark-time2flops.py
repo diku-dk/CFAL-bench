@@ -18,5 +18,5 @@ for (dataset,v) in zip(sys.argv[3::2], sys.argv[4::2]):
     runtimes_mean = runtimes_sum / len(runtimes)
     gflop_s = gflops / runtimes
     gflop_per_s_mean = gflops / runtimes_mean
-    print('Dataset {}: mean GFLOP/s: {:.2f}±{:.4f}'
-          .format(dataset, gflop_per_s_mean, np.std(gflop_s)))
+    print('Dataset {:20} mean GFLOP/s: {:10.2f}±{:.2}'
+          .format(dataset+':', gflop_per_s_mean, np.std(gflop_s)))
