@@ -13,9 +13,7 @@ cuda: bin/nbody_cuda
 cuda: SAC_FLAGS = -t cuda
 
 bin/nbody%: src/nbody.sac
-	$(SAC) -D N=${N} \
-		   -D ITER=${ITER} \
-		   $(SAC_FLAGS) $< -o $@
+	$(SAC) $(SAC_FLAGS) $< -o $@
 
 bench_seq:
 	sbatch bench_seq.sh 10000 10 10 out
