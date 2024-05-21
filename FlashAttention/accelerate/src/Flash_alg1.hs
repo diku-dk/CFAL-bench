@@ -6,7 +6,6 @@ module Flash_alg1 where
 
 import Data.Array.Accelerate hiding (encodeFloat,(^))
 import Prelude hiding (replicate, zipWith, zipWith3, map, sum, min, Ord(..), maximum)
-import Data.Array.Accelerate.Debug.Trace
 
 -- untested!
 -- direct port of flash_alg1.sac to accelerate
@@ -14,7 +13,7 @@ totalProgram :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Matrix Float)
 totalProgram (T3 n d m) = let T3 q k v = mkInput (the n) (the d) in flashAttention q k v (the m)
 
 check :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Scalar Float, Scalar Float)
-check a@(T3 x _ _ ) = checkCorrectness . atraceArray "done" x . totalProgram $ a
+check = checkCorrectness . totalProgram
 
 
 flashAttention :: Acc (Matrix Float) -> Acc (Matrix Float) -> Acc (Matrix Float) -> Exp Int -> Acc (Matrix Float)
@@ -35,7 +34,7 @@ flashAttention q k v m' =
       x@(T3 result _ _) = afst $ awhile (map (< max_j) . asnd)
              (\(T2 state j) -> T2 (step state qb kb vb j) (map (+1) j))
              (T2 (T3 o m l) $ unit 0)
-  in atraceExp "reshape" (shape result) $ reshape (Z_ ::. n ::. d) $ atrace "result" result
+  in reshape (Z_ ::. n ::. d) result
 
 -- awhile' :: (p2 -> p3) -> (p2 -> p2) -> p2 -> p2
 -- awhile' _ s x = let y = s . s . s $ x in y
@@ -65,7 +64,7 @@ step (T3 o m l) qb kb vb j =
               pj1
       o'' = zipWith (+) o' $ matmul pj2 vbj
       o''' = zipWith (/) o'' (replicate (Any_ ::. d) lnew)
-  in atraceArray "o'''" j $ T3 o''' mnew lnew
+  in T3 o''' mnew lnew
 
 ceildiv :: Exp Int -> Exp Int -> Exp Int
 ceildiv a b = (a + b - 1) `div` b
