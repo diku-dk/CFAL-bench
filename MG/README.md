@@ -75,3 +75,11 @@ $ ./bin/mg.B
 ```
 
 For the first time, you may have to create the `bin` directory inside `baseline-NPB-GPU`, i.e., `$ mkdir bin`
+
+# CPU baseline implementation
+
+Download the [NAS implementation](https://www.nas.nasa.gov/assets/npb/NPB3.4.2.tar.gz). 
+
+Put make.def in NPB3.4-OMP/config
+
+Then run the benchmark with bench_omp.sh
