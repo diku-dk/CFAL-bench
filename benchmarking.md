@@ -98,7 +98,7 @@ and unpack it and copy the `bin/ispc` program to somewhere in your
 
 ### Automatic benchmarking
 
-[`benchmark_futhark.sh`](benchmark_futhark.sh).
+[`benchmark_futhark.sh`](util/benchmark_futhark.sh).
 
 ### Manual benchmarking
 

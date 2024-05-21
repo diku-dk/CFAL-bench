@@ -1,5 +1,5 @@
-SAC = $(HOME)/repos/sac2c/build_CFAL/sac2c_d
-SAC_FLAGS = -dcccall -maxwlur 2
+SAC = sac2c_p
+SAC_FLAGS = -maxwlur 2
 
 .PHONY: all clean bench_seq bench_omp bench
 
@@ -13,9 +13,7 @@ cuda: bin/nbody_cuda
 cuda: SAC_FLAGS = -t cuda
 
 bin/nbody%: src/nbody.sac
-	$(SAC) -D N=${N} \
-		   -D ITER=${ITER} \
-		   $(SAC_FLAGS) $< -o $@
+	$(SAC) $(SAC_FLAGS) $< -o $@
 
 bench_seq:
 	sbatch bench_seq.sh 10000 10 10 out

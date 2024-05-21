@@ -1,8 +1,9 @@
-use Array: all except {zero, sel};
-import Array: {zero, sel};
+use Structures: all except {zero, sel};
+import Structures: {zero, sel};
 use Math: all;
 use StdIO: all;
 use Benchmarking: all;
+use CommandLine: all;
 
 #define EPSILON2 0x1p-53
 
@@ -87,23 +88,26 @@ advance(struct Body[N] positions, struct Body[N] velocities, double[N] masses,
 
 int main()
 {
+    off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
+    N = toi(argv(off + 1));
+    ITER = toi(argv(off + 2));
     itime = getInterval("time", 1);
     start(itime);
-
+    
     velocities = with {}: genarray([N], zero(Body {0d, 0d, 0d}));
     positions = with {
                   (. <= [i] <= .): Body {tod(i), tod(2 * i), tod(3 * i)};
                }: genarray([N], zero(Body {0d, 0d, 0d}));
     masses = {[i] -> 1d | [i] < [N]};
-
+    
     for (t = 0; t < ITER; t++) {
       positions, velocities = advance(positions, velocities, masses, 0.01);
     }
-
+    
     end(itime);
-
+    
     fprintf(stderr, "Sum is %lf\n", positions[0].x);
-
+    
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
     printf("%f\n", 
