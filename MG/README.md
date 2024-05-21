@@ -82,4 +82,5 @@ Download the [NAS implementation](https://www.nas.nasa.gov/assets/npb/NPB3.4.2.t
 
 Put make.def in NPB3.4-OMP/config
 
-Then run the benchmark with bench_omp.sh
+Then run the benchmark with `bench_omp.sh` for OpenMP on 32 cores, or `bench_seq.sh` for the
+sequential version.
