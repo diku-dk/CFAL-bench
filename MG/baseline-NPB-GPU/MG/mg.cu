@@ -59,6 +59,15 @@
  * ------------------------------------------------------------------------------
  */
 
+#define CUDA_SAFE(fncall)                                                     \
+    {                                                                         \
+        cudaError_t err = fncall;                                             \
+        if (err != cudaSuccess) {                                             \
+            printf("%s:%d %s\n", __FILE__, __LINE__,                          \
+                    cudaGetErrorString(err));                                 \
+        }                                                                     \
+    }
+
 #include <cuda.h>
 #include "../common/npb-CPP.hpp"
 #include "npbparams.hpp"
@@ -1270,7 +1279,7 @@ static void norm2u3_gpu(double* r_device,
 			1);
 
 	temp_size=(amount_of_work_x*amount_of_work_y)/(threads_per_block_x*threads_per_block_y);	
-	cudaMalloc(&data_device,2*temp_size*sizeof(double));
+	CUDA_SAFE(cudaMalloc(&data_device,2*temp_size*sizeof(double)));
 	sum_device=data_device;
 	max_device=data_device+temp_size;
 
@@ -1287,7 +1296,7 @@ static void norm2u3_gpu(double* r_device,
 				amount_of_work_x);
 
 	data_host=(double*)malloc(2*temp_size*sizeof(double));
-	cudaMemcpy(data_host, data_device, 2*temp_size*sizeof(double), cudaMemcpyDeviceToHost);
+	CUDA_SAFE(cudaMemcpy(data_host, data_device, 2*temp_size*sizeof(double), cudaMemcpyDeviceToHost));
 	sum_host=data_host;
 	max_host=(data_host+temp_size);
 
@@ -1296,7 +1305,7 @@ static void norm2u3_gpu(double* r_device,
 		if(max_rnmu<max_host[j]){max_rnmu=max_host[j];}
 	}
 
-	cudaFree(data_device);
+	CUDA_SAFE(cudaFree(data_device));
 	free(data_host);
 
 	*rnmu=max_rnmu;
@@ -1533,11 +1542,11 @@ __global__ void psinv_gpu_kernel(double* r,
 }
 
 static void release_gpu(){
-	cudaFree(a_device);
-	cudaFree(c_device);
-	cudaFree(u_device);
-	cudaFree(v_device);
-	cudaFree(r_device);
+	CUDA_SAFE(cudaFree(a_device));
+	CUDA_SAFE(cudaFree(c_device));
+	CUDA_SAFE(cudaFree(u_device));
+	CUDA_SAFE(cudaFree(v_device));
+	CUDA_SAFE(cudaFree(r_device));
 }
 
 /*
@@ -2009,7 +2018,7 @@ static void setup_gpu(double* a,
 	 * }
 	 */
 	/* define gpu_device */
-	cudaGetDeviceCount(&total_devices);
+	CUDA_SAFE(cudaGetDeviceCount(&total_devices));
 	if(total_devices==0){
 		printf("\n\n\n No Nvidia GPU found!!! \n\n\n");
 		exit(-1);
@@ -2019,8 +2028,8 @@ static void setup_gpu(double* a,
 	}else{
 		gpu_device_id = 0;
 	}
-	cudaSetDevice(gpu_device_id);	
-	cudaGetDeviceProperties(&gpu_device_properties, gpu_device_id);
+	CUDA_SAFE(cudaSetDevice(gpu_device_id));	
+	CUDA_SAFE(cudaGetDeviceProperties(&gpu_device_properties, gpu_device_id));
 
 	/* define threads_per_block */
 	if((MG_THREADS_PER_BLOCK_ON_COMM3>=1)&&
@@ -2079,16 +2088,16 @@ static void setup_gpu(double* a,
 	size_shared_data_on_resid=2*M*sizeof(double);
 	size_shared_data_on_rprj3=2*M*sizeof(double);
 
-	cudaMalloc(&a_device, size_a_device);
-	cudaMalloc(&c_device, size_c_device);
-	cudaMalloc(&u_device, size_u_device);
-	cudaMalloc(&v_device, size_v_device);
-	cudaMalloc(&r_device, size_r_device);
-	cudaMemcpy(a_device, a, size_a_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(c_device, c, size_c_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(u_device, u, size_u_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(v_device, v, size_v_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(r_device, r, size_r_device, cudaMemcpyHostToDevice);		
+	CUDA_SAFE(cudaMalloc(&a_device, size_a_device));
+	CUDA_SAFE(cudaMalloc(&c_device, size_c_device));
+	CUDA_SAFE(cudaMalloc(&u_device, size_u_device));
+	CUDA_SAFE(cudaMalloc(&v_device, size_v_device));
+	CUDA_SAFE(cudaMalloc(&r_device, size_r_device));
+	CUDA_SAFE(cudaMemcpy(a_device, a, size_a_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(c_device, c, size_c_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(u_device, u, size_u_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(v_device, v, size_v_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(r_device, r, size_r_device, cudaMemcpyHostToDevice));		
 }
 
 static void showall(void* pointer_z, 

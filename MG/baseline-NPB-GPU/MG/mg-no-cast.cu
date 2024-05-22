@@ -61,6 +61,15 @@
 
  /* NO CAST VERSION 2 */
 
+#define CUDA_SAFE(fncall)                                                     \
+    {                                                                         \
+        cudaError_t err = fncall;                                             \
+        if (err != cudaSuccess) {                                             \
+            printf("%s:%d %s\n", __FILE__, __LINE__,                          \
+                    cudaGetErrorString(err));                                 \
+        }                                                                     \
+    }
+
 #include <cuda.h>
 #include "../common/npb-CPP.hpp"
 #include "npbparams.hpp"
@@ -776,7 +785,7 @@ static void comm3_gpu(double* u_device,
 			n2,
 			n3,
 			amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 
 	threads_per_block = THREADS_PER_BLOCK_ON_COMM3;
 	amount_of_work = (n3-2) * THREADS_PER_BLOCK_ON_COMM3;	
@@ -787,7 +796,7 @@ static void comm3_gpu(double* u_device,
 			n2,
 			n3,
 			amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 
 	threads_per_block = THREADS_PER_BLOCK_ON_COMM3;
 	amount_of_work = n2 * THREADS_PER_BLOCK_ON_COMM3;
@@ -798,7 +807,7 @@ static void comm3_gpu(double* u_device,
 			n2,
 			n3,
 			amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 
 	if(timeron){timer_stop(T_COMM3);}
 }
@@ -1112,7 +1121,7 @@ static void interp_gpu(double* z_device,
 						n2,
 						n3,
 						amount_of_work);
-		cudaDeviceSynchronize();
+		CUDA_SAFE(cudaDeviceSynchronize());
 	}
 	if(timeron){timer_stop(T_INTERP);}
 }
@@ -1357,8 +1366,8 @@ static void norm2u3_gpu(double* r_device,
 	double (*max_host)=(double*)malloc(temp_size*sizeof(double));
 	double* sum_device;
 	double* max_device;
-	cudaMalloc(&sum_device,temp_size*sizeof(double));
-	cudaMalloc(&max_device,temp_size*sizeof(double));
+	CUDA_SAFE(cudaMalloc(&sum_device,temp_size*sizeof(double)));
+	CUDA_SAFE(cudaMalloc(&max_device,temp_size*sizeof(double)));
 
 	norm2u3_gpu_kernel<<<blocks_per_grid, 
 		threads_per_block
@@ -1372,18 +1381,18 @@ static void norm2u3_gpu(double* r_device,
 					max_device,
 					blocks_per_grid,
 					amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 
-	cudaMemcpy(sum_host, sum_device, temp_size*sizeof(double), cudaMemcpyDeviceToHost);
-	cudaMemcpy(max_host, max_device, temp_size*sizeof(double), cudaMemcpyDeviceToHost);
+	CUDA_SAFE(cudaMemcpy(sum_host, sum_device, temp_size*sizeof(double), cudaMemcpyDeviceToHost));
+	CUDA_SAFE(cudaMemcpy(max_host, max_device, temp_size*sizeof(double), cudaMemcpyDeviceToHost));
 
 	for(j=0; j<temp_size; j++){
 		s=s+sum_host[j];
 		if(max_rnmu<max_host[j]){max_rnmu=max_host[j];}
 	}
 
-	cudaFree(sum_device);
-	cudaFree(max_device);
+	CUDA_SAFE(cudaFree(sum_device));
+	CUDA_SAFE(cudaFree(max_device));
 	free(sum_host);
 	free(max_host);
 
@@ -1578,7 +1587,7 @@ static void psinv_gpu(double* r_device,
 					n2,
 					n3,
 					amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 	if(timeron){timer_stop(T_PSINV);}
 
 	/*
@@ -1629,11 +1638,11 @@ __global__ void psinv_gpu_kernel(double* r,
 }
 
 static void release_gpu(){
-	cudaFree(a_device);
-	cudaFree(c_device);
-	cudaFree(u_device);
-	cudaFree(v_device);
-	cudaFree(r_device);
+	CUDA_SAFE(cudaFree(a_device));
+	CUDA_SAFE(cudaFree(c_device));
+	CUDA_SAFE(cudaFree(u_device));
+	CUDA_SAFE(cudaFree(v_device));
+	CUDA_SAFE(cudaFree(r_device));
 }
 
 /*
@@ -1768,7 +1777,7 @@ static void resid_gpu(double* u_device,
 					n2,
 					n3,
 					amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 	if(timeron){timer_stop(T_RESID);}
 
 	/*
@@ -1976,7 +1985,7 @@ static void rprj3_gpu(double* r_device,
 					d2,
 					d3,
 					amount_of_work);
-	cudaDeviceSynchronize();
+	CUDA_SAFE(cudaDeviceSynchronize());
 	if(timeron){timer_stop(T_RPRJ3);}
 
 	j=k-1;
@@ -2107,16 +2116,16 @@ static void setup_gpu(double* a,
 	size_u_device=sizeof(double)*(NR);
 	size_v_device=sizeof(double)*(NV);
 	size_r_device=sizeof(double)*(NR);
-	cudaMalloc(&a_device, size_a_device);
-	cudaMalloc(&c_device, size_c_device);
-	cudaMalloc(&u_device, size_u_device);
-	cudaMalloc(&v_device, size_v_device);
-	cudaMalloc(&r_device, size_r_device);
-	cudaMemcpy(a_device, a, size_a_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(c_device, c, size_c_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(u_device, u, size_u_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(v_device, v, size_v_device, cudaMemcpyHostToDevice);
-	cudaMemcpy(r_device, r, size_r_device, cudaMemcpyHostToDevice);		
+	CUDA_SAFE(cudaMalloc(&a_device, size_a_device));
+	CUDA_SAFE(cudaMalloc(&c_device, size_c_device));
+	CUDA_SAFE(cudaMalloc(&u_device, size_u_device));
+	CUDA_SAFE(cudaMalloc(&v_device, size_v_device));
+	CUDA_SAFE(cudaMalloc(&r_device, size_r_device));
+	CUDA_SAFE(cudaMemcpy(a_device, a, size_a_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(c_device, c, size_c_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(u_device, u, size_u_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(v_device, v, size_v_device, cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMemcpy(r_device, r, size_r_device, cudaMemcpyHostToDevice);	)	
 }
 
 static void showall(void* pointer_z, 
