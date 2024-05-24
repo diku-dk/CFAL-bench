@@ -42,8 +42,8 @@ make -C quickhull/futhark run_cuda
 make -C nbody-naive/futhark run_multicore
 make -C nbody-naive/futhark run_cuda
 
-echo N-body CPU GFLOP/s
-$time2flops nbody-naive/futhark/nbody_multicore.json nbody.fut 'n=1000' 1677 'n=10000' 1677 'n=100000' 1677
+echo N-body CPU (all threads) GFLOP/s
+$time2flops nbody-naive/futhark/nbody_multicore.json nbody.fut 'n=1000' 1800 'n=10000' 1800 'n=100000' 1800
 
 echo N-body GPU GFLOP/s
-$time2flops nbody-naive/futhark/nbody_cuda.json nbody.fut 'n=1000' 1677 'n=10000' 1677 'n=100000' 1677
+$time2flops nbody-naive/futhark/nbody_cuda.json nbody.fut 'n=1000' 1800 'n=10000' 1800 'n=100000' 1800
