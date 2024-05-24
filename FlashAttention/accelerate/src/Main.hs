@@ -13,19 +13,19 @@ import Criterion.Types (Benchmark(Benchmark))
 
 main :: IO ()
 main = do
+  -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel check
   -- check: these two values should be _very close_
-  -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [8])
-  -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64])
-  -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [1024])
-  -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [16384])
+  print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [8 :: Int])
+  -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64])
+  -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [1024])
+  -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [16384])
   
   -- higher values for `m` crash Accelerate for some reason, even though the formula claims that these three should be fine:
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [32768])
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [65536])
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [131072])
-  defaultMain [backend "CPU" $ A.runN @CPU.Native
-                -- , backend "GPU" GPU.runN]
-                   ]
+  
+  -- defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
   where
     backend name runN
       = bgroup name

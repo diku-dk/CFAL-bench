@@ -6,13 +6,17 @@ import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
-import Control.Concurrent
-import System.IO
+import qualified Data.Array.Accelerate.LLVM.Native.Foreign as CPU
 
 main :: Prelude.IO ()
-main = defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+main = do
+  -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel $ makeInput $ use $ fromList Z [256]
+  -- Prelude.print input256
+  -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel $ mg 4 weightsA
+  defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
   where
     makeInput' = runN @CPU.Native makeInput
+    input4 = makeInput' $ fromList Z [4]
     input256 = makeInput' $ fromList Z [256]
     input512 = makeInput' $ fromList Z [512]
 
@@ -47,8 +51,8 @@ coarse2fine z = generate (Z_ ::. n*2 ::. n*2 ::. n*2) $ \(I3 i j k) ->
     I3 n _ _ = shape z
 
 fine2coarse :: Acc (Array3 Double) -> Acc (Array3 Double)
-fine2coarse z = generate (Z_ ::. n `quot` 2 ::. m `quot` 2 ::. k `quot` 2) $ \(I3 i j l) ->
-    z ! I3 (i * 2 + 1) (j * 2 + 1) (l * 2 + 1)
+fine2coarse z = backpermute (Z_ ::. n `quot` 2 ::. m `quot` 2 ::. k `quot` 2) (\(I3 i j l) ->
+    I3 (i * 2 + 1) (j * 2 + 1) (l * 2 + 1)) z
   where
     I3 n m k = shape z
 
@@ -109,9 +113,6 @@ mg n weights iter v = unit . l2 . zipWith (-) v . a . asnd . awhile
     in T2 i' $ zipWith (+) u r'
   )
   . T2 (unit 0)
-
-awhile' ::  Arrays a => (Acc a -> Acc (Scalar Bool)) -> (Acc a -> Acc a) -> Acc a -> Acc a
-awhile' cond step init = step $ step $ step $ step $ step $ step init
 
 makeInput :: Acc (Scalar Int) -> Acc (Array3 Double)
 makeInput n = generate (Z_ ::. the n ::. the n ::. the n) $ \idx ->

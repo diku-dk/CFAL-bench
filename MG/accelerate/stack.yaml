@@ -19,6 +19,10 @@ extra-deps:
   subdirs:
     - llvm-hs
     - llvm-hs-pure
-- ../../../haskell-MIP/MIP
+# - ../../../haskell-MIP/MIP
+- github: msakai/haskell-MIP
+  commit: 4295aa21a24a30926b55770c55ac00f749fb8a39
+  subdirs:
+  - MIP
 - OptDir-0.0.4
 - bytestring-encoding-0.1.2.0
