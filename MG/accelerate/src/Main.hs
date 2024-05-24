@@ -44,8 +44,8 @@ coarse2fine z = generate (Z_ ::. n*2 ::. n*2 ::. n*2) $ \(I3 i j k) ->
     I3 n _ _ = shape z
 
 fine2coarse :: Acc (Array3 Double) -> Acc (Array3 Double)
-fine2coarse z = generate (Z_ ::. n `quot` 2 ::. m `quot` 2 ::. k `quot` 2) $ \(I3 i j l) ->
-    z ! I3 (i * 2 + 1) (j * 2 + 1) (l * 2 + 1)
+fine2coarse z = backpermute (Z_ ::. n `quot` 2 ::. m `quot` 2 ::. k `quot` 2) (\(I3 i j l) ->
+    I3 (i * 2 + 1) (j * 2 + 1) (l * 2 + 1)) z
   where
     I3 n m k = shape z
 
