@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --partition=csmpi_fpga_short
 #SBATCH --job-name=cfal-futhark
-#SBATCH --time=20:00
+#SBATCH --time=10:00
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
