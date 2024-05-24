@@ -13,4 +13,3 @@ run_ispc:
 
 run_cuda:
 	CFLAGS=$(CFLAGS) futhark bench --backend=cuda $(BENCHMARK).fut --json $(BENCHMARK)_cuda.json
-
