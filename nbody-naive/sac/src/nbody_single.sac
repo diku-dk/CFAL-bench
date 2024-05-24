@@ -2,13 +2,15 @@ use Array: all;
 use Math: all;
 use StdIO: all;
 use Benchmarking: all;
+use CommandLine: all;
+
+#define EPSILON2 0x1p-53
 
 inline
 double[3] acc(double[3] x, double[3] y, double m)
 {
     dir = y - x;
-    factor = (sum(dir * dir) == 0d) ? 
-          0d : m / (sum(dir * dir) * sqrt(sum(dir * dir)));
+    factor = m / (sum(dir * dir) * sqrt(sum(dir * dir)) + EPSILON2);
     return dir * factor;
 }
 
@@ -37,6 +39,10 @@ advance(double[N, 3] positions, double[N, 3] velocities, double[N] masses,
 
 int main()
 {
+    off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
+    N = toi(argv(off + 1));
+    ITER = toi(argv(off + 2));
+
     itime = getInterval("time", 1);
     start(itime);
 

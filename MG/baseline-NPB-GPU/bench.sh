@@ -25,7 +25,8 @@ runs="$2"
 outfile="$3/MG_${class}_cuda"
 mkdir -p "$3"
 
-make clean
+# clean does not remove the binaries
+make cleanall
 make mg CLASS="$class" 
 
 printf 'mean,stddev\n' > "${outfile}"
