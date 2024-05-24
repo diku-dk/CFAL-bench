@@ -78,82 +78,84 @@ double[*] fine2coarse(double[*] r)
   return {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
 }
 
-//specialize double[256,256,256] A (double[256,256,256] r);
-//specialize double[128,128,128] A (double[128,128,128] r);
-//specialize double[64,64,64]    A (double[64,64,64] r);
-//specialize double[32,32,32]    A (double[32,32,32] r);
-//specialize double[16,16,16]    A (double[16,16,16] r);
-//specialize double[8,8,8]       A (double[8,8,8] r);
-//specialize double[4,4,4]       A (double[4,4,4] r);
+//specialize double[512,512,512] A(double[512,512,512] r);
+//specialize double[256,256,256] A(double[256,256,256] r);
+//specialize double[128,128,128] A(double[128,128,128] r);
+//specialize double[64,64,64]    A(double[64,64,64] r);
+//specialize double[32,32,32]    A(double[32,32,32] r);
+//specialize double[16,16,16]    A(double[16,16,16] r);
+//specialize double[8,8,8]       A(double[8,8,8] r);
+//specialize double[4,4,4]       A(double[4,4,4] r);
 inline
 double[.,.,.] A(double[.,.,.] a)
 {
   return relax(a, [-8d/3d, 0d, 1d/6d, 1d/12d]);
 }
 
-specialize double[128,128,128] P (double[256,256,256] r);
-specialize double[64,64,64] P (double[128,128,128] r);
-specialize double[32,32,32]    P (double[64,64,64] r);
-specialize double[16,16,16]    P (double[32,32,32] r);
-specialize double[8,8,8]    P (double[16,16,16] r);
-specialize double[4,4,4]       P (double[8,8,8] r);
-specialize double[2,2,2]       P (double[4,4,4] r);
+specialize double[256,256,256] P(double[512,512,512] r);
+specialize double[128,128,128] P(double[256,256,256] r);
+specialize double[64,64,64] P(double[128,128,128] r);
+specialize double[32,32,32]    P(double[64,64,64] r);
+specialize double[16,16,16]    P(double[32,32,32] r);
+specialize double[8,8,8]    P(double[16,16,16] r);
+specialize double[4,4,4]       P(double[8,8,8] r);
+specialize double[2,2,2]       P(double[4,4,4] r);
 noinline
 double[.,.,.] P(double[.,.,.] a)
 {
   return fine2coarse(relax(a, [1d/2d, 1d/4d, 1d/8d, 1d/16d]));
 }
 
-specialize double[256,256,256] Q (double[128,128,128] r);
-specialize double[128,128,128] Q (double[64,64,64] r);
-specialize double[64,64,64]    Q (double[32,32,32] r);
-specialize double[32,32,32]    Q (double[16,16,16] r);
-specialize double[16,16,16]    Q (double[8,8,8] r);
-specialize double[8,8,8]       Q (double[4,4,4] r);
-specialize double[4,4,4]       Q (double[2,2,2] r);
+specialize double[512,512,512] Q(double[256,256,256] r);
+specialize double[256,256,256] Q(double[128,128,128] r);
+specialize double[128,128,128] Q(double[64,64,64] r);
+specialize double[64,64,64]    Q(double[32,32,32] r);
+specialize double[32,32,32]    Q(double[16,16,16] r);
+specialize double[16,16,16]    Q(double[8,8,8] r);
+specialize double[8,8,8]       Q(double[4,4,4] r);
+specialize double[4,4,4]       Q(double[2,2,2] r);
 noinline
 double[.,.,.] Q(double[.,.,.] a)
 {
   return relax(coarse2fine (a), [1d, 1d/2d, 1d/4d, 1d/8d]);
 }
 
-//specialize double[256,256,256] Sa (double[256,256,256] r);
-//specialize double[128,128,128] Sa (double[128,128,128] r);
-//specialize double[64,64,64]    Sa (double[64,64,64] r);
-//specialize double[32,32,32]    Sa (double[32,32,32] r);
-//specialize double[16,16,16]    Sa (double[16,16,16] r);
-//specialize double[8,8,8]       Sa (double[8,8,8] r);
-//specialize double[4,4,4]       Sa (double[4,4,4] r);
-inline
+specialize double[512,512,512] Sa(double[512,512,512] r);
+specialize double[256,256,256] Sa(double[256,256,256] r);
+specialize double[128,128,128] Sa(double[128,128,128] r);
+specialize double[64,64,64]    Sa(double[64,64,64] r);
+specialize double[32,32,32]    Sa(double[32,32,32] r);
+specialize double[16,16,16]    Sa(double[16,16,16] r);
+specialize double[8,8,8]       Sa(double[8,8,8] r);
+specialize double[4,4,4]       Sa(double[4,4,4] r);
+noinline
 double[.,.,.] Sa(double[.,.,.] a)
 {
   return relax(a, [-3d/8d, 1d/32d, -1d/64d, 0d]);
 }
 
-//specialize double[256,256,256] Sb (double[256,256,256] r);
-//specialize double[128,128,128] Sb (double[128,128,128] r);
-//specialize double[64,64,64]    Sb (double[64,64,64] r);
-//specialize double[32,32,32]    Sb (double[32,32,32] r);
-//specialize double[16,16,16]    Sb (double[16,16,16] r);
-//specialize double[8,8,8]       Sb (double[8,8,8] r);
-//specialize double[4,4,4]       Sb (double[4,4,4] r);
-inline
+specialize double[512,512,512] Sb(double[512,512,512] r);
+specialize double[256,256,256] Sb(double[256,256,256] r);
+specialize double[128,128,128] Sb(double[128,128,128] r);
+specialize double[64,64,64]    Sb(double[64,64,64] r);
+specialize double[32,32,32]    Sb(double[32,32,32] r);
+specialize double[16,16,16]    Sb(double[16,16,16] r);
+specialize double[8,8,8]       Sb(double[8,8,8] r);
+specialize double[4,4,4]       Sb(double[4,4,4] r);
+noinline
 double[.,.,.] Sb(double[.,.,.] a)
 {
   return relax(a, [-3d/17d, 1d/33d, -1d/61d, 0d]);
 }
 
-noinline
-double[*] id(double[*] x) {return x;}
-//specialize double[1024,1024,1024] M (double[1024,1024,1024] r);
-//specialize double[512,512,512] M (double[512,512,512] r);
-specialize double[256,256,256] M (double[256,256,256] r);
-specialize double[128,128,128] M (double[128,128,128] r);
-specialize double[64,64,64] M (double[64,64,64] r);
-specialize double[32,32,32] M (double[32,32,32] r);
-specialize double[16,16,16] M (double[16,16,16] r);
-specialize double[8,8,8]    M (double[8,8,8] r);
-specialize double[4,4,4]  M (double[4,4,4] r);
+specialize double[512,512,512] M(double[512,512,512] r);
+specialize double[256,256,256] M(double[256,256,256] r);
+specialize double[128,128,128] M(double[128,128,128] r);
+specialize double[64,64,64]    M(double[64,64,64] r);
+specialize double[32,32,32]    M(double[32,32,32] r);
+specialize double[16,16,16]    M(double[16,16,16] r);
+specialize double[8,8,8]       M(double[8,8,8] r);
+specialize double[4,4,4]       M(double[4,4,4] r);
 noinline
 double[.,.,.] M(double[.,.,.] r)
 {
@@ -161,7 +163,6 @@ double[.,.,.] M(double[.,.,.] r)
   zs = M(rs);
   z  = Q(zs);
   r  = r - A(z);
-  r  = id(r);
   z  = z + S(r);
 
   return z;
