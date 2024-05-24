@@ -35,13 +35,13 @@ flashAttention q k v m' =
              (\(T2 state j) -> T2 (step state qb kb vb j) (map (+1) j))
              (T2 (T3 o m l) $ unit 0)
   in --reshape (Z_ ::. n ::. d) result
-      -- let T3 result _ _ = 
+      let T3 result _ _ = 
               --  step (
                   step (T3 o m l) qb kb vb (unit 0) 
                 -- ) qb kb vb (unit 1)
-      -- in 
+      in 
         -- reshape (Z_ ::. n ::. d) 
-        -- result
+        result
 
 awhile' :: (p2 -> p3) -> (p2 -> p2) -> p2 -> p2
 awhile' _ s x = s x
