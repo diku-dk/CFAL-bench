@@ -9,16 +9,16 @@
 -- ==
 -- "1M_circle.dat"
 -- script input { points_from_string ($loadbytes "../input/1M_circle.dat") }
--- "1M_quadratic.dat"
--- script input { points_from_string ($loadbytes "../input/1M_quadratic.dat") }
 -- "1M_rectangle.dat"
 -- script input { points_from_string ($loadbytes "../input/1M_rectangle.dat") }
+-- "1M_quadratic.dat"
+-- script input { points_from_string ($loadbytes "../input/1M_quadratic.dat") }
 -- "100M_circle.dat"
 -- script input { points_from_string ($loadbytes "../input/100M_circle.dat") }
--- "100M_quadratic.dat"
--- script input { points_from_string ($loadbytes "../input/100M_quadratic.dat") }
 -- "100M_rectangle.dat"
 -- script input { points_from_string ($loadbytes "../input/100M_rectangle.dat") }
+-- "100M_quadratic.dat"
+-- script input { points_from_string ($loadbytes "../input/100M_quadratic.dat") }
 
 module type euclidean_space = {
   type dist
