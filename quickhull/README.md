@@ -49,3 +49,6 @@ The input files are binary. Each point is represented as a pair of
 point. You can read these files straight into memory, but note that
 Quickhull itself requires double-precision floats, so you'll have to
 convert them afterwards.
+
+The `points2sac` program can convert the binary data files into a file
+readable by the SAC Stdlib functions.
