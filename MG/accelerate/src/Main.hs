@@ -84,7 +84,7 @@ m n weights r = z'
     zs = m (n `Prelude.div` 2) weights rs
     z = q zs
     r' = zipWith (-) r $ a z
-    z' = zipWith (+) z $ relax weights r
+    z' = zipWith (+) z $ relax weights r'
 
 l2 :: Acc (Array3 Double) -> Exp Double
 l2 xsss =
