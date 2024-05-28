@@ -14,7 +14,7 @@ import Control.Monad (forM_)
 
 main :: IO ()
 main = do
-  -- print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64 :: Int])
+  print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64 :: Int])
   -- flip forM_ putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel totalProgram
   -- check: these two values should be _very close_
   -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64])
@@ -26,7 +26,7 @@ main = do
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [65536])
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [131072])
   
-  defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
+  -- defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
   where
     backend name runN
       = bgroup name

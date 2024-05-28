@@ -29,7 +29,7 @@ flashAttention q k v m' =
       l = fill (Z_ ::. n `div` br ::. br)       0
 
       max_j = n `div` bc
-      x@(T3 result _ _) = afst $ awhile' (map (< max_j) . asnd)
+      x@(T3 result _ _) = afst $ awhile (map (< max_j) . asnd)
              (\(T2 state j) -> T2 (step state qb kb vb j) (map (+1) j))
              (T2 (T3 o m l) $ unit 0)
   in reshape (Z_ ::. n ::. d) result
@@ -111,10 +111,11 @@ checkCorrectness o = let Z_ ::. n ::. d = shape o
                      in T2 (unit target) result
 
 dontFuse :: (Shape sh, Elt a) => Acc (Array sh a) -> Acc (Array sh a)
-dontFuse xs = generate (shape xs) (\idx -> xs ! idx)
+dontFuse xs = xs --generate (shape xs) (\idx -> xs ! idx)
 
 reshapeBackpermute :: (Shape sh, Shape sh', Elt e) => Exp sh -> Acc (Array sh' e) -> Acc (Array sh e)
-reshapeBackpermute sh array = dontFuse $ backpermute sh (\idx -> fromIndex sh' $ toIndex sh idx) array'
-  where
-    sh' = shape array'
-    array' = dontFuse array
+reshapeBackpermute sh array = reshape sh array
+  -- dontFuse $ backpermute sh (\idx -> fromIndex sh' $ toIndex sh idx) array'
+  -- where
+  --   sh' = shape array'
+  --   array' = dontFuse array
