@@ -12,8 +12,13 @@ main :: Prelude.IO ()
 main = do
   -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel $ makeInput $ use $ fromList Z [256]
   -- Prelude.print input256
+  Prelude.print $ runN @CPU.Native (mg 4 weightsA) (fromList Z [4]) input256 (fromList (Z :. 256 :. 256 :. 256) $ Prelude.repeat 0)
+  -- Prelude.print $ run @CPU.Native $ mg 4 weightsA (use $ fromList Z [4]) (makeInput $ use $ fromList Z [256]) (generate (Z_ ::. constant 256 ::. constant 256 ::. constant 256) $ const 0)
   -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel $ mg 4 weightsA
-  defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+
+  -- Prelude.print $ runN @CPU.Native $ fold (+) 0 $ reshape (I1 5000) $ generate (I2 500 20) (\(I2 x y) -> 20*x+y)
+  -- Prelude.print $ runN @CPU.Native $ fold (+) (0 :: Exp Int) $ generate (I3 20 20 20) (const 1)
+  -- defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
   where
     makeInput' = runN @CPU.Native makeInput
     input4 = makeInput' $ fromList Z [4]
@@ -91,8 +96,11 @@ m n weights r = z'
     zs = m (n `Prelude.div` 2) weights rs
     z = q zs
     r' = zipWith (-) r $ a z
-    z' = zipWith (+) z $ relax weights r
-
+    z' = zipWith (+) z $ relax weights r'
+-- -3.1095396593489024   here r'
+-- -3.1063198068769045   here r
+-- 2.2160889740034156e-5 main r'
+-- 1.753079327178975e-4  main r
 l2 :: Acc (Array3 Double) -> Exp Double
 l2 xsss =
   sqrt (
@@ -103,16 +111,20 @@ l2 xsss =
     sz = size xsss
 
 mg :: Int -> (Double, Double, Double, Double) -> Acc (Scalar Int) -> Acc (Array3 Double) -> Acc (Array3 Double) -> Acc (Scalar Double)
-mg n weights iter v = unit . l2 . zipWith (-) v . a . asnd . awhile
-  (\(T2 i _) -> unit $ the i < the iter)
-  (\(T2 i u) ->
-    let
-      r = zipWith (-) v $ a u
-      r' = m n weights r
-      i' = unit $ the i + 1
-    in T2 i' $ zipWith (+) u r'
-  )
-  . T2 (unit 0)
+mg n weights iter v = unit . l2 . zipWith (-) v . a . asnd . 
+  awhile
+    (\(T2 i _) -> unit $ the i < the iter)
+    (\(T2 i u) ->
+      let
+        r = zipWith (-) v $ a u
+        r' = m n weights r
+        i' = unit $ the i + 1
+      in T2 i' $ zipWith (+) u r'
+    )
+   . T2 (unit 0)
+
+awhile' :: (a->b) -> (a->a) -> a -> a
+awhile' c s x = s . s . s . s $ s x
 
 makeInput :: Acc (Scalar Int) -> Acc (Array3 Double)
 makeInput n = generate (Z_ ::. the n ::. the n ::. the n) $ \idx ->
