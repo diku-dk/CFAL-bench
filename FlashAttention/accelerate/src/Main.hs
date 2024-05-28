@@ -10,12 +10,13 @@ import Criterion.Main
 import Naive
 import Flash_alg1
 import Criterion.Types (Benchmark(Benchmark))
+import Control.Monad (forM_)
 
 main :: IO ()
 main = do
-  -- putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel check
+  -- print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64 :: Int])
+  -- flip forM_ putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel totalProgram
   -- check: these two values should be _very close_
-  print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [8 :: Int])
   -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64])
   -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [1024])
   -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [16384])
@@ -25,7 +26,7 @@ main = do
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [65536])
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [131072])
   
-  -- defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
+  defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
   where
     backend name runN
       = bgroup name
