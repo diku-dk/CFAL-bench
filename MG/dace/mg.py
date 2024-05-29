@@ -46,7 +46,8 @@ def njit(f):
 # DaCe imports and symbols
 import cupy
 import dace
-from dace.transformation.auto.auto_optimize import auto_optimize
+from dace.transformation.auto.auto_optimize import auto_optimize, greedy_fuse, tile_wcrs
+from dace.transformation.dataflow import MapReduceFusion, TaskletFusion, Vectorization
 
 n0i, n0j, n0k = (dace.symbol(s, dtype=dace.int32) for s in ('n0i', 'n0j', 'n0k'))
 n1i, n1j, n1k = (dace.symbol(s, dtype=dace.int64) for s in ('n1i', 'n1j', 'n1k'))
@@ -341,32 +342,94 @@ def interp(pointer_z, mm1, mm2, mm3, pointer_u, n1, n2, n3, k):
 #END interp()
 
 
+# @dace.program
+# def interp_dace(z: dace.float64[n0i, n0j, n0k], u: dace.float64[n1i, n1j, n1k]):
+
+#     z1 = numpy.empty_like(z)
+#     z2 = numpy.empty_like(z)
+#     z3 = numpy.empty_like(z)
+
+#     for i3, i2 in dace.map[0:z.shape[0] - 1, 0:z.shape[1] - 1]:
+
+#         for i1 in dace.map[0:z.shape[2]]:
+#             z1[i3, i2, i1] = z[i3, i2 + 1, i1] + z[i3, i2, i1]
+#             z2[i3, i2, i1] = z[i3 + 1, i2, i1] + z[i3, i2, i1]
+#             z3[i3, i2, i1] = z[i3 + 1, i2 + 1, i1] + z[i3 + 1, i2, i1] + z1[i3, i2, i1]
+
+#         for i1 in dace.map[0:z.shape[2] - 1]:
+#             u[2 * i3, 2 * i2, 2 * i1] = u[2 * i3, 2 * i2, 2 * i1] + z[i3, i2, i1]
+#             u[2 * i3, 2 * i2, 2 * i1 + 1] = u[2 * i3, 2 * i2, 2 * i1 + 1] + 0.5 * (z[i3, i2, i1 + 1] + z[i3, i2, i1])
+#             u[2 * i3, 2 * i2 + 1, 2 * i1] = u[2 * i3, 2 * i2 + 1, 2 * i1] + 0.5 * z1[i3, i2, i1]
+#             u[2 * i3, 2 * i2 + 1,
+#               2 * i1 + 1] = u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] + 0.25 * (z1[i3, i2, i1] + z1[i3, i2, i1 + 1])
+#             u[2 * i3 + 1, 2 * i2, 2 * i1] = u[2 * i3 + 1, 2 * i2, 2 * i1] + 0.5 * z2[i3, i2, i1]
+#             u[2 * i3 + 1, 2 * i2,
+#               2 * i1 + 1] = u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] + 0.25 * (z2[i3, i2, i1] + z2[i3, i2, i1 + 1])
+#             u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] + 0.25 * z3[i3, i2, i1]
+#             u[2 * i3 + 1, 2 * i2 + 1,
+#               2 * i1 + 1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] + 0.125 * (z3[i3, i2, i1] + z3[i3, i2, i1 + 1])
+
+
+# @dace.program
+# def interp_dace(z: dace.float64[n0i, n0j, n0k], u: dace.float64[n1i, n1j, n1k]):
+
+#     # z1 = numpy.empty_like(z)
+#     # z2 = numpy.empty_like(z)
+#     # z3 = numpy.empty_like(z)
+
+#     for i3, i2 in dace.map[0:z.shape[0] - 1, 0:z.shape[1] - 1]:
+
+#         z10 = z[i3, i2 + 1, 0] + z[i3, i2, 0]
+#         z20 = z[i3 + 1, i2, 0] + z[i3, i2, 0]
+#         z30 = z[i3 + 1, i2 + 1, 0] + z[i3 + 1, i2, 0] + z10
+
+#         for i1 in range(z.shape[2] - 1):
+
+#             z11 = z[i3, i2 + 1, i1 + 1] + z[i3, i2, i1 + 1]
+#             z21 = z[i3 + 1, i2, i1 + 1] + z[i3, i2, i1 + 1]
+#             z31 = z[i3 + 1, i2 + 1, i1 + 1] + z[i3 + 1, i2, i1 + 1] + z11
+
+#             u[2 * i3, 2 * i2, 2 * i1] = u[2 * i3, 2 * i2, 2 * i1] + z[i3, i2, i1]
+#             u[2 * i3, 2 * i2, 2 * i1 + 1] = u[2 * i3, 2 * i2, 2 * i1 + 1] + 0.5 * (z[i3, i2, i1 + 1] + z[i3, i2, i1])
+#             u[2 * i3, 2 * i2 + 1, 2 * i1] = u[2 * i3, 2 * i2 + 1, 2 * i1] + 0.5 * z10
+#             u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] = u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] + 0.25 * (z10 + z11)
+#             u[2 * i3 + 1, 2 * i2, 2 * i1] = u[2 * i3 + 1, 2 * i2, 2 * i1] + 0.5 * z20
+#             u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] = u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] + 0.25 * (z20 + z21)
+#             u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] + 0.25 * z30
+#             u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] + 0.125 * (z30 + z31)
+            
+#             z10 = z11
+#             z20 = z21
+#             z30 = z31
+
+max_M = 256 + 2 + 1
+
 @dace.program
 def interp_dace(z: dace.float64[n0i, n0j, n0k], u: dace.float64[n1i, n1j, n1k]):
 
-    z1 = numpy.empty_like(z)
-    z2 = numpy.empty_like(z)
-    z3 = numpy.empty_like(z)
+    # z1 = numpy.empty_like(z)
+    # z2 = numpy.empty_like(z)
+    # z3 = numpy.empty_like(z)
+    z1 = numpy.empty((max_M, max_M, max_M), dtype=numpy.float64)
+    z2 = numpy.empty((max_M, max_M, max_M), dtype=numpy.float64)
+    z3 = numpy.empty((max_M, max_M, max_M), dtype=numpy.float64)
 
-    for i3, i2 in dace.map[0:z.shape[0] - 1, 0:z.shape[1] - 1]:
+    for i3, i2, i1 in dace.map[0:z.shape[0] - 1, 0:z.shape[1] - 1, 0:z.shape[2]]:
 
-        for i1 in dace.map[0:z.shape[2]]:
-            z1[i3, i2, i1] = z[i3, i2 + 1, i1] + z[i3, i2, i1]
-            z2[i3, i2, i1] = z[i3 + 1, i2, i1] + z[i3, i2, i1]
-            z3[i3, i2, i1] = z[i3 + 1, i2 + 1, i1] + z[i3 + 1, i2, i1] + z1[i3, i2, i1]
+        z1[i3, i2, i1] = z[i3, i2 + 1, i1] + z[i3, i2, i1]
+        z2[i3, i2, i1] = z[i3 + 1, i2, i1] + z[i3, i2, i1]
+        z3[i3, i2, i1] = z[i3 + 1, i2 + 1, i1] + z[i3 + 1, i2, i1] + z1[i3, i2, i1]
 
-        for i1 in dace.map[0:z.shape[2] - 1]:
-            u[2 * i3, 2 * i2, 2 * i1] = u[2 * i3, 2 * i2, 2 * i1] + z[i3, i2, i1]
-            u[2 * i3, 2 * i2, 2 * i1 + 1] = u[2 * i3, 2 * i2, 2 * i1 + 1] + 0.5 * (z[i3, i2, i1 + 1] + z[i3, i2, i1])
-            u[2 * i3, 2 * i2 + 1, 2 * i1] = u[2 * i3, 2 * i2 + 1, 2 * i1] + 0.5 * z1[i3, i2, i1]
-            u[2 * i3, 2 * i2 + 1,
-              2 * i1 + 1] = u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] + 0.25 * (z1[i3, i2, i1] + z1[i3, i2, i1 + 1])
-            u[2 * i3 + 1, 2 * i2, 2 * i1] = u[2 * i3 + 1, 2 * i2, 2 * i1] + 0.5 * z2[i3, i2, i1]
-            u[2 * i3 + 1, 2 * i2,
-              2 * i1 + 1] = u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] + 0.25 * (z2[i3, i2, i1] + z2[i3, i2, i1 + 1])
-            u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] + 0.25 * z3[i3, i2, i1]
-            u[2 * i3 + 1, 2 * i2 + 1,
-              2 * i1 + 1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] + 0.125 * (z3[i3, i2, i1] + z3[i3, i2, i1 + 1])
+    for i3, i2, i1 in dace.map[0:z.shape[0] - 1, 0:z.shape[1] - 1, 0:z.shape[2] - 1]:
+
+        u[2 * i3, 2 * i2, 2 * i1] = u[2 * i3, 2 * i2, 2 * i1] + z[i3, i2, i1]
+        u[2 * i3, 2 * i2, 2 * i1 + 1] = u[2 * i3, 2 * i2, 2 * i1 + 1] + 0.5 * (z[i3, i2, i1 + 1] + z[i3, i2, i1])
+        u[2 * i3, 2 * i2 + 1, 2 * i1] = u[2 * i3, 2 * i2 + 1, 2 * i1] + 0.5 * z1[i3, i2, i1]
+        u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] = u[2 * i3, 2 * i2 + 1, 2 * i1 + 1] + 0.25 * (z1[i3, i2, i1] + z1[i3, i2, i1 + 1])
+        u[2 * i3 + 1, 2 * i2, 2 * i1] = u[2 * i3 + 1, 2 * i2, 2 * i1] + 0.5 * z2[i3, i2, i1]
+        u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] = u[2 * i3 + 1, 2 * i2, 2 * i1 + 1] + 0.25 * (z2[i3, i2, i1] + z2[i3, i2, i1 + 1])
+        u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1] + 0.25 * z3[i3, i2, i1]
+        u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] = u[2 * i3 + 1, 2 * i2 + 1, 2 * i1 + 1] + 0.125 * (z3[i3, i2, i1] + z3[i3, i2, i1 + 1])
 
 
 # --------------------------------------------------------------------
@@ -646,10 +709,10 @@ def mg3P(u, v, r, a, c, n1, n2, n3, k):
 #END mg3P()
 
 
-def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp):
+def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp, combo=None):
     # --------------------------------------------------------------------
     # down cycle.
-    # restrict the residual from the find grid to the coarse
+    # restrict the residual from the fine grid to the coarse
     # -------------------------------------------------------------------
     for k in range(lt, lb + 1 - 1, -1):
         j = k - 1
@@ -657,7 +720,11 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp):
         szj = m1[j] * m2[j] * m3[j]
         r_sub_k = numpy.reshape(r[ir[k]:ir[k] + szk], (m3[k], m2[k], m1[k]))
         r_sub_j = numpy.reshape(r[ir[j]:ir[j] + szj], (m3[j], m2[j], m1[j]))
+        if timeron:
+            c_timers.timer_start(T_RPRJ3)
         rprj3(r=r_sub_k, s=r_sub_j, n0i=m3[k], n0j=m2[k], n0k=m1[k], n1i=m3[j], n1j=m3[j], n1k=m3[j])
+        if timeron:
+            c_timers.timer_stop(T_RPRJ3)
 
     k2 = lb
     # --------------------------------------------------------------------
@@ -667,7 +734,11 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp):
     r_sub_p = numpy.reshape(r[ir[k2]:ir[k2] + szk], (m3[k2], m2[k2], m1[k2]))
     u_sub_p = numpy.reshape(u[ir[k2]:ir[k2] + szk], (m3[k2], m2[k2], m1[k2]))
     u_sub_p[:] = 0.0
+    if timeron:
+        c_timers.timer_start(T_PSINV)
     psinv(r=r_sub_p, u=u_sub_p, c=c, n0i=m3[k2], n0j=m2[k2], n0k=m1[k2])
+    if timeron:
+        c_timers.timer_stop(T_PSINV)
 
     for k in range(lb + 1, lt - 1 + 1):
         j = k - 1
@@ -681,15 +752,29 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp):
         # -------------------------------------------------------------------
         u_sub_k[:] = 0.0
         # print(f"{k}, {m3[k]}, {m3[j]}")
-        interp(z=u_sub_j, u=u_sub_k, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=m3[k], n1j=m2[k], n1k=m1[k])
-        # --------------------------------------------------------------------
-        # compute residual for level k
-        # --------------------------------------------------------------------
-        resid(u=u_sub_k, v=r_sub_k, r=r_sub_k, a=a, n0i=m3[k], n0j=m2[k], n0k=m1[k])
-        # --------------------------------------------------------------------
-        # apply smoother
-        # --------------------------------------------------------------------
-        psinv(r=r_sub_k, u=u_sub_k, c=c, n0i=m3[k], n0j=m2[k], n0k=m1[k])
+        if combo is not None:
+            combo(z=u_sub_j, u=u_sub_k, v=r_sub_k, r=r_sub_k, a=a, c=c,
+                  n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=m3[k], n1j=m2[k], n1k=m1[k])
+        else:
+            if timeron:
+                c_timers.timer_start(T_INTERP)
+            interp(z=u_sub_j, u=u_sub_k, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=m3[k], n1j=m2[k], n1k=m1[k])
+            if timeron:
+                c_timers.timer_stop(T_INTERP)
+                c_timers.timer_start(T_RESID)
+            # --------------------------------------------------------------------
+            # compute residual for level k
+            # --------------------------------------------------------------------
+            resid(u=u_sub_k, v=r_sub_k, r=r_sub_k, a=a, n0i=m3[k], n0j=m2[k], n0k=m1[k])
+            if timeron:
+                c_timers.timer_stop(T_RESID)
+                c_timers.timer_start(T_PSINV)
+            # --------------------------------------------------------------------
+            # apply smoother
+            # --------------------------------------------------------------------
+            psinv(r=r_sub_k, u=u_sub_k, c=c, n0i=m3[k], n0j=m2[k], n0k=m1[k])
+            if timeron:
+                c_timers.timer_stop(T_PSINV)
 
     j = lt - 1
     k2 = lt
@@ -698,9 +783,25 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp):
     my_u = numpy.reshape(u[:n1 * n2 * n3], (n3, n2, n1))
     my_v = numpy.reshape(v[:n1 * n2 * n3], (n3, n2, n1))
     my_r = numpy.reshape(r[:n1 * n2 * n3], (n3, n2, n1))
-    interp(z=u_sub_j, u=my_u, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=n3, n1j=n2, n1k=n1)
-    resid(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-    psinv(r=my_r, u=my_u, c=c, n0i=n3, n0j=n2, n0k=n1)
+
+    if combo is not None:
+        combo(z=u_sub_j, u=my_u, v=my_v, r=my_r, a=a, c=c,
+              n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=n3, n1j=n2, n1k=n1)
+    else:
+        if timeron:
+            c_timers.timer_start(T_INTERP)
+        interp(z=u_sub_j, u=my_u, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=n3, n1j=n2, n1k=n1)
+        if timeron:
+            c_timers.timer_stop(T_INTERP)
+            c_timers.timer_start(T_RESID)
+        resid(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        if timeron:
+            c_timers.timer_stop(T_RESID)
+            c_timers.timer_start(T_PSINV)
+        psinv(r=my_r, u=my_u, c=c, n0i=n3, n0j=n2, n0k=n1)
+        if timeron:
+            c_timers.timer_stop(T_PSINV)
+
 
 
 #static void showall(void* pointer_z, int n1, int n2, int n3){
@@ -877,15 +978,29 @@ def norm2u3(pointer_r, n1, n2, n3, nx, ny, nz):
 @dace.program
 def norm2u3_dace(r: dace.float64[n0i, n0j, n0k], dn: dace.int32):
 
-    s = 0.0
-    rnmu = 0.0
-    t0 = r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1]
-    t1 = numpy.abs(r[1:-1, 1:-1, 1:-1])
-    dace.reduce(lambda a, b: a + b, t0, s)
-    dace.reduce(lambda a, b: max(a, b), t1, rnmu)
+    # s = 0.0
+    # rnmu = 0.0
+    # t0 = r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1]
+    # t1 = numpy.abs(r[1:-1, 1:-1, 1:-1])
+    # dace.reduce(lambda a, b: a + b, t0, s)
+    # dace.reduce(lambda a, b: max(a, b), t1, rnmu)
+    # rnm2 = numpy.sqrt(s / dn)
+
+    s, rnmu = 0.0, 0.0
+    dace.reduce(lambda a, b: a + b, r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1], s)
+    dace.reduce(lambda a, b: max(a, b), numpy.abs(r[1:-1, 1:-1, 1:-1]), rnmu)
     rnm2 = numpy.sqrt(s / dn)
 
     return rnm2, rnmu
+
+
+@dace.program
+def combo_dace(z: dace.float64[n0i, n0j, n0k], u: dace.float64[n1i, n1j, n1k],
+               v: dace.float64[n1i, n1j, n1k], r: dace.float64[n1i, n1j, n1k],
+               a: dace.float64[4], c: dace.float64[4]):
+    interp_dace(z, u)
+    resid_dace(u, v, r, a)
+    psinv_dace(r, u, c)
 
 
 # ---------------------------------------------------------------------
@@ -1214,7 +1329,8 @@ def main(framework: str):
 
     c_timers.timer_start(T_INIT)
 
-    timeron = os.path.isfile("timer.flag")
+    # timeron = os.path.isfile("timer.flag")
+    timeron = True
     if timeron:
         t_names[T_INIT] = "init"
         t_names[T_BENCH] = "benchmk"
@@ -1246,28 +1362,39 @@ def main(framework: str):
             if not desc.transient and isinstance(desc, dace.data.Array):
                 desc.storage = dace.StorageType.GPU_Global
     
-    def compile_program_cpu(prog: dace.program):
-        sdfg = prog.to_sdfg(simplify=True)
-        auto_optimize(sdfg, dace.DeviceType.CPU)
+    def compile_program_cpu(prog: dace.program, use_stencil_tiling: bool = True):
+        sdfg = prog.to_sdfg(simplify=False)
+        sdfg.simplify()
+        auto_optimize(sdfg, dace.DeviceType.CPU, use_stencil_tiling=use_stencil_tiling)
+        # sdfg.apply_transformations_repeated([TaskletFusion])
+        # sdfg.apply_transformations([Vectorization], options={'vector_len': 2})
         return sdfg.compile()
     
     def compile_program_gpu(prog: dace.program):
         sdfg = prog.to_sdfg(simplify=True)
         auto_optimize(sdfg, dace.DeviceType.GPU, gpu_global=True)
         return sdfg.compile()
+    
+    combo_func = None
 
     if framework == 'dace_cpu':
         print("Compiling DaCe versions")
         resid_func = compile_program_cpu(resid_dace)
         rprj3_func = compile_program_cpu(rprj3_dace)
         psinv_func = compile_program_cpu(psinv_dace)
-        # interp_func = compile_program_cpu(interp_dace)
-        interp_func = interp_dace.to_sdfg(simplify=True)  # Issue with persistent z1, z2, z3
+        interp_func = compile_program_cpu(interp_dace, use_stencil_tiling=False)
+        # combo_func = compile_program_cpu(combo_dace)
+        # sdfg = interp_dace.to_sdfg(simplify=True)  # Issue with persistent z1, z2, z3
+        # interp_func = sdfg.compile()
+        # sdfg = norm2u3_dace.to_sdfg(simplify=True)
+        # auto_optimize(sdfg, dace.DeviceType.CPU)
+        # sdfg.simplify()
+        # auto_optimize(sdfg, dace.DeviceType.CPU)
         sdfg = norm2u3_dace.to_sdfg(simplify=True)
-        auto_optimize(sdfg, dace.DeviceType.CPU)
-        sdfg.simplify()
-        auto_optimize(sdfg, dace.DeviceType.CPU)
-        norm2u3_func = sdfg.compile()  # Double auto-optimize for reduction
+        sdfg.apply_transformations_repeated([MapReduceFusion])
+        tile_wcrs(sdfg, validate_all=True)
+        greedy_fuse(sdfg, validate_all=True)
+        norm2u3_func = sdfg.compile()  # Custom workflow to work around inability to tile two WCRs in a single Map
     elif framework == 'dace_gpu':
         print("Compiling DaCe versions")
         resid_func = compile_program_gpu(resid_dace)
@@ -1318,18 +1445,18 @@ def main(framework: str):
 
     n1, n2, n3, is1, is2, is3, ie1, ie2, ie3 = setup(k, nx, ny, nz, m1, m2, m3, ir)
 
-    zero3(u, n1, n2, n3)
-    zran3(v, n1, n2, n3, nx[lt], ny[lt], k)
+    # zero3(u, n1, n2, n3)
+    # zran3(v, n1, n2, n3, nx[lt], ny[lt], k)
 
-    rnm2, rnmu = norm2u3(v, n1, n2, n3, nx[lt], ny[lt], nz[lt])
+    # rnm2, rnmu = norm2u3(v, n1, n2, n3, nx[lt], ny[lt], nz[lt])
 
 
     print("\n\n NAS Parallel Benchmarks 4.1 Serial Python version - MG Benchmark\n")
     print(" Size: %3dx%3dx%3d (class_npb %1c)" % (nx[lt], ny[lt], nz[lt], npbparams.CLASS))
     print(" Iterations: %3d" % (nit))
 
-    resid(u, v, r, n1, n2, n3, a, k)
-    rnm2, rnmu = norm2u3(r, n1, n2, n3, nx[lt], ny[lt], nz[lt])
+    # resid(u, v, r, n1, n2, n3, a, k)
+    # rnm2, rnmu = norm2u3(r, n1, n2, n3, nx[lt], ny[lt], nz[lt])
 
     if framework == "python":
 
@@ -1399,8 +1526,9 @@ def main(framework: str):
         # ---------------------------------------------------------------------
         # one iteration for startup
         # ---------------------------------------------------------------------
-        mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func)
+        mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
         resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
     
         n1, n2, n3, is1, is2, is3, ie1, ie2, ie3 = setup(k, nx, ny, nz, m1, m2, m3, ir)
 
@@ -1433,7 +1561,7 @@ def main(framework: str):
                 print("  iter %3d" % (it))
             if timeron:
                 c_timers.timer_start(T_MG3P)
-            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func)
+            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
             if timeron:
                 c_timers.timer_stop(T_MG3P)
             if timeron:
