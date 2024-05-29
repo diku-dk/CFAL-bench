@@ -7,6 +7,7 @@ import Criterion
 import Criterion.Main
 import qualified Prelude
 import qualified Data.Array.Accelerate.LLVM.Native.Foreign as CPU
+import Data.Array.Accelerate.Trafo.Partitioning.ILP.Solve (Objective(..))
 
 main :: Prelude.IO ()
 main = do
@@ -17,8 +18,10 @@ main = do
   -- Prelude.putStrLn $ test @CPU.UniformScheduleFun @CPU.NativeKernel $ mg 4 weightsA
 
   -- Prelude.print $ runN @CPU.Native $ fold (+) 0 $ reshape (I1 5000) $ generate (I2 500 20) (\(I2 x y) -> 20*x+y)
-  -- Prelude.print $ runN @CPU.Native $ fold (+) (0 :: Exp Int) $ generate (I3 20 20 20) (const 1)
-  defaultMain [backend "CPU" $ runN @CPU.Native] --, backend "GPU" GPU.runN]
+  -- Prelude.print $ runN @CPU.Native $ fold (+) (0 :: Exp Int) $ generate (I3 20 20 20) (const 1)\
+
+  -- Prelude.putStrLn $ testBench @CPU.UniformScheduleFun @CPU.NativeKernel NoFusion $ mg 4 weightsA
+  defaultMain [backend "CPU" $ runNBench @CPU.Native GreedyFusion] --, backend "GPU" GPU.runN]
   where
     makeInput' = runN @CPU.Native makeInput
     input256 = makeInput' $ fromList Z [256]
@@ -100,7 +103,7 @@ m n weights r = z'
 l2 :: Acc (Array3 Double) -> Exp Double
 l2 xsss =
   sqrt (
-    the (sum $ map (**2) $ reshape (Z_ ::. sz) xsss)
+    the (sum $ map (**2) $ reshapeBackpermute (Z_ ::. sz) xsss)
     / fromIntegral sz
   )
   where
@@ -152,3 +155,10 @@ makeInput n = generate (Z_ ::. the n ::. the n ::. the n) $ \idx ->
       I3 203 18 198,
       I3 243 172 14,
       I3 54 209 40]
+
+reshapeBackpermute :: (Shape sh, Shape sh', Elt e) => Exp sh -> Acc (Array sh' e) -> Acc (Array sh e)
+reshapeBackpermute sh array = reshape sh array
+  -- backpermute sh (\idx -> fromIndex sh' $ toIndex sh idx) array
+  -- where
+  --   sh' = shape array
+    

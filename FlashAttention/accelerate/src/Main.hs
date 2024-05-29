@@ -11,10 +11,11 @@ import Naive
 import Flash_alg1
 import Criterion.Types (Benchmark(Benchmark))
 import Control.Monad (forM_)
+import Data.Array.Accelerate.Trafo.Partitioning.ILP.Solve (Objective(..))
 
 main :: IO ()
 main = do
-  print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64 :: Int])
+  -- print $ A.runN @CPU.Native totalProgram (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64 :: Int])
   -- flip forM_ putStrLn $ A.test @CPU.UniformScheduleFun @CPU.NativeKernel totalProgram
   -- check: these two values should be _very close_
   -- print $ A.runN @CPU.Native check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [64])
@@ -26,17 +27,18 @@ main = do
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [65536])
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [131072])
   
-  -- defaultMain [backend "CPU" $ A.runN @CPU.Native {- , backend "GPU" GPU.runN] -}]
+  defaultMain [backend "CPU" $ A.runNWithObj @CPU.Native {- , backend "GPU" GPU.runN] -}]
   where
     backend name runN
       = bgroup name
       $ map (testcase runN)
-      $ (,,) <$> [512, 1024, 2048, 4096, 8192, 16384]
-             <*> [64, 128]
-             <*> [8, 64, 512, 2048, 8192, 16384]
-    testcase runN (n,d,m) = 
-      env (pure $ runN totalProgram)
-      $ \p -> bench ("n" ++ show n ++ ", d" ++ show d ++ ", m" ++ show m)
+      $ (,,,)<$> [Everything]
+             <*> [512] --, 1024, 2048, 4096, 8192, 16384]
+             <*> [64] --, 128]
+             <*> [512] --[8, 64, 512, 2048, 8192, 16384]
+    testcase runN (obj,n,d,m) = 
+      env (pure $ runN obj totalProgram)
+      $ \p -> bench (show obj ++ "n" ++ show n ++ ", d" ++ show d ++ ", m" ++ show m)
       $ nf p ( A.fromList A.Z [n]
              , A.fromList A.Z [d]
              , A.fromList A.Z [m])
