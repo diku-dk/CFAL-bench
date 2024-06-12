@@ -141,8 +141,8 @@ double[., ., .] init(int n)
   minusones = col_maj(smallest(random_values, 10), shape);
 
   for (i = 0; i < 10; i++) {
-    result[ones[i]] = 1d;
-    result[minusones[i]] = -1d;
+    result[mod(ones[i] + 1, shape)] = 1d;
+    result[mod(minusones[i] + 1, shape)] = -1d;
   }
 
   return result;
