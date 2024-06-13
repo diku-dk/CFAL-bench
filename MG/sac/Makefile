@@ -5,17 +5,17 @@ CUDA_LPATH := host/cuda
 DYLIB := so                          # adjust to your system (e.g. so)
 
 SAC2C := sac2c_p                  # may need to adjust if sac2c is not in your PATH
-SAC2CFLAGS := -maxwlur 27 -v3 # when changing you may want to include -check c
+SAC2CFLAGS := -maxwlur 27 -v3 -noSRP -noSOP# when changing you may want to include -check c
 
 all: seq test mt cuda
 
 test: bin/RNG_test bin/input_test
 
-seq: bin/MG_${CLASS}_seq
+seq: bin/MG_${CLASS}_seq bin/MG_stride_${CLASS}_seq
 
-mt: bin/MG_${CLASS}_mt
+mt: bin/MG_${CLASS}_mt bin/MG_stride_${CLASS}_mt
 
-cuda: bin/MG_${CLASS}_cuda
+cuda: bin/MG_${CLASS}_cuda bin/MG_stride_${CLASS}_cuda
 cuda: SAC2CFLAGS += -nomemrt
 
 bin/MG_${CLASS}_seq: src/MG.sac $(SEQ_LPATH)/libInputMod.$(DYLIB)
@@ -32,6 +32,21 @@ bin/MG_${CLASS}_cuda: src/MG.sac $(CUDA_LPATH)/libInputMod.$(DYLIB)
 	mkdir -p bin
 	$(SAC2C) -D CLASS_${CLASS}=1 -tcuda_man $(SAC2CFLAGS) $< -o$@
 	$(RM) bin/MG_cuda.*
+
+bin/MG_stride_${CLASS}_seq: src/MG_stride.sac $(SEQ_LPATH)/libInputMod.$(DYLIB)
+	mkdir -p bin
+	$(SAC2C) -D CLASS_${CLASS}=1 $(SAC2CFLAGS) $< -o$@
+	$(RM) bin/MG_stride_seq.*
+
+bin/MG_stride_${CLASS}_mt: src/MG_stride.sac $(MT_LPATH)/libInputMod.$(DYLIB)
+	mkdir -p bin
+	$(SAC2C) -D CLASS_${CLASS}=1 -tmt_pth $(SAC2CFLAGS) $< -o$@
+	$(RM) bin/MG_mt.*
+
+bin/MG_stride_${CLASS}_cuda: src/MG_stride.sac $(CUDA_LPATH)/libInputMod.$(DYLIB)
+	mkdir -p bin
+	$(SAC2C) -D CLASS_${CLASS}=1 -tcuda_man $(SAC2CFLAGS) $< -o$@
+	$(RM) bin/MG_stride_cuda.*
 
 bin/RNG_test: src/RNG_test.sac $(SEQ_LPATH)/libRNGMod.$(DYLIB)
 	mkdir -p bin

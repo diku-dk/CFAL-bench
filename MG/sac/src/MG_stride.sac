@@ -1,0 +1,158 @@
+#ifdef CLASS_S
+#define N 32
+#define ITER 4
+#define ref 0.5307707005734e-4
+#endif
+
+#ifdef CLASS_W
+#define N 128
+#define ITER 4
+#define ref 0.6467329375339e-5
+#endif
+
+#ifdef CLASS_A
+#define N 256
+#define ITER 4
+#define ref 0.2433365309069e-5
+#endif
+
+#ifdef CLASS_B
+#define N 256
+#define ITER 20
+#define ref 0.1800564401355e-5
+#endif
+
+#ifdef CLASS_C
+#define N 512
+#define ITER 20
+#define ref 0.5706732285740e-6
+#endif
+
+#ifdef CLASS_D
+#define N 1024
+#define ITER 50
+#define ref 0.1583275060440e-9
+#endif
+
+use Input: all;
+use StdIO: all;
+use Math: all;
+use Array: all except {rotate};
+use Benchmarking: all;
+
+#if defined(CLASS_S) || defined(CLASS_W) || defined(CLASS_A)
+  #define S(z, stride) Sa(z, stride)
+#else
+  #define S(z, stride) Sb(z, stride)
+#endif
+
+inline
+double[.,.,.] gen_weights(double[4] cs)
+{
+  return {iv -> cs[sum(abs(iv - [1, 1, 1]))] | iv < [3, 3, 3]};
+}
+
+inline
+double[n,n,n] relax(double[n,n,n] x, double[4] cs, int stride)
+{
+  weights = gen_weights(cs);
+  return with {
+             ([0, 0, 0] <= iv < [n, n, n] step [stride, stride, stride]):
+                  sum({jv -> x[mod(iv + (jv - 1) * stride, shape(x))] *
+                               weights[jv]});
+         }: modarray(x);
+}
+
+inline
+double[.,.,.] A(double[.,.,.] a, int stride)
+{
+  return relax(a, [-8d/3d, 0d, 1d/6d, 1d/12d], stride);
+}
+
+inline
+double[n,n,n] P(double[n,n,n] a, int stride)
+{
+  weights = gen_weights([1d/2d, 1d/4d, 1d/8d, 1d/16d]);
+  return with {
+             ([0, 0, 0] <= iv < [n, n, n] step [2 * stride, 2 * stride, 2 * stride]):
+                  sum({jv -> a[mod(iv + (jv - 1) * stride, shape(a))] *
+                               weights[jv]});
+         }: modarray(a);
+}
+
+inline
+double[.,.,.] Q(double[.,.,.] a, int stride)
+{
+  return relax(a, [1d, 1d/2d, 1d/4d, 1d/8d], stride);
+}
+
+inline
+double[.,.,.] Sa(double[.,.,.] a, int stride)
+{
+  return relax(a, [-3d/8d, 1d/32d, -1d/64d, 0d], stride);
+}
+
+inline
+double[.,.,.] Sb(double[.,.,.] a, int stride)
+{
+  return relax(a, [-3d/17d, 1d/33d, -1d/61d, 0d], stride);
+}
+
+inline
+double[n,n,n] M(double[n,n,n] r, int s)
+{
+  if (s == n / 2) {
+    r = {iv -> r[iv] | iv < [n, n, n] step [n / 2, n / 2, n / 2]};
+    z = S(r, n / 2);
+  } else {
+    rs = P(r, s);
+    zs = M(rs, s * 2);
+    /* Zero-out coarse grid */
+    zs = {iv -> zs[iv] | iv < [n, n, n] step [2 * s, 2 * s, 2 * s]};
+    z  = Q(zs, s);
+    r  = r - A(z, s);
+    z  = z + S(r, s);
+  }
+  return z;
+}
+
+inline
+double MG(double[N,N,N] v)
+{
+  u = genarray([N, N, N], 0d);
+  for (i = 0; i < ITER; i++) {
+    r = v - A(u, 1);
+    u = u + M(r, 1);
+  }
+
+  return L2(v - A(u, 1));
+}
+
+inline
+double L2 (double[.,.,.] r)
+{
+  return sqrt(sum(r * r) / prod(tod(shape(r))));
+}
+
+int main()
+{
+  i_init = getInterval("init", 1);
+  i_mg = getInterval("mg", 2);
+
+  start(i_init);
+  v = init(N);
+  end(i_init);
+  time, unit = returnResultUnit(i_init);
+  fprintf(stderr, "Initalisation took %f %s\n", time, unit);
+
+  start(i_mg);
+  r = MG(v);
+  end(i_mg);
+  time, unit = returnResultUnit(i_mg);
+  fprintf(stderr, "Calculation took %f %s\n", time, unit);
+  printf("%f\n",
+      58d * tod(ITER) * tod(N) * tod(N) * tod(N) * 1e-9 / tod(time), unit);
+
+  fprintf(stderr, "Error: %.17e\n", abs(r - ref));
+  return 0;
+}
