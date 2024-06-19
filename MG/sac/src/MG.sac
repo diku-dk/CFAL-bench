@@ -69,13 +69,13 @@ double[.,.,.] relax(double[.,.,.] x, double[4] cs)
 inline
 double[*] coarse2fine(double[*] z)
 {
-  return {iv -> z[iv / 2] | [1, 1, 1] <= iv < 2 * shape(z) step [2, 2, 2]};
+  return {iv -> z[iv / 2] | iv < 2 * shape(z) step [2, 2, 2]};
 }
 
 inline
 double[*] fine2coarse(double[*] r)
 {
-  return {iv -> r[2 * iv + 1] | iv < shape(r) / 2};
+  return {iv -> r[2 * iv] | iv < shape(r) / 2};
 }
 
 //specialize double[512,512,512] A(double[512,512,512] r);

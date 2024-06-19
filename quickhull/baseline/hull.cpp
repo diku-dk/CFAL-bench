@@ -157,10 +157,12 @@ parlay::sequence<indexT> hull(parlay::sequence<point> const &Points) {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " " << "FILE" << std::endl;
+  if (argc != 2 && argc != 3) {
+    std::cerr << "Usage: " << argv[0] << " FILE [LABEL] " << std::endl;
     return 1;
   }
+
+  std::string label( argc == 2 ? argv[1] : argv[2]);
 
   std::ifstream is(argv[1], std::ifstream::ate | std::ifstream::binary);
 
@@ -171,7 +173,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  std::cout << "Input has " << n << " points." << std::endl;
+  std::cerr << "Input has " << n << " points." << std::endl;
 
   is.seekg(0, std::ios::beg);
   std::vector<int> nums(n*2);
@@ -189,19 +191,18 @@ int main(int argc, char** argv) {
   {
     auto hull_is = hull(points);
     hull_size = hull_is.size();
-    std::cout << "Hull size: " << hull_size << std::endl;
+    std::cerr << "Hull size: " << hull_size << std::endl;
   }
 
   const int runs = 10;
 
-  timer timer;
-  timer.start();
   for (int i = 0; i < runs; i++) {
+    timer timer;
+    timer.start();
     // Hopefully the assert prevents this from being optimised away.
     auto hull_is = hull(points);
+    timer.stop();
     assert(hull_size == hull_is.size());
+    std::cout << "Baseline (CPU)," << label << "," << timer.get_total() << std::endl;
   }
-  timer.stop();
-  std::cout << "Mean runtime in seconds: " << std::flush;
-  std::cout << timer.get_total()/runs << std::endl;
 }

@@ -103,6 +103,7 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     ptr_shared_Q = shared_Q;
     for (int bidx = 0; bidx < d; bidx += Bd) {
     
+      // This works for input K.T, please FIX ME
       for (int offset = 0, offset_global = 0; offset < Bd; offset += stride_K, offset_global += stride_Q) {
         shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[(thread_row_K + offset) * N + thread_col_K];
         // shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[thread_col_Q * d + thread_row_Q + offset_global];

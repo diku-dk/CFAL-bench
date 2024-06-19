@@ -4,6 +4,7 @@ hull: hull.cpp
 .PHONY: run
 
 run: hull
-	./hull ../input/1M_circle_16384.dat
-	./hull ../input/1M_quadratic_2147483648.dat
-	./hull ../input/1M_rectangle_16384.dat
+	rm -f quickhull.csv
+	./hull ../input/100M_circle.dat circle >> quickhull.csv
+	./hull ../input/100M_rectangle.dat rectangle >> quickhull.csv
+	./hull ../input/100M_quadratic.dat quadratic >> quickhull.csv
