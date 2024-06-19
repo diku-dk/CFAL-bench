@@ -219,10 +219,17 @@ double rollback(double *ResultE, double dtInv, double dx, double *X, double *Y,
     for (int j = 0; j < NUM_Y; j++) {
         U[j * NUM_X + 0] = dtInv * ResultE[j * NUM_X + 0];
         for (int i = 1; i < NUM_X - 1; i++) {
-            /* For the first pass, this is dtInv * ResultE[j, i],
-             * except when 2 * ResultE[j * NUM_X - 1] is not representable
-             * as a double. This goes wrong slightly differently in C and SaC,
-             * but for this version the error explodes, and not for SaC. */
+            /**
+             * For the first pass, ResultE[j, i] depends only on i, so
+             * algebraically this simplifies to dtInv * ResultE[j * NUM_X + i].
+             * Printing shows that the rows are not exactly equal though, even
+             * when doing everything IEEE compliant. The SaC and C code have
+             * exactly the same dtInv, ResultE, VarX1, VarX2, but U differs
+             * slightly (about 1e-13) (and both are unequal to the true, infinite
+             * precision answer, as it should be dtInv * ResultE). 
+             * However, where the SaC converges, this version
+             * diverges.
+             **/
             U[j * NUM_X + i] = dtInv * ResultE[j * NUM_X + i] +
                                   VarX1[j] * VarX2[i] / 4.0 * (
                                        ResultE[j * NUM_X + i - 1] / (dx * dx) +
@@ -244,7 +251,7 @@ double rollback(double *ResultE, double dtInv, double dx, double *X, double *Y,
     printf("L2(U + 2V) = %.17e\n", L2(U, NUM_X * NUM_Y));
 
     /* implicit x (takes 60% of the total time, a significant amount of time
-     * is in computing a and b) TODO wrong */
+     * is in computing a and b) */
 
     for (int j = 0; j < NUM_Y; j++) {
         VarX1[j] *= -0.25 / dtInv / (dx * dx);
