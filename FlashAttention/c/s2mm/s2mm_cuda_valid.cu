@@ -365,15 +365,8 @@ void setParamsAndCallKer(int N, int d, float *Q_d, float *K_d, float *V_d, float
 __host__ int
 s2mm(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, float *V_d, int N, int d)
 {
-    // int Br, Bc, Tr, Tc;
-
-    // Bc = M / (4 * d);
-    // Br = d < Bc ? d : Bc;
-    // Tr = N / Br;
-    // Tc = N / Bc;
 
     const int BN = 64; // Br = Bc = Bd = BN
-    //const int Bd = BN;
     const int TN = 4;
 
     if(d == 128) {
