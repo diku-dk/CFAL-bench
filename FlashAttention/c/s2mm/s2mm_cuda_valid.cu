@@ -34,9 +34,10 @@ template <const int BN, const int TN, const int mul>
 __global__ void __launch_bounds__((BN * BN) / (TN * TN), 1)
 s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float* O, float* ms) {
 
-  const int num_block_out = BN * BN;
-  const int num_thread_out = TN * TN;
-  const int num_threads = num_block_out / num_thread_out;
+  // Assumptions: ( TN | BN ) && ( BN | d ) && ( TN^2 | BN ) && 
+  //              ( (BN / TN^2) | BN ) && ( BN >= TN^2 ) && (BN | N)
+
+  const int num_threads = (BN*BN) / (TN*TN);
   assert(num_threads == blockDim.x);
 
   // Shared memory
@@ -58,24 +59,16 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
   // __shared__ float shared_P[BN * BN];
 
   // Registers
-  float reg_O[TN * TN * mul] = {0.0};
+  float reg_O[mul][TN][TN] = {0.0};
 
   const float* ptr_Q;
   const float* ptr_K;
   const float* ptr_V;
   float* ptr_O;
 
-  const int thread_row_Q = threadIdx.x / BN;
-  const int thread_col_Q = threadIdx.x % BN;
-  const int stride_Q = num_threads / BN;
-
-//  const int thread_row_K = thread_row_Q;
-//  const int thread_col_K = thread_col_Q;
-//  const int stride_K = stride_Q;
-
-  const int thread_row_V = thread_row_Q;
-  const int thread_col_V = thread_col_Q;
-  const int stride_V = stride_Q;
+  const int thread_row_inp = threadIdx.x / BN;
+  const int thread_col_inp = threadIdx.x % BN;
+  const int stride_inp = num_threads / BN;
 
   const int thread_row_out = threadIdx.x / (BN / TN);
   const int thread_col_out = threadIdx.x % (BN / TN);
@@ -89,12 +82,11 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     li[t]   = 0;
   }
 
-
   ptr_Q = Q + block_row * BN * d;
   float *ptr_shared_Q = shared_Q;
   for (int bidx = 0; bidx < d; bidx += BN) {
-    for (int offset = 0; offset < BN; offset += stride_Q) {
-      ptr_shared_Q[(thread_row_Q + offset) * BN + thread_col_Q] = ptr_Q[(thread_row_Q + offset) * d + thread_col_Q];
+    for (int offset = 0; offset < BN; offset += stride_inp) {
+      ptr_shared_Q[(thread_row_inp + offset) * BN + thread_col_inp] = ptr_Q[(thread_row_inp + offset) * d + thread_col_inp];
     }
     ptr_Q += BN;
     ptr_shared_Q += BN * BN;
@@ -116,24 +108,24 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
     float reg_i[TN] = {0.0};
     float reg_j[TN] = {0.0};
-    float reg_P[TN * TN] = {0.0};
+    float reg_P[TN][TN] = {0.0};
 
     ptr_shared_Q = shared_Q;
     for (int bidx = 0; bidx < d; bidx += BN) {
     
       // This works for input K.T, please FIX ME
 #if 0
-      for (int offset = 0, offset_global = 0; offset < BN; offset += stride_K, offset_global += stride_Q) {
-        shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[(thread_row_K + offset) * N + thread_col_K];
-        // shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[thread_col_Q * d + thread_row_Q + offset_global];
+      for (int offset = 0, offset_global = 0; offset < BN; offset += stride_inp, offset_global += stride_inp) {
+        shared_K[(thread_row_inp + offset) * BN + thread_col_inp] = ptr_K[(thread_row_inp + offset) * N + thread_col_inp];
+        // shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[thread_col_inp * d + thread_row_inp + offset_global];
       }
 #else
       { // copies from global to shared memory the slice: 
         // K[block_col*BN : block_col*(BN+1)][bidx : bidx + BN]
         for(int tt = 0; tt < TN*TN; tt ++) {
-            int row_idx = tt*stride_Q + thread_row_Q;
+            int row_idx = tt*stride_inp + thread_row_inp;
             // Kj[q*(d+1) + r] = K[glb_ind];
-            shared_K[row_idx*(BN+1) + thread_col_Q] = ptr_K[row_idx*N + thread_col_Q];
+            shared_K[row_idx*(BN+1) + thread_col_inp] = ptr_K[row_idx*N + thread_col_inp];
         }
       }
 #endif
@@ -143,7 +135,7 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
       for (int idx = 0; idx < BN; ++idx) {
 
-#if 1
+#if 0
         for (int i = 0; i < TN; ++i) {
           reg_i[i] = ptr_shared_Q[(thread_row_out * TN + i) * BN + idx];
         }
@@ -153,14 +145,14 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
         }
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
-            reg_P[i * TN + j] += reg_i[i] * reg_j[j];
+            reg_P[i][j] += reg_i[i] * reg_j[j];
           }
         }
 #else
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
-            reg_P[i * TN + j] += ptr_shared_Q[(thread_row_out * TN + i) * BN + idx] * 
-                                 shared_K[(thread_col_out * TN + j) * (BN+1) + idx] ;
+            reg_P[i][j] += ptr_shared_Q[(thread_row_out * TN + i) * BN + idx] * 
+                           shared_K[(thread_col_out * TN + j) * (BN+1) + idx] ;
           }
         }
 #endif
@@ -175,12 +167,12 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     ///////////////////////////////////
 
     for (int i = 0; i < TN; i++) {
-      float loc_max = reg_P[i * TN + 0];
+      float loc_max = reg_P[i][0];
       for (int j = 1; j < TN; j++) {
         //atomicMaxFloat(&maxs[thread_row_out*TN + i], reg_P[i * TN + j]);
-        if (loc_max < reg_P[i * TN + j])
-            loc_max = reg_P[i * TN + j];
-        //loc_max = max(loc_max, reg_P[i * TN + j]);
+        if (loc_max < reg_P[i][j])
+            loc_max = reg_P[i][j];
+        //loc_max = max(loc_max, reg_P[i][j]);
       }
       const int ii = thread_row_out*TN + i;
       atomicMaxFloat(&maxs[ii], loc_max);
@@ -194,10 +186,10 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
       float loc_sum = 0;
       #pragma unroll
       for (int j = 0; j < TN; j++) {
-        float pij = reg_P[i * TN + j];
+        float pij = reg_P[i][j];
         pij = exp( pij - row_max );
         loc_sum += pij;
-        reg_P[i * TN + j] = pij;
+        reg_P[i][j] = pij;
       }
       //atomicAdd(&sums[ii], loc_sum); // this is very expensive for some reason; hence we serialize it
       shared_P[thread_col_out*BN + ii] = loc_sum;
@@ -234,8 +226,8 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     for (int i = 0; i < TN; i++) {
       int ii = thread_row_out*TN + i;
       for (int j = 0; j < TN; j++) {
-        float pij = reg_P[i * TN + j];
-        reg_P[i * TN + j] = es[ii]*pij;
+        float pij = reg_P[i][j];
+        reg_P[i][j] = es[ii]*pij;
       }
     }
 
@@ -246,16 +238,15 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
     for (int i = 0; i < TN; ++i) {
       for (int j = 0; j < TN; ++j) {
-        shared_P[(thread_row_out * TN + i) * BN + thread_col_out * TN + j] = reg_P[i * TN + j];
+        shared_P[(thread_row_out * TN + i) * BN + thread_col_out * TN + j] = reg_P[i][j];
       }
     }
 
     // here insert the softmax layer
 
-    float* ptr_reg_O = reg_O;
     for (int k = 0; k < mul; k++) {
-      for (int offset = 0; offset < BN; offset += stride_V) {
-        shared_V[(thread_row_V + offset) * BN + thread_col_V] = ptr_V[(thread_row_V + offset) * d + thread_col_V];
+      for (int offset = 0; offset < BN; offset += stride_inp) {
+        shared_V[(thread_row_inp + offset) * BN + thread_col_inp] = ptr_V[(thread_row_inp + offset) * d + thread_col_inp];
       }
       __syncthreads();
 
@@ -267,7 +258,7 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
       for (int i = 0; i < TN; i++) {
         int ii = row_offset + i;
         for (int j = 0; j < TN; j++) {
-            ptr_reg_O[i * TN + j] *= el[ii];
+            reg_O[k][i][j] *= el[ii];
         }
       }
 
@@ -283,14 +274,14 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
         }
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
-            ptr_reg_O[i * TN + j] += reg_i[i] * reg_j[j];
+            reg_O[k][i][j] += reg_i[i] * reg_j[j];
           }
         }
 #else
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
-            ptr_reg_O[i * TN + j] += shared_P[(row_offset + i) * BN + idx] * //reg_i[i] * 
-                                     shared_V[idx * BN + thread_col_out * TN + j]; //reg_j[j];
+            reg_O[k][i][j] += shared_P[(row_offset + i) * BN + idx] * //reg_i[i] * 
+                              shared_V[idx * BN + thread_col_out * TN + j]; //reg_j[j];
           }
         }
 #endif
@@ -300,11 +291,10 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
       for (int i = 0; i < TN; i++) {
         int ii = row_offset + i;
         for (int j = 0; j < TN; j++) {
-            ptr_reg_O[i * TN + j] /= li[ii];
+            reg_O[k][i][j] /= li[ii];
         }
       }
 
-      ptr_reg_O += TN * TN;
       __syncthreads();
     }
     __syncthreads();
@@ -312,15 +302,13 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
   // write out the results
   ptr_O = O + block_row * BN * d;
-  float* ptr_reg_O = reg_O;
-  for (int bidx = 0; bidx < d; bidx += BN) {
+  for (int k = 0; k < mul; k++) {
     for (int i = 0; i < TN; ++i) {
       for (int j = 0; j < TN; ++j) {
-        ptr_O[(thread_row_out * TN + i) * d + thread_col_out * TN + j] = ptr_reg_O[i * TN + j];
+        ptr_O[(thread_row_out * TN + i) * d + thread_col_out * TN + j] = reg_O[k][i][j];
       }
     }
     ptr_O += BN;
-    ptr_reg_O += TN * TN;
   }
 
 #if 0
@@ -350,6 +338,30 @@ L2(float *x, size_t c)
         return sqrt(sum);
 }
 
+
+template<int BN, int TN, int mul>
+void setParamsAndCallKer(int N, int d, float *Q_d, float *K_d, float *V_d, float *O_d, float* m_d) {
+    // Assumptions: ( TN | BN ) && ( BN | d ) && ( TN^2 | BN ) && 
+    //              ( (BN / TN^2) | BN ) && ( BN >= TN^2 ) && (BN | N)
+    bool assert1 = (BN % TN) == 0;
+    bool assert2 = (d % BN)  == 0;
+    bool assert3 = (BN % (TN*TN)) == 0;
+    bool assert4 = (BN % (BN / (TN*TN)))  == 0;
+    bool assert5 = (BN >= (TN*TN));
+    assert(assert1 && assert2 && assert3 && assert4 && assert5);
+
+
+    dim3 grid(N / BN);
+    dim3 block((BN * BN) / (TN * TN));
+    const size_t shmem_size = (BN * BN * mul + BN * (BN+1) + BN * BN + 6*BN) * sizeof(float);
+
+    // printf("N %d, d %d, BN %d, Bd %d, TN %d, mul %d, shmem %d\n", N, d, BN, Bd, TN, mul, shmem_size);
+
+    cudaFuncSetAttribute(s2mm_kernel<BN, TN, mul>, cudaFuncAttributeMaxDynamicSharedMemorySize, shmem_size);
+
+    s2mm_kernel<BN, TN, mul><<<grid, block, shmem_size>>>(N, d, Q_d, K_d, V_d, O_d, m_d);
+}
+
 __host__ int
 s2mm(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, float *V_d, int N, int d)
 {
@@ -363,27 +375,15 @@ s2mm(float* m_d, float* l_d, float *O_d, float *Q_d, float *K_d, float *V_d, int
     const int BN = 64; // Br = Bc = Bd = BN
     //const int Bd = BN;
     const int TN = 4;
-    const int mul = 2; // d / Bd;
 
-    // // iniatialize m with -INFINITY and l with zero (both have size N)
-    // initKer<<<(N+255)/256, 256>>>(m_d, l_d, N);
-
-    // initialize O to zeros
-    cudaMemset((void**)&O_d, 0, N*d*sizeof(float));
-
-    // setup execution parameters
-    // dim3 block(Bc, Br, 1);
-    // dim3 grid (Tr,  1, 1);
-    // const size_t shmem_size = (Bc*(d+1) + Br*d + Br*Bc + 5*Br) * sizeof(float);
-    dim3 grid(N / BN);
-    dim3 block((BN * BN) / (TN * TN));
-    const size_t shmem_size = (BN * BN * mul + BN * (BN+1) + BN * BN + 6*BN) * sizeof(float);
-
-    // printf("N %d, d %d, BN %d, Bd %d, TN %d, mul %d, shmem %d\n", N, d, BN, Bd, TN, mul, shmem_size);
-
-    cudaFuncSetAttribute(s2mm_kernel<BN, TN, mul>, cudaFuncAttributeMaxDynamicSharedMemorySize, shmem_size);
-
-    s2mm_kernel<BN, TN, mul><<<grid, block, shmem_size>>>(N, d, Q_d, K_d, V_d, O_d, m_d);
+    if(d == 128) {
+        setParamsAndCallKer<BN,TN,2>(N,d,Q_d,K_d,V_d,O_d,m_d);
+    } else if (d == 64) {
+        setParamsAndCallKer<BN,TN,1>(N,d,Q_d,K_d,V_d,O_d,m_d);
+    } else {
+        printf("Unsupported dataset, exiting!");
+        exit(1);
+    }
     // cudaDeviceSynchronize();
 
 #if 0
