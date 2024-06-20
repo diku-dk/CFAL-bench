@@ -106,25 +106,21 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     ptr_V = V + block_col * BN * d;
     ptr_O = O + block_row * BN * d;
 
-    float reg_i[TN] = {0.0};
-    float reg_j[TN] = {0.0};
     float reg_P[TN][TN] = {0.0};
 
     ptr_shared_Q = shared_Q;
     for (int bidx = 0; bidx < d; bidx += BN) {
     
-      // This works for input K.T, please FIX ME
+    // copies from global to shared memory the slice: 
+    // K[block_col*BN : block_col*(BN+1)][bidx : bidx + BN]
 #if 0
-      for (int offset = 0, offset_global = 0; offset < BN; offset += stride_inp, offset_global += stride_inp) {
-        shared_K[(thread_row_inp + offset) * BN + thread_col_inp] = ptr_K[(thread_row_inp + offset) * N + thread_col_inp];
-        // shared_K[(thread_row_K + offset) * BN + thread_col_K] = ptr_K[thread_col_inp * d + thread_row_inp + offset_global];
+      for (int offset = 0; offset < BN; offset += stride_inp) {
+        shared_K[(thread_row_inp + offset) * (BN+1) + thread_col_inp] = ptr_K[(thread_row_inp + offset) * N + thread_col_inp];
       }
 #else
-      { // copies from global to shared memory the slice: 
-        // K[block_col*BN : block_col*(BN+1)][bidx : bidx + BN]
+      {
         for(int tt = 0; tt < TN*TN; tt ++) {
             int row_idx = tt*stride_inp + thread_row_inp;
-            // Kj[q*(d+1) + r] = K[glb_ind];
             shared_K[row_idx*(BN+1) + thread_col_inp] = ptr_K[row_idx*N + thread_col_inp];
         }
       }
@@ -133,29 +129,14 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
       ptr_K += BN;
 
+      // the first matrix multiplication
       for (int idx = 0; idx < BN; ++idx) {
-
-#if 0
-        for (int i = 0; i < TN; ++i) {
-          reg_i[i] = ptr_shared_Q[(thread_row_out * TN + i) * BN + idx];
-        }
-        for (int i = 0; i < TN; ++i) {
-          //reg_j[i] = shared_K[idx * BN + thread_col_out * TN + i];
-          reg_j[i] = shared_K[(thread_col_out * TN + i) * (BN+1) + idx];
-        }
-        for (int i = 0; i < TN; ++i) {
-          for (int j = 0; j < TN; ++j) {
-            reg_P[i][j] += reg_i[i] * reg_j[j];
-          }
-        }
-#else
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
             reg_P[i][j] += ptr_shared_Q[(thread_row_out * TN + i) * BN + idx] * 
                            shared_K[(thread_col_out * TN + j) * (BN+1) + idx] ;
           }
         }
-#endif
       }
 
       ptr_shared_Q += BN * BN;
@@ -163,9 +144,14 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     }
 
     ///////////////////////////////////
-    // reductions of softmax layer
+    // the softmax layer
     ///////////////////////////////////
 
+    // probably the reduce with max should be treated
+    // in a manner similar to addition; currently the
+    // reason for which the atomic update does not degrade
+    // is likely because no update is actually performed, i.e.,
+    // the initial value is maximal (due to replicate n 1) 
     for (int i = 0; i < TN; i++) {
       float loc_max = reg_P[i][0];
       for (int j = 1; j < TN; j++) {
@@ -179,31 +165,33 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     }
     __syncthreads();
 
-    #pragma unroll
-    for (int i = 0; i < TN; i++) {
-      const int ii = thread_row_out*TN + i;
-      float row_max = maxs[ii];
-      float loc_sum = 0;
-      #pragma unroll
-      for (int j = 0; j < TN; j++) {
-        float pij = reg_P[i][j];
-        pij = exp( pij - row_max );
-        loc_sum += pij;
-        reg_P[i][j] = pij;
-      }
-      //atomicAdd(&sums[ii], loc_sum); // this is very expensive for some reason; hence we serialize it
-      shared_P[thread_col_out*BN + ii] = loc_sum;
-    }
-    __syncthreads();
-
-    for(int t=threadIdx.x; t < BN; t+=num_threads) {
-        float fin_sum = 0;
-        #pragma unroll
-        for(int j=0; j<BN/TN; j++) {
-            fin_sum += shared_P[j*BN + t];
+    { // handling segment reduce with additon
+        for (int i = 0; i < TN; i++) {
+          const int ii = thread_row_out*TN + i;
+          float row_max = maxs[ii];
+          float loc_sum = 0;
+          for (int j = 0; j < TN; j++) {
+            float pij = reg_P[i][j];
+            pij = exp( pij - row_max );
+            loc_sum += pij;
+            reg_P[i][j] = pij;
+          }
+          //atomicAdd(&sums[ii], loc_sum); // this is very expensive for some reason; hence we serialize it
+          shared_P[thread_col_out*BN + ii] = loc_sum;
         }
-        sums[t] = fin_sum;
+        __syncthreads();
+
+        // sequentializing the reduce
+        for(int t=threadIdx.x; t < BN; t+=num_threads) {
+            float fin_sum = 0;
+            #pragma unroll
+            for(int j=0; j<BN/TN; j++) {
+                fin_sum += shared_P[j*BN + t];
+            }
+            sums[t] = fin_sum;
+        }
     }
+
     __syncthreads();
 
     if(threadIdx.x < BN) { // must hold: BN >= TN*TN
@@ -232,21 +220,22 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
     }
 
     ///////////////////////////////////
-    // end reductions of softmax layer
+    // end softmax layer
     ///////////////////////////////////
 
 
+    // publishing P from registers to shared memory
     for (int i = 0; i < TN; ++i) {
       for (int j = 0; j < TN; ++j) {
         shared_P[(thread_row_out * TN + i) * BN + thread_col_out * TN + j] = reg_P[i][j];
       }
     }
 
-    // here insert the softmax layer
 
     for (int k = 0; k < mul; k++) {
+      // copy the slice of V from global to shared memory
       for (int offset = 0; offset < BN; offset += stride_inp) {
-        shared_V[(thread_row_inp + offset) * BN + thread_col_inp] = ptr_V[(thread_row_inp + offset) * d + thread_col_inp];
+        shared_V[(thread_row_inp + offset) * (BN+1) + thread_col_inp] = ptr_V[(thread_row_inp + offset) * d + thread_col_inp];
       }
       __syncthreads();
 
@@ -262,29 +251,14 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
         }
       }
 
-      // calculate per-thread results
+      // the second matrix multiplication
       for (int idx = 0; idx < BN; ++idx) {
-#if 1
-        // block into registers
-        for (int i = 0; i < TN; ++i) {
-          reg_i[i] = shared_P[(row_offset + i) * BN + idx];
-        }
-        for (int i = 0; i < TN; ++i) {
-          reg_j[i] = shared_V[idx * BN + thread_col_out * TN + i];
-        }
-        for (int i = 0; i < TN; ++i) {
-          for (int j = 0; j < TN; ++j) {
-            reg_O[k][i][j] += reg_i[i] * reg_j[j];
-          }
-        }
-#else
         for (int i = 0; i < TN; ++i) {
           for (int j = 0; j < TN; ++j) {
             reg_O[k][i][j] += shared_P[(row_offset + i) * BN + idx] * //reg_i[i] * 
-                              shared_V[idx * BN + thread_col_out * TN + j]; //reg_j[j];
+                              shared_V[idx * (BN+1) + thread_col_out * TN + j]; //reg_j[j];
           }
         }
-#endif
       }
 
       // ptr_reg_O /= li[ii];
@@ -297,10 +271,10 @@ s2mm_kernel(int N, int d, const float* Q, const float* K, const float* V, float*
 
       __syncthreads();
     }
-    __syncthreads();
+    //__syncthreads();
   }
 
-  // write out the results
+  // write out the results from register to global memory
   ptr_O = O + block_row * BN * d;
   for (int k = 0; k < mul; k++) {
     for (int i = 0; i < TN; ++i) {
