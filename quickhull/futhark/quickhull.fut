@@ -9,16 +9,16 @@
 -- ==
 -- "1M_circle.dat"
 -- script input { points_from_string ($loadbytes "../input/1M_circle.dat") }
--- "1M_quadratic.dat"
--- script input { points_from_string ($loadbytes "../input/1M_quadratic.dat") }
 -- "1M_rectangle.dat"
 -- script input { points_from_string ($loadbytes "../input/1M_rectangle.dat") }
--- "100M_circle.dat"
+-- "1M_quadratic.dat"
+-- script input { points_from_string ($loadbytes "../input/1M_quadratic.dat") }
+-- "circle"
 -- script input { points_from_string ($loadbytes "../input/100M_circle.dat") }
--- "100M_quadratic.dat"
--- script input { points_from_string ($loadbytes "../input/100M_quadratic.dat") }
--- "100M_rectangle.dat"
+-- "rectangle"
 -- script input { points_from_string ($loadbytes "../input/100M_rectangle.dat") }
+-- "quadratic"
+-- script input { points_from_string ($loadbytes "../input/100M_quadratic.dat") }
 
 module type euclidean_space = {
   type dist
@@ -107,7 +107,7 @@ module quickhull (S : euclidean_space) : convex_hull with space.point = S.point 
     let point_ixs = map (i64.i32 <-< (.0)) points
     let segs_inhabited =
       reduce_by_index
-      (replicate num_segs 0i32) (+) 0 point_ixs (replicate num_points 1)
+      (replicate num_segs 0) (+) 0 point_ixs (replicate num_points 1)
       |> map (> 0)
     let (segs_true, segs_false) = partition (.1) (zip segs segs_inhabited)
     let segs_indicator = map i32.bool segs_inhabited
@@ -123,7 +123,7 @@ module quickhull (S : euclidean_space) : convex_hull with space.point = S.point 
     else
       (loop (hull, segs, points) =
          ([], [(start, end)], map (\p -> (0, p)) points)
-       while !(null points) do
+       while !null points do
        let (segs', points') = expand_hull segs points
        in extract_empty_segments hull segs' points')
       |> (.0)

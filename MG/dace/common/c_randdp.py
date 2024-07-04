@@ -25,7 +25,9 @@
 #
 # ------------------------------------------------------------------------------
 
-from numba import njit
+# from numba import njit
+def njit(f):
+    return f
 
 # Global variables
 r23 = pow(0.5, 23.0)
@@ -57,7 +59,7 @@ t46 = t23 * t23
  # 
  # ---------------------------------------------------------------------
  # double randlc(double *x, double a)
-# @njit
+@njit
 def randlc(x, a):
 	# ---------------------------------------------------------------------
 	# break A into two parts such that A = 2^23 * A1 + A2.
@@ -108,7 +110,7 @@ def randlc(x, a):
  #
  # ---------------------------------------------------------------------
  # void vranlc(int n, double *x_seed, double a, double y[]){
-# @njit
+@njit
 def vranlc(n, x_seed, a, y):
 	# ---------------------------------------------------------------------
 	# break A into two parts such that A = 2^23 * A1 + A2.

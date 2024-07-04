@@ -35,19 +35,19 @@ def step [n] (dt: f64) (bodies: [n]body): [n]body =
   map2 (advance_body dt) bodies
        (calc_accels bodies)
 
-def nbody [n] (k: i32) (dt: f64) (bodies: [n]body): [n]body =
-  loop bodies' = bodies for _i < k do step dt bodies'
+def nbody [n] (t: i32) (dt: f64) (bodies: [n]body): [n]body =
+  loop bodies' = bodies for _i < t do step dt bodies'
 
 -- Everything below is boilerplate for benchmarking.
 
-entry main [n] (k: i32) (dt: f64) (positions: [n][3]f64) (masses: [n]f64) =
+entry main [n] (t: i32) (dt: f64) (positions: [n][3]f64) (masses: [n]f64) =
   let mk position mass =
     {pos={x=position[0], y=position[1], z=position[2]},
      mass,
      vel={x=0, y=0, z=0}}
   let unmk p = [p.pos.x, p.pos.y, p.pos.z]
   in map2 mk positions masses
-     |> nbody k dt
+     |> nbody t dt
      |> map unmk
 
 entry mk_positions (n: i64) =
@@ -60,6 +60,6 @@ entry mk_masses (n: i64) =
 
 -- ==
 -- entry: main
--- "k=10, n=1000"   script input { (10i32, 0.1f64, mk_positions 1000,   mk_masses 1000) }
--- "k=10, n=10000"  script input { (10i32, 0.1f64, mk_positions 10000,  mk_masses 10000) }
--- "k=10, n=100000" script input { (10i32, 0.1f64, mk_positions 100000, mk_masses 100000) }
+-- "n=1000"   script input { (100000i32, 0.1f64, mk_positions 1000,   mk_masses 1000) }
+-- "n=10000"  script input { (1000i32,   0.1f64, mk_positions 10000,  mk_masses 10000) }
+-- "n=100000" script input { (10i32,     0.1f64, mk_positions 100000, mk_masses 100000) }

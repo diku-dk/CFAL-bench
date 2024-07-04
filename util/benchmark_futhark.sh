@@ -1,7 +1,7 @@
 #!/bin/sh
-#SBATCH --partition=csmpi_fpga_short
+#SBATCH --partition=csmpi_fpga_long
 #SBATCH --job-name=cfal-futhark
-#SBATCH --time=10:00
+#SBATCH --time=30:00
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
@@ -42,8 +42,8 @@ make -C quickhull/futhark run_cuda
 make -C nbody-naive/futhark run_multicore
 make -C nbody-naive/futhark run_cuda
 
-echo N-body CPU GFLOP/s
-$time2flops nbody-naive/futhark/nbody_multicore.json nbody.fut 'k=10, n=1000' 0.18012 'k=10, n=10000' 18.0012 'k=10, n=100000' 1800.0012
+echo "N-body CPU (all threads) GFLOP/s"
+$time2flops nbody-naive/futhark/nbody_multicore.json nbody.fut 'n=1000' 1800 'n=10000' 1800 'n=100000' 1800
 
-echo N-body GPU GFLOP/s
-$time2flops nbody-naive/futhark/nbody_cuda.json nbody.fut 'k=10, n=1000' 0.18012 'k=10, n=10000' 18.0012 'k=10, n=100000' 1800.0012
+echo "N-body GPU GFLOP/s"
+$time2flops nbody-naive/futhark/nbody_cuda.json nbody.fut 'n=1000' 1800 'n=10000' 1800 'n=100000' 1800

@@ -72,7 +72,7 @@ REAL[N, d] FlashAttention(REAL[N, d] Q, REAL[N, d] K, REAL[N, d] V, int M)
   Bc = ceildiv(M, 4 * d);
   Br = min(Bc, d);
 
-  printf("Br = %d, Bc = %d, d = %d\n", Br, Bc, d);
+//  printf("Br = %d, Bc = %d, d = %d\n", Br, Bc, d);
 
   Qb = reshape([N / Br, Br, d], Q);
   Kb = reshape([N / Bc, Bc, d], K);
@@ -112,15 +112,15 @@ REAL L2(REAL[*] x)
 
 int main()
 {
-  if (argc() != 6) {
-    printf("%s -mt <n> <d> <N> <M>\n", argv(0));
+  if (argc() != 8) {
+    printf("%s -mt <n> -mt_bind <mode> <d> <N> <M>\n", argv(0));
     N = 0;
     d = 0;
     M = 0;
   } else {
-    d, unused = strtoi(argv(3), 10);
-    N, unused = strtoi(argv(4), 10);
-    M, unused = strtoi(argv(5), 10);
+    d, unused = strtoi(argv(5), 10);
+    N, unused = strtoi(argv(6), 10);
+    M, unused = strtoi(argv(7), 10);
     Bc = ceildiv(M, 4 * d);
     Br = min(Bc, d);
     if ((N % Br != 0) || (N % Bc != 0)) {
@@ -140,10 +140,10 @@ int main()
   end(i_flash);
   time, unit = returnResultUnit(i_flash);
 
-  printf("L2 norm of output is %lf, should be %lf\n", 
+  fprintf(stderr, "L2 norm of output is %lf, should be %lf\n", 
               L2(O), Math::sqrt(tor(d * N)));
-  printf("Compute rate: %f Gflops / %s\n", 
-        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+  printf("%f\n", 
+        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9);
 
   return 0;
 }
