@@ -1,8 +1,10 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module LocVolCalib where
 
@@ -10,14 +12,11 @@ import Prelude (id)
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Unsafe (undef)
 import Data.Array.Accelerate.Control.Lens
+import Data.Array.Accelerate.Debug.Trace
 
 type Two a = (a,a)
 type Three a = (a,a,a)
 
--- WIP: blind translation from futhark
--- `main` does a map of value over strikes, which has some ripple effects
--- due to Accelerate not supporting nested parallelism:
--- all 'strike' values are instead arrays, some arrays and matrices also have an extra dimension
 
 
 initGrid :: Exp (Float, Float, Float, Float, Int, Int, Int)
@@ -29,7 +28,7 @@ initGrid (T7 s0 alpha nu t numX numY numT) =
       stdY = 10.0 * nu         * sqrt t
       dx = stdX / toFloating numX
       dy = stdY / toFloating numY
-      myXindex = round (s0 / dx)
+      myXindex = floor (s0 / dx)
       myYindex = numY `div` 2
       myX = generate (I1 numX) (\(I1 i) -> toFloating i * dx - toFloating myXindex * dx + s0)
       myY = generate (I1 numY) (\(I1 i) -> toFloating i * dy - toFloating myYindex * dy + logAlpha)
@@ -229,6 +228,6 @@ iterateOver :: (Elt a, Arrays b) => Acc (Vector a) -> Acc b -> (Exp a -> Acc b -
 iterateOver xs initial f =
   let Z_ ::. n = shape xs
   in afst $ awhile
-    (map (< n) . asnd)
+    (map (< 1) . asnd)
     (\(T2 current i) -> T2 (f (xs!I1 (the i)) current) (map (+1) i))
     (T2 initial $ unit 0)

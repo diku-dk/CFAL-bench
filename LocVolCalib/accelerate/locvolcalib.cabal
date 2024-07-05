@@ -9,7 +9,7 @@ maintainer:         i.g.dewolff@uu.nl
 executable locvolcalib
   main-is:          Main.hs
 
-  other-modules:
+  other-modules:    LocVolCalib
 
   build-depends:    base >= 4.10,
                     accelerate >= 1.3.0.0,
