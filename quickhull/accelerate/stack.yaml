@@ -17,3 +17,4 @@ extra-deps:
   subdirs:
     - llvm-hs
     - llvm-hs-pure
+- accelerate-io-1.3.0.0@sha256:06c87ff6bc8a57051450f4d522081c2dd703c0074e1ee093143e9deb1d9b144b,1812
