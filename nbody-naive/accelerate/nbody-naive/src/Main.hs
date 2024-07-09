@@ -10,5 +10,7 @@ import Criterion.Main
 main :: IO ()
 main = defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
   where
-    backend s r = bgroup s $ map (size r) [1000,10000,100000]
-    size r n = env (return (r nbody, fromList Z [0.1], fromList Z [n], fromList Z [10])) $ \ ~(p,dt,n,k) -> bench (show n) $ nf (p dt n) k
+    backend s r = bgroup s $ map (size r) [(1000, 100000)
+                                          ,(10000,  1000)
+                                          ,(100000,   10)]
+    size r (n,t) = env (return (r nbody, fromList Z [0.1], fromList Z [n], fromList Z [t])) $ \ ~(p,dt,n,k) -> bench (show n) $ nf (p dt n) k
