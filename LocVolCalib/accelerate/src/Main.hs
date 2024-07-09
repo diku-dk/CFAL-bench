@@ -1,10 +1,10 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Main where
 
 import LocVolCalib
 
-import Criterion
-import Data.Array.Accelerate
-import qualified Data.Array.Accelerate.Interpreter as Interp
+import Criterion.Main
+import Data.Array.Accelerate hiding (map)
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import qualified Data.Array.Accelerate.LLVM.PTX as GPU
 import Prelude hiding (sum)
@@ -13,62 +13,35 @@ import Prelude hiding (sum)
 main :: IO ()
 main = 
   defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
-
     where
-      backend name run = bgroup name $ map benchrun run [small, medium, large]
-      benchrun run (name, input) = bench name $ nf (run main') input
+      backend name run = bgroup name $ map (benchrun run) [small, medium, large]
+      benchrun run (name, input) = bench name $ nf (run main') (fromList Z $ pure input)
 
-      small = ("small", T9
-                        (constant 16)
-                        (constant 32)
-                        (constant 256)
-                        (constant 256)
-                        (constant 0.03)
-                        (constant 5.0)
-                        (constant 0.2)
-                        (constant 0.6)
-                        (constant 0.5))
-      medium = ("medium", T9 
-                        (constant 128 )
-                        (constant 256 )
-                        (constant 32  )
-                        (constant 64  )
-                        (constant 0.03)
-                        (constant 5.0 )
-                        (constant 0.2 )
-                        (constant 0.6 )
-                        (constant 0.5 ))
-      large = ("large", T9 
-                        (constant 256 )
-                        (constant 256 )
-                        (constant 256 )
-                        (constant 64  )
-                        (constant 0.03)
-                        (constant 5.0 )
-                        (constant 0.2 )
-                        (constant 0.6 )
-                        (constant 0.5 ))
+      small = ("small", (16
+                        ,32
+                        ,256
+                        ,256
+                        ,0.03
+                        ,5.0
+                        ,0.2
+                        ,0.6
+                        ,0.5))
+      medium = ("medium",(128 
+                         ,256 
+                         ,32  
+                         ,64  
+                         ,0.03
+                         ,5.0 
+                         ,0.2 
+                         ,0.6 
+                         ,0.5 ))
+      large = ("large", (256 
+                        ,256 
+                        ,256 
+                        ,64  
+                        ,0.03
+                        ,5.0 
+                        ,0.2 
+                        ,0.6 
+                        ,0.5 ))
 
-  print $ CPU.runN $ -- const (sum $ generate (Z_ ::. (constant 40 :: Exp Int)) (const (constant 40 :: Exp Int))) $
-    main' $ T9 
-        -- small
-      -- (constant 16)
-      -- (constant 32)
-      -- (constant 256)
-      -- (constant 256)
-      -- (constant 0.03)
-      -- (constant 5.0)
-      -- (constant 0.2)
-      -- (constant 0.6)
-      -- (constant 0.5)
-
-        -- medium
-      (constant 128 )
-      (constant 256 )
-      (constant 32  )
-      (constant 64  )
-      (constant 0.03)
-      (constant 5.0 )
-      (constant 0.2 )
-      (constant 0.6 )
-      (constant 0.5 )

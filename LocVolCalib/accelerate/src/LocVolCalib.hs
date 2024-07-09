@@ -8,15 +8,13 @@
 
 module LocVolCalib where
 
-import Prelude (id)
 import Data.Array.Accelerate
 import Data.Array.Accelerate.Unsafe (undef)
 import Data.Array.Accelerate.Control.Lens
-import Data.Array.Accelerate.Debug.Trace
 
 type Two a = (a,a)
 type Three a = (a,a,a)
-
+type Input = (Int, Int, Int, Int, Float, Float, Float, Float, Float)
 
 
 initGrid :: Exp (Float, Float, Float, Float, Int, Int, Int)
@@ -218,8 +216,8 @@ value (T8 numX numY numT s0 t alpha nu beta) strikes =
                   in rollback (T2 tnow tnext) (T9 res mux myDx myDxx varx muy myDy myDyy vary))
   in slice final (Z_ ::. All_ ::. myYindex ::. myXindex)
 
-main' :: Exp (Int, Int, Int, Int, Float, Float, Float, Float, Float) -> Acc (Vector Float)
-main' (T9 outerloopcount numX numY numT s0 t alpha nu beta) =
+main' :: Acc (Scalar Input) -> Acc (Vector Float)
+main' s = let (T9 outerloopcount numX numY numT s0 t alpha nu beta) = the s in
   let strikes = generate (I1 outerloopcount) (\(I1 i) -> 0.001 * toFloating i)
   in value (T8 numX numY numT s0 t alpha nu beta) strikes
 

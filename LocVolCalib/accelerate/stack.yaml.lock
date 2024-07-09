@@ -7,76 +7,107 @@ packages:
 - completed:
     hackage: lens-accelerate-0.3.0.0@sha256:782bb148e47babdd90a146879066de935e63269ebe800091c7ecc59eba7973bf,1431
     pantry-tree:
-      sha256: c70c9f6fe85d96c7a271dbe808a7e04563424de259a69e347957f38efac5b5c3
       size: 692
+      sha256: c70c9f6fe85d96c7a271dbe808a7e04563424de259a69e347957f38efac5b5c3
   original:
     hackage: lens-accelerate-0.3.0.0
 - completed:
-    name: accelerate
-    pantry-tree:
-      sha256: cf97973656bb0f7ded17b5e98fc2baa4914b6703c9c3b5e5b81d98925864323c
-      size: 18551
-    sha256: d4991ed3500f1ff3ecc7bc9cb0a1d25a7df1c6b8566e3ea434ef7b3b7957b2f3
     size: 722510
     url: https://github.com/acceleratehs/accelerate/archive/17466411109170c4e4361d9980f1cded0eb85efb.tar.gz
+    name: accelerate
     version: 1.3.0.0
+    sha256: d4991ed3500f1ff3ecc7bc9cb0a1d25a7df1c6b8566e3ea434ef7b3b7957b2f3
+    pantry-tree:
+      size: 18551
+      sha256: cf97973656bb0f7ded17b5e98fc2baa4914b6703c9c3b5e5b81d98925864323c
   original:
     url: https://github.com/acceleratehs/accelerate/archive/17466411109170c4e4361d9980f1cded0eb85efb.tar.gz
 - completed:
+    size: 282618
+    subdir: accelerate-llvm
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
     name: accelerate-llvm
+    version: 1.3.0.0
+    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
     pantry-tree:
-      sha256: edd4e8ed6a7d1496f9e27f4020a5ae0080bbaf231ed35541aa164ac822dbd575
       size: 5825
-    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
-    size: 282618
-    subdir: accelerate-llvm
-    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
-    version: 1.3.0.0
+      sha256: edd4e8ed6a7d1496f9e27f4020a5ae0080bbaf231ed35541aa164ac822dbd575
   original:
     subdir: accelerate-llvm
     url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
 - completed:
+    size: 282618
+    subdir: accelerate-llvm-native
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
     name: accelerate-llvm-native
-    pantry-tree:
-      sha256: 1d34df34b1e5801bd2ef2ea31951c0ba7f249ccf311623bccb4cab95f1094740
-      size: 4849
-    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
-    size: 282618
-    subdir: accelerate-llvm-native
-    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
     version: 1.3.0.0
+    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
+    pantry-tree:
+      size: 4849
+      sha256: 1d34df34b1e5801bd2ef2ea31951c0ba7f249ccf311623bccb4cab95f1094740
   original:
     subdir: accelerate-llvm-native
     url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
 - completed:
-    name: llvm-hs
+    size: 282618
+    subdir: accelerate-llvm-ptx
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
+    name: accelerate-llvm-ptx
+    version: 1.3.0.0
+    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
     pantry-tree:
-      sha256: 21f74a6f51fae6c0a0fcf3e6620a59f341289ac743998b41ed3276fd1b7d8862
-      size: 12716
-    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
+      size: 4967
+      sha256: 370f69ca1719ee33bf053f76494051aa15235e7938c870b62cbb832174e44efc
+  original:
+    subdir: accelerate-llvm-ptx
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
+- completed:
+    size: 815706
+    url: https://github.com/dpvanbalen/cuda/archive/a140e84a905753fd63fc4a4a707d7e60cb1888f3.tar.gz
+    name: cuda
+    version: 0.11.0.1
+    sha256: 6ef876915772e617f5ab33e1fec256b443edbc0220c784d2d5b786db4e5e2cb3
+    pantry-tree:
+      size: 10376
+      sha256: b4ffc1344e503faaedee749a48fbf723ef05e62fd2e32b99924e7ae113ab3709
+  original:
+    url: https://github.com/dpvanbalen/cuda/archive/a140e84a905753fd63fc4a4a707d7e60cb1888f3.tar.gz
+- completed:
+    hackage: nvvm-0.10.0.1@sha256:13b54669b580e27455bbab8d0e3d09711646d2655dd9dd80ec48f16aa8841689,2456
+    pantry-tree:
+      size: 684
+      sha256: 1941b8f5e5aa7fa433d73a2c6bc607343d041fc53ce109a86ecc1d47194b541f
+  original:
+    hackage: nvvm-0.10.0.1
+- completed:
     size: 9802201
     subdir: llvm-hs
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
+    name: llvm-hs
     version: 15.0.0
+    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
+    pantry-tree:
+      size: 12716
+      sha256: 21f74a6f51fae6c0a0fcf3e6620a59f341289ac743998b41ed3276fd1b7d8862
   original:
     subdir: llvm-hs
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
 - completed:
-    name: llvm-hs-pure
-    pantry-tree:
-      sha256: b512f9e5f8f2b3e3a06bad2fa5ff053a83d817798c7efcd47e254e68c842169d
-      size: 2712
-    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
     size: 9802201
     subdir: llvm-hs-pure
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
+    name: llvm-hs-pure
     version: 15.0.0
+    sha256: 2c1b676496382a33e430f17429112fc6f4ebc34bea5be966a6b290af4040513b
+    pantry-tree:
+      size: 2712
+      sha256: b512f9e5f8f2b3e3a06bad2fa5ff053a83d817798c7efcd47e254e68c842169d
   original:
     subdir: llvm-hs-pure
     url: https://github.com/llvm-hs/llvm-hs/archive/e4b3cfa47e72f094ab109884f18acfc666b0fb7d.tar.gz
 snapshots:
 - completed:
-    sha256: caa77fdbc5b9f698262b21ee78030133272ec53116ad6ddbefdc4c321f668e0c
     size: 640014
     url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/4.yaml
+    sha256: caa77fdbc5b9f698262b21ee78030133272ec53116ad6ddbefdc4c321f668e0c
   original: lts-21.4
