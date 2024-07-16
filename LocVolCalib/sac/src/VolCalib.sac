@@ -3,233 +3,123 @@ use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 
-#ifdef DOUBLE
-  #define REAL double
-  #define tor tod
-  #define VEC 8
-#else
-  #define REAL float
-  #define tor tof
-  #define VEC 8
-#endif
-
-void PrintArr(double[m, n] x)
-{
-    for (i = 0; i < m; i++) {
-        for (j = 0; j < n; j++) {
-            printf("%.17e ", x[i, j]);
-        }
-        printf("\n");
-    }
-}
-
-void PrintArr(double[n] x)
-{
-        for (j = 0; j < n; j++) {
-            printf("%.17e ", x[j]);
-        }
-        printf("\n");
-}
+#define REAL double
+#define TO_REAL tod
 
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
  */
-inline
-REAL[NUM_Y], REAL[NUM_X], REAL[NUM_Y, NUM_X], REAL[NUM_X, NUM_Y]
-updateParams(REAL[NUM_X] X, REAL[NUM_Y] Y, REAL t)
+REAL[NUM_Y], REAL[NUM_X] updateParams(REAL[NUM_X] X, REAL[NUM_Y] Y, REAL t)
 {
-  VarX1 = {[j] -> exp(tor(2) * Y[j] - NU * NU * t)};
-  VarX2 = {[i] -> pow(X[i], tor(2) * BETA)};
-  MuX = {iv -> tor(0) | iv < [NUM_Y, NUM_X]};
-  MuY = {iv -> tor(0) | iv < [NUM_X, NUM_Y]};
+  VarX1 = {[j] -> exp(2.0 * Y[j] - NU * NU * t)};
+  VarX2 = {[i] -> pow(X[i], 2.0 * BETA)};
 
-  return (VarX1, VarX2, MuX, MuY);
+  return (VarX1, VarX2);
 }
 
 /**
  * Initializes indX, indY, X, Y, Dxx, Dyy
  */
 inline
-int, int, REAL[NUM_X], REAL[NUM_Y], REAL[.], REAL[.] 
-initGrid()
+int, int, REAL[NUM_X], REAL[NUM_Y], REAL[3], REAL[3] initGrid()
 {
-  stdX = tor(20) * ALPHA * S0 * sqrt(T);
-  dx = stdX / tor(NUM_X);
+  stdX = 20.0 * ALPHA * S0 * sqrt(T);
+  dx = stdX / TO_REAL(NUM_X);
   indX = toi(S0 / dx);
-  X = {[i] -> tor(i) * dx - tor(indX) * dx + S0 | [i] < [NUM_X]};
+  X = {[i] -> TO_REAL(i) * dx - TO_REAL(indX) * dx + S0 | [i] < [NUM_X]};
+  Dxx = [1.0 / (dx * dx), -2.0 / (dx * dx), 1.0 / (dx * dx)];
 
-  stdY = tor(10) * NU * sqrt(T);
-  dy = stdY / tor(NUM_Y);
+  stdY = 10.0 * NU * sqrt(T);
+  dy = stdY / TO_REAL(NUM_Y);
   indY = NUM_Y / 2;
+  Dyy = [1.0 / (dy * dy), -2.0 / (dy * dy), 1.0 / (dy * dy)];
 
-  Y = {[i] -> tor(i) * dy - tor(indY) * dy + log(ALPHA)
+  Y = {[i] -> TO_REAL(i) * dy - TO_REAL(indY) * dy + log(ALPHA)
             | [i] < [NUM_Y]};
-
-  Dxx = {[i] -> [tor(2) * (X[i + 1] - X[i]) / (X[i + 2] - X[i]),
-                 tor(-2) * (tor(1)/(X[i + 1] - X[i]) + tor(1)/(X[i + 2] - X[i + 1])) / (X[i + 2] - X[i]),
-                 tor(2) * (X[i + 2] - X[i]) / (X[i + 2] - X[i])]
-              | [i] < [NUM_X - 2]};
-
-  Dyy = {[i] -> [tor(2) * (Y[i + 1] - Y[i]) / (Y[i + 2] - Y[i]),
-                 tor(-2) * (tor(1)/(Y[i + 1] - Y[i]) + tor(1)/(Y[i + 2] - Y[i + 1])) / (Y[i + 2] - Y[i]),
-                 tor(2) * (Y[i + 2] - Y[i]) / (Y[i + 2] - Y[i])]
-              | [i] < [NUM_Y - 2]};
 
   return (indX, indY, X, Y, Dxx, Dyy);
 }
 
-/* a, b, c are constants signifying a Toeplitz system. This solves
-   the Toeplitz system on each column of y. */
-inline
-REAL[NUM_Y, NUM_X] toeplitz(REAL a, REAL b, REAL c, REAL[NUM_Y, NUM_X] y)
+inline 
+REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
 {
-  n = NUM_Y;
-  gamma = with {}: genarray([NUM_Y], tor(0));
-
-  /* This is the modified Thomas method from Numerical Mathematics.
-   * Note that the non-zeroes in a row are a, b, c in this application,
-   * and b, a, c in Numerical Methods. */
-  gamma[0] = tor(1) / b;
-  y[0] = gamma[0] * y[0];
-
-  //printf("y[1] (input)\n");
-  //print(y[1]);
-  gamma[1] = tor(1) / b;
-  y[1] = gamma[1] * (y[1] - a * y[0]);
-  //printf("y[1] (sweep 1)\n");
-  //print(y[1]);
-
-  for (i = 2; i < n; i++) {
-      gamma[i] = tor(1) / (b - a * gamma[i - 1] * c);
-      y[i] = gamma[i] * (y[i] - a * y[i - 1]);
-  }
-
-  //printf("y[2] (sweep 2)\n");
-  //print(y[2]);
-
-  for (i = n - 2; i >= 1; i--) {
-      y[i] = y[i] - gamma[i] * c * y[i + 1];
-  }
-
-  return y;
-}
-
-noinline 
-REAL[NUM_X, VEC] tridag_v(REAL[NUM_X, VEC] a, REAL[NUM_X, VEC] b, 
-                          REAL[NUM_X, VEC] c, REAL[NUM_X, VEC] y)
-{
-  //printf("a = \n");
-  //print(a);
-
-  //printf("b = \n");
-  //print(b);
-
-  //printf("Input\n");
-  //print(y);
   n = shape(y)[0];
 
   /* This is the modified Thomas method from Numerical Methods.
    * Note that the non-zeroes in a row are a, b, c in this application,
    * and b, a, c in Numerical Methods.
    * We store gamma in b. */
-  b[0] = tor(1) / b[0];
+  b[0] = 1.0 / b[0];
   y[0] = b[0] * y[0];
 
-  b[1] = tor(1) / b[1];
-  y[1] = b[1] * (y[1] - a[1] * y[0]);
-  for (i = 2; i < n; i++) {
-      b[i] = tor(1) / (b[i] - a[i] * b[i - 1] * c[i - 1]);
+  for (i = 1; i < n; i++) {
+      b[i] = 1.0 / (b[i] - a[i] * b[i - 1] * c[i - 1]);
       y[i] = b[i] * (y[i] - a[i] * y[i - 1]);
   }
-
-  //printf("Sweep 1\n");
-  //print(y);
 
   for (i = n - 2; i >= 1; i--) {
       y[i] = y[i] - b[i] * c[i] * y[i + 1];
   }
-  //printf("Output\n");
-  //print(y);
 
   return y;
 }
 
-noinline
-REAL[VEC, NUM_X] implicit_x(REAL[VEC] VarX1, REAL[NUM_X] VarX2,
-                       REAL[VEC, NUM_X] uu)
+inline
+REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[3] Dxx,
+                   REAL dtInv, REAL[NUM_X] uu)
 {
-  uu_t = transpose(uu);
-  a = {[j] -> VarX1 * VarX2[j]          | [1] <= [j] < [NUM_X - 1];
-       [j] -> genarray([VEC], tor(0))   | [NUM_X - 1] <= [j] < [NUM_X]}; 
-  res = tridag_v(a, tor(1) - tor(2) * a, a, uu_t); 
-  return transpose(res);
+  a = {[j] -> -0.25 * VarX1 * VarX2[j] * Dxx[0] | [1] <= [j] < [NUM_X - 1];
+       [j] -> 0d                                | [NUM_X - 1] <= [j] < [NUM_X]}; 
+
+  return tridag(a, dtInv - 2d * a, a, uu); 
 }
 
-REAL L2(REAL[*] x) { return sqrt(sum(x * x)); }
+inline
+REAL[NUM_Y] implicit_y(REAL VarY, REAL[3] Dyy, REAL dtInv,
+                       REAL[NUM_Y] yy)
+{
+  a = {[j] -> -0.25 * VarY * Dyy[0] | [1] <= [j] < [NUM_Y - 1];
+       [j] -> 0d                    | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
+
+  return tridag(a, dtInv - 2d * a, a, yy);
+}
 
 inline
-REAL[NUM_Y, NUM_X] rollback(REAL dtInv, REAL[.] Dxx,
-                            REAL[NUM_X] X, REAL[NUM_Y] Y, 
-                            REAL[NUM_Y] VarX1, REAL[NUM_X] VarX2,
-                            REAL[.] Dyy, REAL VarY,
-                            REAL[NUM_Y, NUM_X] ResultE, 
-                            REAL[., .] MuX, REAL[., .] MuY)
+REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[3] Dxx,
+                            REAL[NUM_X] X, REAL[NUM_Y] Y, int t,
+                            REAL[3] Dyy, REAL VarY,
+                            REAL[NUM_X, NUM_Y] ResultE)
 {
-//  printf("dtInv = %.17e\n", dtInv);
+  VarX1, VarX2 = updateParams(X, Y, T * TO_REAL(t) / TO_REAL(NUM_T - 1));
 
   /* explicit y */
-  V = {[j, i] -> VarY / tor(4) * (ResultE[j - 1, i] * Dyy[j - 1, 0] +
-                        tor(-2) * ResultE[j    , i] * Dyy[j - 1, 1] +
-                                  ResultE[j + 1, i] * Dyy[j - 1, 2])
-               | [1, 0] <= [j, i] < [NUM_Y - 1, NUM_X];
-       [j, i] -> tor(0)
-               | [NUM_Y - 1, 0] <= [j, i] < [NUM_Y, NUM_X]
+  V = {[i, j] -> 0.5 * sum({[k] -> ResultE[i, j - 1 + k] * VarY * Dyy[k]
+                                 | [0] <= [k] < [3]})
+               | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
+       [i, j] -> 0d
+               | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
       };
 
-//  printf("L2(V) = %.17e\n", L2(V));
-//  print(V);
-
   /* explicit x */
-  U = {[j, i] -> dtInv * ResultE[j, i]
+  U = {[j, i] -> dtInv * ResultE[i, j]
                | [0, 0] <= [j, i] < [NUM_Y, 1];
-       [j, i] -> dtInv * ResultE[j, i] + VarX1[j] * VarX2[i] / tor(4) * (
-                            ResultE[j, i - 1] * Dxx[i - 1, 0] +
-                  tor(-2) * ResultE[j, i    ] * Dxx[i - 1, 1] +
-                            ResultE[j, i + 1] * Dxx[i - 1, 2])
+       [j, i] -> dtInv * ResultE[i, j] + 0.25 *
+                  sum({[k] -> ResultE[i - 1 + k, j] *
+                              VarX1[j] * VarX2[i] * Dxx[k]
+                            | [0] <= [k] < [3]})
                | [0, 1] <= [j, i] < [NUM_Y, NUM_X - 1];
-       [j, i] -> dtInv * ResultE[j, i]
+       [j, i] -> dtInv * ResultE[i, j]
                | [0, NUM_X - 1] <= [j, i] < [NUM_Y, NUM_X]
        };
 
-//  printf("L2(U) = %.17e\n", L2(U));
-//  PrintArr(U);
-//  print(U);
-
-  U = {[j, i] -> U[j, i] + tor(2) * V[j, i]};
-//  printf("L2(U + 2V) = %.17e\n", L2(U));
+  U = {[j, i] -> U[j, i] + V[i, j]};
 
   /* implicit x */
-  dx = tor(1) / Dxx[1, 0];
-  dy = tor(1) / Dyy[1, 0];
-  VarX1 *= tor(1) / (dx * dx) / tor(-4) / dtInv; // Scale solution by dtInv
-
-  VarX1p = reshape([NUM_Y / VEC, VEC], VarX1);
-  Up = reshape([NUM_Y / VEC, VEC, NUM_X], U);
-  Up = {[j] -> implicit_x(VarX1p[j], VarX2, Up[j])};
-  U = reshape([NUM_Y, NUM_X], Up);
-//  printf("L2(implicit U) = %.17e\n", L2(U));
-//  printf("U[1]\n");
-//  print(U[1]);
-//  printf("V[1]\n");
-//  print(V[1]);
+  U = {[j] -> implicit_x(VarX1[j], VarX2, Dxx, dtInv, U[j])};
 
   /* implicit y */
-  V = U - V;
-  a = VarY / tor(-4) / (dy * dy);
-//  printf("(U - V)[1]\n");
-//  print(V[1]);
-  ResultE = toeplitz(a, dtInv - tor(2) * a, a, V);
-  printf("L2(implicit y) = %.17e\n", L2(ResultE));
+  ResultE = {[i] -> implicit_y(VarY, Dyy, dtInv,
+                      {[j] -> dtInv * U[j, i] - V[i, j] / 2.0})};
 
   return ResultE;
 }
@@ -237,36 +127,27 @@ REAL[NUM_Y, NUM_X] rollback(REAL dtInv, REAL[.] Dxx,
 inline
 REAL value(REAL strike, int indX, int indY,
            REAL[NUM_X] X, REAL[NUM_Y] Y,
-           REAL[.] Dxx, REAL[.] Dyy)
+           REAL[3] Dxx, REAL[3] Dyy)
 {
-  VarX1, VarX2, MuX, MuY = 
-        updateParams(X, Y, tor(NUM_T - 2) * T / tor(NUM_T - 1));
-  PrintArr(VarX1);
-  PrintArr(VarX2);
-  printf("strike = %.17e\n", strike);
-  ResultE = {[j, i] -> max(X[i] - strike, tor(0)) | [j, i] < [NUM_Y, NUM_X]};
-  PrintArr(ResultE);
+  ResultE = {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 
   for (t = NUM_T - 2; t >= 0; t--) {
-    ResultE = rollback(tor(NUM_T - 1) / T, Dxx, X, Y, VarX1, VarX2,
-                       Dyy, NU * NU, ResultE, MuX, MuY);
-    VarX2 *= exp(NU * NU * T / tor(NUM_T - 1));
+    ResultE = rollback(TO_REAL(NUM_T - 1) / T, Dxx, X, Y, t, 
+                       Dyy, NU * NU, ResultE);
   }
 
-  return ResultE[indY, indX];
+  return ResultE[indX, indY];
 }
 
 int main()
 {
-  fprintf(stderr, "\n// SaC Volatility Calibration Benchmark:\n");
+  fprintf(stdout, "\n// SaC Volatility Calibration Benchmark:\n");
 
   itime = getInterval("time", 1);
   start(itime);
-  indX, indY, X, Y, DDx, DDy = initGrid();
-  PrintArr(X);
-  PrintArr(Y);
+  indX, indY, X, Y, Dxx, Dyy = initGrid();
 
-  result = {[i] -> value(tor(i) / tor(1000), indX, indY, X, Y, DDx, DDy)
+  result = {[i] -> value(TO_REAL(i) / 1000.0, indX, indY, X, Y, Dxx, Dyy)
                  | [i] < [OUTER]};
   end(itime);
   print(result);
