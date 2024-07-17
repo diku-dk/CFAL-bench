@@ -5,6 +5,7 @@ use Benchmarking: all;
 
 #define REAL double
 #define tor tod
+#define VEC 8
 
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
@@ -79,7 +80,31 @@ initGrid()
   return (indX, indY, X, Y, Dxx, Dyy, Dx, Dy);
 }
 
-/* TODO we have a whole system of these, so vectorize */
+inline 
+REAL[., VEC] tridag_v(REAL[., VEC] a, REAL[., VEC] b, REAL[., VEC] c, 
+                    REAL[., VEC] y)
+{
+  n = shape(y)[0];
+
+  /* This is the modified Thomas method from Numerical Methods.
+   * Note that the non-zeroes in a row are a, b, c in this application,
+   * and b, a, c in Numerical Methods.
+   * We store gamma in b. */
+  b[0] = 1.0 / b[0];
+  y[0] = b[0] * y[0];
+
+  for (i = 1; i < n; i++) {
+      b[i] = 1.0 / (b[i] - a[i] * b[i - 1] * c[i - 1]);
+      y[i] = b[i] * (y[i] - a[i] * y[i - 1]);
+  }
+
+  for (i = n - 2; i >= 1; i--) {
+      y[i] = y[i] - b[i] * c[i] * y[i + 1];
+  }
+
+  return y;
+}
+
 inline 
 REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
 {
@@ -104,14 +129,17 @@ REAL[.] tridag(REAL[.] a, REAL[.] b, REAL[.] c, REAL[.] y)
   return y;
 }
 
-inline
-REAL[NUM_X] implicit_x(REAL VarX1, REAL[NUM_X] VarX2, REAL[NUM_X, 3] Dxx,
-                   REAL dtInv, REAL[NUM_X] uu)
+/* noinline because we want to transpose to actually happen in memory */
+noinline
+REAL[VEC, NUM_X] implicit_x(REAL[VEC] VarX1, REAL[NUM_X] VarX2, 
+                            REAL[NUM_X, 3] Dxx, REAL dtInv, REAL[VEC, NUM_X] uu)
 {
-  a = {[j] -> -0.25 * VarX1 * VarX2[j] * Dxx[j, 0] | [1] <= [j] < [NUM_X - 1];
-       [j] -> 0d                                | [NUM_X - 1] <= [j] < [NUM_X]}; 
+  uu_t = transpose(uu);
+  a = {[j, i] -> -0.25 * VarX1[i] * VarX2[j] * Dxx[j, 0] 
+              | [1, 0] <= [j, i] < [NUM_X - 1, VEC];
+       [j, i] -> tor(0) | [NUM_X - 1, 0] <= [j, i] < [NUM_X, VEC]}; 
 
-  return tridag(a, dtInv - 2d * a, a, uu); 
+  return transpose(tridag_v(a, dtInv - 2d * a, a, uu_t));
 }
 
 inline
@@ -122,15 +150,6 @@ REAL[NUM_Y] implicit_y(REAL[NUM_Y] VarY, REAL[NUM_Y, 3] Dyy, REAL dtInv,
        [j] -> 0d                    | [NUM_Y - 1] <= [j] < [NUM_Y]}; 
 
   return tridag(a, dtInv - 2d * a, a, yy);
-}
-
-inline
-REAL[NUM_X, NUM_Y] rollback(REAL dtInv, REAL[NUM_X, 3] Dxx,
-                            REAL[NUM_X] X, REAL[NUM_Y] Y, int t,
-                            REAL[NUM_Y, 3] Dyy, REAL VarY,
-                            REAL[NUM_X, NUM_Y] ResultE)
-{
-  return ResultE;
 }
 
 inline
@@ -176,7 +195,10 @@ REAL value(REAL strike, int indX, int indY,
     U = {[j, i] -> U[j, i] + V[i, j]};
   
     /* implicit x */
-    U = {[j] -> implicit_x(VarX1[j], VarX2, Dxx, dtInv, U[j])};
+    U_vec = reshape([NUM_Y / VEC, VEC, NUM_X], U);
+    VarX1_vec = reshape([NUM_X / VEC, VEC], VarX1);
+    U = {[j] -> implicit_x(VarX1_vec[j], VarX2, Dxx, dtInv, U_vec[j])};
+    U = reshape([NUM_Y, NUM_X], U);
   
     /* implicit y */
     ResultE = {[i] -> implicit_y(VarY[i], Dyy, dtInv,
