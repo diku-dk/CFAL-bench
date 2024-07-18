@@ -25,11 +25,11 @@ def initGrid_dace(s0: float, alpha: float, nu: float, t: float,
 
     # Scalar computations
     # indX
-    stdX = 20 * alpha * s0 * np.sqrt(t)
+    stdX = 20.0 * alpha * s0 * np.sqrt(t)
     dx = stdX / numX
     indX = int(s0 / dx)
     # indY
-    stdY = 10 * nu * np.sqrt(t)
+    stdY = 10.0 * nu * np.sqrt(t)
     dy = stdY / numY
     logAlpha = np.log(alpha)
     indY = int(numY / 2)
@@ -94,7 +94,7 @@ def initOperator_dace(xx: dace.float64[M], D: dace.float64[M, 3], DD: dace.float
 def setPayoff_dace(strike: float, X: dace.float64[numX], ResultE: dace.float64[numX, numY]):
 
     for ip in dace.map[0:numX]:
-        ResultE[ip] = max(X[ip] - strike, 0.0)
+        ResultE[ip, :] = max(X[ip] - strike, 0.0)
     # ResultE[:] = np.reshape(np.maximum(X - strike, 0.0), (numX, 1))
 
 
@@ -107,7 +107,7 @@ def updateParams_dace(alpha: float, beta: float, nu: float,
     for ju in dace.map[0:numY]:
         for iu in dace.map[0:numX]:
             # MuX[ju, iu] = 0.0
-            VarX[ju, iu] = np.exp(2 * (beta * np.log(X[iu]) + Y[ju] - 0.5 * nu * nu * Time[g]))
+            VarX[ju, iu] = np.exp(2.0 * (beta * np.log(X[iu]) + Y[ju] - 0.5 * nu * nu * Time[g]))
             # MuY[iu, ju] = 0.0
     # MuX[:] = 0.0
     # VarX[:] = np.exp(2 * np.add.outer(Y - 0.5 * nu * nu * Time[g], beta * np.log(X)))
@@ -127,16 +127,16 @@ def tridiag_dace(a: dace.float64[N], b: dace.float64[N], c: dace.float64[N], y: 
     """
 
     # forward swap
-    for i in range(1, N - 1):
-        beta = a[i] / b[i - 1]
+    for itrd in range(1, N - 1):
+        beta = a[itrd] / b[itrd - 1]
 
-        b[i] = b[i] - beta * c[i - 1]
-        y[i] = y[i] - beta * y[i - 1]
+        b[itrd] = b[itrd] - beta * c[itrd - 1]
+        y[itrd] = y[itrd] - beta * y[itrd - 1]
 
     # backward
     y[N - 1] = y[N - 1] / b[N - 1]
-    for i in range(N - 2, -1, -1):
-        y[i] = (y[i] - c[i] * y[i + 1]) / b[i]
+    for itrd in range(N - 2, -1, -1):
+        y[itrd] = (y[itrd] - c[itrd] * y[itrd + 1]) / b[itrd]
 
 
 # @dace.program
@@ -218,14 +218,14 @@ def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], 
     for j, i in dace.map[0:numY, 0:numX]:
         V[i, j] = 0.5 * ResultE[i, j] * VarY[i, j] * Dyy[j, 1]
         if j > 0:
-            V[i, j] = V[i, j] + ResultE[i, j - 1] * 0.5 * VarY[i, j] * Dyy[j, 0]
+            V[i, j] = V[i, j] + 0.5 * ResultE[i, j - 1] * VarY[i, j] * Dyy[j, 0]
         if j < numY - 1:
-            V[i, j] = V[i, j] + ResultE[i, j + 1] * 0.5 * VarY[i, j] * Dyy[j, 2]
+            V[i, j] = V[i, j] + 0.5 * ResultE[i, j + 1] * VarY[i, j] * Dyy[j, 2]
         U[j, i] = U[j, i] + V[i, j]
 
     # implicit x
     for j in dace.map[0:numY]:
-        for i in range(numX):
+        for i in dace.map[0:numX]:
             a[j, i] = -0.25 * VarX[j, i] * Dxx[i, 0]
             b[j, i] = dtInv - 0.25 * VarX[j, i] * Dxx[i, 1]
             c[j, i] = -0.25 * VarX[j, i] * Dxx[i, 2]
@@ -236,7 +236,7 @@ def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], 
 
     # implicit y
     for i in dace.map[0:numX]:
-        for j in range(numY):
+        for j in dace.map[0:numY]:
             a[i, j] = -0.25 * VarY[i, j] * Dyy[j, 0]
             b[i, j] = dtInv - 0.25 * VarY[i, j] * Dyy[j, 1]
             c[i, j] = -0.25 * VarY[i, j] * Dyy[j, 2]
@@ -270,27 +270,6 @@ def value_dace(strike: float, alpha: float, beta: float, nu: float,
     return res
 
 
-# @dace.program
-# def LocVolCalib_dace(s0: float, alpha: float, beta: float, nu: float, t: float,
-#                      a: dace.float64[outer, numXY, numXY], b: dace.float64[outer, numXY, numXY], c: dace.float64[outer, numXY, numXY],
-#                      X: dace.float64[numX], Y: dace.float64[numY], Time: dace.float64[numT],
-#                      U: dace.float64[outer, numY, numX], V: dace.float64[outer, numX, numY],
-#                      Dx: dace.float64[numX, 3], Dxx: dace.float64[numX, 3],
-#                      MuX: dace.float64[outer, numY, numX], VarX: dace.float64[outer, numY, numX],
-#                      Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3],
-#                      MuY: dace.float64[outer, numX, numY], VarY: dace.float64[outer, numX, numY],
-#                      ResultE: dace.float64[outer, numX, numY], result: dace.float64[outer]):
-    
-#     indX, indY = initGrid_dace(s0, alpha, nu, t, X, Y, Time)
-#     initOperator_dace(X, Dx, Dxx)
-#     initOperator_dace(Y, Dy, Dyy)
-#     for io in dace.map[0:outer]:
-#         strike = 0.001 * dace.float64(io)
-#         result[io] = value_dace(strike, alpha, beta, nu, a[io], b[io], c[io], X, Y, Time,
-#                                 U[io], V[io], Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io],
-#                                 ResultE[io], xidx=indX, yidx=indY)
-
-
 @dace.program
 def LocVolCalib_dace(s0: float, alpha: float, beta: float, nu: float, t: float,
                      a: dace.float64[outer, numXY, numXY], b: dace.float64[outer, numXY, numXY], c: dace.float64[outer, numXY, numXY],
@@ -305,22 +284,43 @@ def LocVolCalib_dace(s0: float, alpha: float, beta: float, nu: float, t: float,
     indX, indY = initGrid_dace(s0, alpha, nu, t, X, Y, Time)
     initOperator_dace(X, Dx, Dxx)
     initOperator_dace(Y, Dy, Dyy)
-
     for io in dace.map[0:outer]:
         strike = 0.001 * dace.float64(io)
-        setPayoff_dace(strike, X, ResultE[io])
+        result[io] = value_dace(strike, alpha, beta, nu, a[io], b[io], c[io], X, Y, Time,
+                                U[io], V[io], Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io],
+                                ResultE[io], xidx=indX, yidx=indY)
 
-    for it in range(numT - 2, -1, -1):
-        for io in dace.map[0:outer]:
-            updateParams_dace(alpha, beta, nu, X, Y, Time, MuX[io], VarX[io], MuY[io], VarY[io], g=it)
-            rollback_dace(a[io], b[io], c[io], Time, U[io], V[io],
-                          Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io], ResultE[io], gidx=it)
-    result[:] = ResultE[:, indX, indY]
+
+# @dace.program
+# def LocVolCalib_dace(s0: float, alpha: float, beta: float, nu: float, t: float,
+#                      a: dace.float64[outer, numXY, numXY], b: dace.float64[outer, numXY, numXY], c: dace.float64[outer, numXY, numXY],
+#                      X: dace.float64[numX], Y: dace.float64[numY], Time: dace.float64[numT],
+#                      U: dace.float64[outer, numY, numX], V: dace.float64[outer, numX, numY],
+#                      Dx: dace.float64[numX, 3], Dxx: dace.float64[numX, 3],
+#                      MuX: dace.float64[outer, numY, numX], VarX: dace.float64[outer, numY, numX],
+#                      Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3],
+#                      MuY: dace.float64[outer, numX, numY], VarY: dace.float64[outer, numX, numY],
+#                      ResultE: dace.float64[outer, numX, numY], result: dace.float64[outer]):
+    
+#     indX, indY = initGrid_dace(s0, alpha, nu, t, X, Y, Time)
+#     initOperator_dace(X, Dx, Dxx)
+#     initOperator_dace(Y, Dy, Dyy)
+
+#     for io in dace.map[0:outer]:
+#         strike = 0.001 * dace.float64(io)
+#         setPayoff_dace(strike, X, ResultE[io])
+
+#     for it in range(numT - 2, -1, -1):
+#         for io in dace.map[0:outer]:
+#             updateParams_dace(alpha, beta, nu, X, Y, Time, MuX[io], VarX[io], MuY[io], VarY[io], g=it)
+#             rollback_dace(a[io], b[io], c[io], Time, U[io], V[io],
+#                           Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io], ResultE[io], gidx=it)
+#     result[:] = ResultE[:, indX, indY]
 
 
 if __name__ == "__main__":
 
-    sdfg = LocVolCalib_dace.to_sdfg()
+    sdfg = LocVolCalib_dace.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.CPU)
     func = sdfg.compile()
@@ -351,6 +351,10 @@ if __name__ == "__main__":
     ResultE = np.ndarray((outer, numX, numY)).astype(np.float64)
 
     result = np.ndarray(outer).astype(np.float64)
+
+    idx, idy = initGrid_dace(s0, alpha, nu, t, X, Y, Time)
+    print(idx, idy)
+
 
     func(s0=s0, alpha=alpha, beta=beta, nu=nu, t=t,
          a=a, b=b, c=c, X=X, Y=Y, Time=Time,
