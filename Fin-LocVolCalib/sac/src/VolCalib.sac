@@ -196,9 +196,9 @@ REAL value(REAL strike, int indX, int indY,
   
     /* implicit x */
     U_vec = reshape([NUM_Y / VEC, VEC, NUM_X], U);
-    VarX1_vec = reshape([NUM_Y / VEC, VEC], VarX1);
-    U_vec = {[j] -> implicit_x(VarX1_vec[j], VarX2, Dxx, dtInv, U_vec[j])};
-    U = reshape([NUM_Y, NUM_X], U_vec);
+    VarX1_vec = reshape([NUM_X / VEC, VEC], VarX1);
+    U = {[j] -> implicit_x(VarX1_vec[j], VarX2, Dxx, dtInv, U_vec[j])};
+    U = reshape([NUM_Y, NUM_X], U);
   
     /* implicit y */
     ResultE = {[i] -> implicit_y(VarY[i], Dyy, dtInv,
