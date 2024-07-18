@@ -720,11 +720,7 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp, combo=None
         szj = m1[j] * m2[j] * m3[j]
         r_sub_k = numpy.reshape(r[ir[k]:ir[k] + szk], (m3[k], m2[k], m1[k]))
         r_sub_j = numpy.reshape(r[ir[j]:ir[j] + szj], (m3[j], m2[j], m1[j]))
-        if timeron:
-            c_timers.timer_start(T_RPRJ3)
         rprj3(r=r_sub_k, s=r_sub_j, n0i=m3[k], n0j=m2[k], n0k=m1[k], n1i=m3[j], n1j=m3[j], n1k=m3[j])
-        if timeron:
-            c_timers.timer_stop(T_RPRJ3)
 
     k2 = lb
     # --------------------------------------------------------------------
@@ -734,11 +730,8 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp, combo=None
     r_sub_p = numpy.reshape(r[ir[k2]:ir[k2] + szk], (m3[k2], m2[k2], m1[k2]))
     u_sub_p = numpy.reshape(u[ir[k2]:ir[k2] + szk], (m3[k2], m2[k2], m1[k2]))
     u_sub_p[:] = 0.0
-    if timeron:
-        c_timers.timer_start(T_PSINV)
+    cupy.cuda.runtime.deviceSynchronize()
     psinv(r=r_sub_p, u=u_sub_p, c=c, n0i=m3[k2], n0j=m2[k2], n0k=m1[k2])
-    if timeron:
-        c_timers.timer_stop(T_PSINV)
 
     for k in range(lb + 1, lt - 1 + 1):
         j = k - 1
@@ -751,30 +744,20 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp, combo=None
         # prolongate from level k-1  to k
         # -------------------------------------------------------------------
         u_sub_k[:] = 0.0
-        # print(f"{k}, {m3[k]}, {m3[j]}")
+        cupy.cuda.runtime.deviceSynchronize()
         if combo is not None:
             combo(z=u_sub_j, u=u_sub_k, v=r_sub_k, r=r_sub_k, a=a, c=c,
                   n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=m3[k], n1j=m2[k], n1k=m1[k])
         else:
-            if timeron:
-                c_timers.timer_start(T_INTERP)
             interp(z=u_sub_j, u=u_sub_k, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=m3[k], n1j=m2[k], n1k=m1[k])
-            if timeron:
-                c_timers.timer_stop(T_INTERP)
-                c_timers.timer_start(T_RESID)
             # --------------------------------------------------------------------
             # compute residual for level k
             # --------------------------------------------------------------------
             resid(u=u_sub_k, v=r_sub_k, r=r_sub_k, a=a, n0i=m3[k], n0j=m2[k], n0k=m1[k])
-            if timeron:
-                c_timers.timer_stop(T_RESID)
-                c_timers.timer_start(T_PSINV)
             # --------------------------------------------------------------------
             # apply smoother
             # --------------------------------------------------------------------
             psinv(r=r_sub_k, u=u_sub_k, c=c, n0i=m3[k], n0j=m2[k], n0k=m1[k])
-            if timeron:
-                c_timers.timer_stop(T_PSINV)
 
     j = lt - 1
     k2 = lt
@@ -788,20 +771,9 @@ def mg3P_dace(u, v, r, a, c, n1, n2, n3, resid, rprj3, psinv, interp, combo=None
         combo(z=u_sub_j, u=my_u, v=my_v, r=my_r, a=a, c=c,
               n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=n3, n1j=n2, n1k=n1)
     else:
-        if timeron:
-            c_timers.timer_start(T_INTERP)
         interp(z=u_sub_j, u=my_u, n0i=m3[j], n0j=m2[j], n0k=m1[j], n1i=n3, n1j=n2, n1k=n1)
-        if timeron:
-            c_timers.timer_stop(T_INTERP)
-            c_timers.timer_start(T_RESID)
         resid(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-        if timeron:
-            c_timers.timer_stop(T_RESID)
-            c_timers.timer_start(T_PSINV)
         psinv(r=my_r, u=my_u, c=c, n0i=n3, n0j=n2, n0k=n1)
-        if timeron:
-            c_timers.timer_stop(T_PSINV)
-
 
 
 #static void showall(void* pointer_z, int n1, int n2, int n3){
@@ -986,9 +958,11 @@ def norm2u3_dace(r: dace.float64[n0i, n0j, n0k], dn: dace.int32):
     # dace.reduce(lambda a, b: max(a, b), t1, rnmu)
     # rnm2 = numpy.sqrt(s / dn)
 
-    s, rnmu = 0.0, 0.0
-    dace.reduce(lambda a, b: a + b, r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1], s)
-    dace.reduce(lambda a, b: max(a, b), numpy.abs(r[1:-1, 1:-1, 1:-1]), rnmu)
+    # s, rnmu = 0.0, 0.0
+    # dace.reduce(lambda a, b: a + b, r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1], s)
+    # dace.reduce(lambda a, b: max(a, b), numpy.abs(r[1:-1, 1:-1, 1:-1]), rnmu)
+    s = dace.reduce(lambda a, b: a + b, r[1:-1, 1:-1, 1:-1] * r[1:-1, 1:-1, 1:-1], identity=0.0)
+    rnmu = dace.reduce(lambda a, b: max(a, b), numpy.abs(r[1:-1, 1:-1, 1:-1]), identity=0.0)
     rnm2 = numpy.sqrt(s / dn)
 
     return rnm2, rnmu
@@ -1164,15 +1138,20 @@ def zran3(pointer_z, n1, n2, n3, nx, ny, k):
     # ---------------------------------------------------------------------
     # each processor looks for twenty candidates
     # ---------------------------------------------------------------------
-    for i in range(MM):
-        ten[1][i] = 0.0
-        j1[1][i] = 0
-        j2[1][i] = 0
-        j3[1][i] = 0
-        ten[0][i] = 1.0
-        j1[0][i] = 0
-        j2[0][i] = 0
-        j3[0][i] = 0
+    # for i in range(MM):
+    #     ten[1][i] = 0.0
+    #     j1[1][i] = 0
+    #     j2[1][i] = 0
+    #     j3[1][i] = 0
+    #     ten[0][i] = 1.0
+    #     j1[0][i] = 0
+    #     j2[0][i] = 0
+    #     j3[0][i] = 0
+    ten[0][:MM] = 1.0
+    ten[1][:MM] = 0.0
+    j1[:][:MM] = 0
+    j2[:][:MM] = 0
+    j3[:][:MM] = 0
 
     for i3 in range(1, n3 - 1):
         for i2 in range(1, n2 - 1):
@@ -1227,10 +1206,11 @@ def zran3(pointer_z, n1, n2, n3, nx, ny, k):
     m1 = 0
     m0 = 0
 
-    for i3 in range(n3):
-        for i2 in range(n2):
-            for i1 in range(n1):
-                z[(i3 * n2 + i2) * n1 + i1] = 0.0  #z[i3][i2][i1] = 0.0
+    # for i3 in range(n3):
+    #     for i2 in range(n2):
+    #         for i1 in range(n1):
+    #             z[(i3 * n2 + i2) * n1 + i1] = 0.0  #z[i3][i2][i1] = 0.0
+    z[:n1 * n2 * n3] = 0.0
 
     for i in range(MM - 1, m0 - 1, -1):
         #z[jg[0][i][3]][jg[0][i][2]][jg[0][i][1]] = -1.0
@@ -1253,10 +1233,11 @@ def zero3(pointer_z, n1, n2, n3):
     #double (*z)[n2][n1] = (double (*)[n2][n1])pointer_z;
     z = pointer_z
 
-    for i3 in range(n3):
-        for i2 in range(n2):
-            for i1 in range(n1):
-                z[(i3 * n2 + i2) * n1 + i1] = 0.0
+    # for i3 in range(n3):
+    #     for i2 in range(n2):
+    #         for i1 in range(n1):
+    #             z[(i3 * n2 + i2) * n1 + i1] = 0.0
+    z[:n1*n2*n3] = 0.0
 
 
 #END zero3()
@@ -1316,6 +1297,11 @@ def setup(k, nx, ny, nz, m1, m2, m3, ir):
 
 
 def main(framework: str):
+
+    import time
+
+    runtime = -time.perf_counter()
+
     global nx, ny, nz, m1, m2, m3, ir
     global u, v, r
     global debug_vec
@@ -1370,12 +1356,18 @@ def main(framework: str):
         # sdfg.apply_transformations([Vectorization], options={'vector_len': 2})
         return sdfg.compile()
     
-    def compile_program_gpu(prog: dace.program):
-        sdfg = prog.to_sdfg(simplify=True)
-        auto_optimize(sdfg, dace.DeviceType.GPU, gpu_global=True)
+    def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True):
+        sdfg = prog.to_sdfg(simplify=False)
+        sdfg.simplify()
+        auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_gpu_storage=True)
         return sdfg.compile()
     
     combo_func = None
+
+    runtime += time.perf_counter()
+    print(" Initialization time: %f seconds" % runtime)
+
+    runtime = -time.perf_counter()
 
     if framework == 'dace_cpu':
         print("Compiling DaCe versions")
@@ -1383,13 +1375,14 @@ def main(framework: str):
         rprj3_func = compile_program_cpu(rprj3_dace)
         psinv_func = compile_program_cpu(psinv_dace)
         interp_func = compile_program_cpu(interp_dace, use_stencil_tiling=False)
-        # combo_func = compile_program_cpu(combo_dace)
+        combo_func = compile_program_cpu(combo_dace, use_stencil_tiling=False)
         # sdfg = interp_dace.to_sdfg(simplify=True)  # Issue with persistent z1, z2, z3
         # interp_func = sdfg.compile()
         # sdfg = norm2u3_dace.to_sdfg(simplify=True)
         # auto_optimize(sdfg, dace.DeviceType.CPU)
         # sdfg.simplify()
         # auto_optimize(sdfg, dace.DeviceType.CPU)
+        # norm2u3_func = compile_program_cpu(norm2u3_dace)
         sdfg = norm2u3_dace.to_sdfg(simplify=True)
         sdfg.apply_transformations_repeated([MapReduceFusion])
         tile_wcrs(sdfg, validate_all=True)
@@ -1400,12 +1393,18 @@ def main(framework: str):
         resid_func = compile_program_gpu(resid_dace)
         rprj3_func = compile_program_gpu(rprj3_dace)
         psinv_func = compile_program_gpu(psinv_dace)
-        # interp_func = compile_program_gpu(interp_dace)
-        sdfg = interp_dace.to_sdfg(simplify=True)
-        gpu_storage(sdfg)
-        sdfg.apply_gpu_transformations()
-        interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
+        combo_func = compile_program_gpu(combo_dace, use_stencil_tiling=False)
+        interp_func = compile_program_gpu(interp_dace, use_stencil_tiling=False)
+        # sdfg = interp_dace.to_sdfg(simplify=True)
+        # gpu_storage(sdfg)
+        # sdfg.apply_gpu_transformations()
+        # interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
         norm2u3_func = compile_program_gpu(norm2u3_dace)
+    
+    runtime += time.perf_counter()
+    print(" Compilation time: %f seconds" % runtime)
+
+    runtime = -time.perf_counter()
 
     # ---------------------------------------------------------------------
     # use these for debug info:
@@ -1444,6 +1443,11 @@ def main(framework: str):
     k = lt
 
     n1, n2, n3, is1, is2, is3, ie1, ie2, ie3 = setup(k, nx, ny, nz, m1, m2, m3, ir)
+
+    runtime += time.perf_counter()
+    print(" Setup time: %f seconds" % runtime)
+
+    runtime = -time.perf_counter()
 
     # zero3(u, n1, n2, n3)
     # zran3(v, n1, n2, n3, nx[lt], ny[lt], k)
@@ -1513,6 +1517,7 @@ def main(framework: str):
             dr = cupy.asarray(r)
             a = cupy.asarray(a)
             c = cupy.asarray(c)
+            cupy.cuda.runtime.deviceSynchronize()
         else:
             du = u
             dv = v
@@ -1527,18 +1532,37 @@ def main(framework: str):
         # one iteration for startup
         # ---------------------------------------------------------------------
         mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+        cupy.cuda.runtime.deviceSynchronize()
         resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        cupy.cuda.runtime.deviceSynchronize()
         norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        cupy.cuda.runtime.deviceSynchronize()
+
+        runtime += time.perf_counter()
+        print(" Warm-up time: %f seconds" % runtime)
+
+        runtime = -time.perf_counter()
     
         n1, n2, n3, is1, is2, is3, ie1, ie2, ie3 = setup(k, nx, ny, nz, m1, m2, m3, ir)
 
+        runtime += time.perf_counter()
+        print(" Setup time: %f seconds" % runtime)
+
+        runtime = -time.perf_counter()
+
         zero3(u, n1, n2, n3)
+        runtime += time.perf_counter()
+        print(" Zero time: %f seconds" % runtime)
+        runtime = -time.perf_counter()
         zran3(v, n1, n2, n3, nx[lt], ny[lt], k)
+        runtime += time.perf_counter()
+        print(" Zran time: %f seconds" % runtime)
 
         if framework == "dace_gpu":
             du[:] = cupy.asarray(u)
             dv[:] = cupy.asarray(v)
             dr[:] = cupy.asarray(r)
+            cupy.cuda.runtime.deviceSynchronize()
 
         c_timers.timer_stop(T_INIT)
         tinit = c_timers.timer_read(T_INIT)
@@ -1551,10 +1575,12 @@ def main(framework: str):
         if timeron:
             c_timers.timer_start(T_RESID2)
         resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
         if timeron:
             c_timers.timer_stop(T_RESID2)
         rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
         for it in range(1, nit+1):
             if it == 1 or it == nit or (it%5) == 0:
@@ -1562,16 +1588,19 @@ def main(framework: str):
             if timeron:
                 c_timers.timer_start(T_MG3P)
             mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+            # cupy.cuda.runtime.deviceSynchronize()
             if timeron:
                 c_timers.timer_stop(T_MG3P)
             if timeron:
                 c_timers.timer_start(T_RESID2)
             resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+            # cupy.cuda.runtime.deviceSynchronize()
 
             if timeron:
                 c_timers.timer_stop(T_RESID2)
 
         rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
         c_timers.timer_stop(T_BENCH)
         t = c_timers.timer_read(T_BENCH)
