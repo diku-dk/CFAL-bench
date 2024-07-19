@@ -1,8 +1,8 @@
 #!/bin/sh
 
-nvcc -O3 -o s2mm_cuda s2mm_cuda_valid.cu -diag-suppress=1650
+nvcc -O3 -o flash_attention_gpu flash_attention_gpu.cu -diag-suppress=1650
 
-./s2mm_cuda 64 16384
-./s2mm_cuda 64 32768
-./s2mm_cuda 128  8192
-./s2mm_cuda 128 16384
+./flash_attention_gpu 64 16384
+./flash_attention_gpu 64 32768
+./flash_attention_gpu 128  8192
+./flash_attention_gpu 128 16384
