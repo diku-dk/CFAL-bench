@@ -140,20 +140,19 @@ int main() {
         strikes[i] = 0.001*i;
     }
 
+    // dry runs
+    whole_loop_nest( res, strikes, s0, t, alpha, nu, beta );
+
     unsigned long int elapsed = 0;
     { // Instrumenting Runtime and Validation!
       // since OpenCL compilation or device querring hangs 
       // for a long time many time we measure the runtime of 
       // the time-series only in both CPU and GPU cases!
 
-//        struct timeval t_start, t_end, t_diff;
-//        gettimeofday(&t_start, NULL);
-
-        elapsed = whole_loop_nest( res, strikes, s0, t, alpha, nu, beta );
-
-//        gettimeofday(&t_end, NULL);
-//        timeval_subtract(&t_diff, &t_end, &t_start);
-//        elapsed = t_diff.tv_sec*1e6+t_diff.tv_usec;
+        const int NUM_RUNS = 5;
+        for(int i=0; i<NUM_RUNS; i++)
+            elapsed += whole_loop_nest( res, strikes, s0, t, alpha, nu, beta );
+        elapsed = elapsed / NUM_RUNS;
     }
     
     { // validation & write back of the result

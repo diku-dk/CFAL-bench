@@ -1,7 +1,7 @@
 #ifndef   CONSTANTS_H
 #define   CONSTANTS_H
 
-#define WITH_FLOATS 1
+#define WITH_FLOATS 0
 
 #define REAL3_CT 4
 #define TRANSPOSE_UV 1

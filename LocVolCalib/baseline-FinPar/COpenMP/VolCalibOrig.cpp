@@ -55,7 +55,7 @@ void updateParams(  const unsigned numX,
             //MuY(i,j)  = 0.0;
             //VarY(i,j) = nu*nu;
             MuY(i,j) = alpha / (i * numY + j + 1);                          // (***Fix***)
-            VarY(i,j) = (nu * nu) / (i * numY + j + 1);
+            VarY(i,j) = (nu * nu) / (i * numY + j + 1);                     // (***Fix***)
         }
 }
 
@@ -414,20 +414,22 @@ int main() {
         }
 
         { // Computation Kernel
+            const int NUM_RUNS = 5;
             gettimeofday(&t_start, NULL);
 
-
-            run_CPUkernel(  OUTER_LOOP_COUNT, numX, numY, numT, 
-                            s0, t, alpha, nu, beta, Ps, 
-                            a, b,  c, Time,  U, V, 
-                            X, Dx, Dxx, MuX, VarX,
-                            Y, Dy, Dyy, MuY, VarY,
-                            ResultE, result
-                         );
+            for(int i=0; i<NUM_RUNS; i++) {
+                run_CPUkernel(  OUTER_LOOP_COUNT, numX, numY, numT, 
+                                s0, t, alpha, nu, beta, Ps, 
+                                a, b,  c, Time,  U, V, 
+                                X, Dx, Dxx, MuX, VarX,
+                                Y, Dy, Dyy, MuY, VarY,
+                                ResultE, result
+                             );
+            }
 
             gettimeofday(&t_end, NULL);
             timeval_subtract(&t_diff, &t_end, &t_start);
-            elapsed = t_diff.tv_sec*1e6+t_diff.tv_usec;
+            elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / NUM_RUNS;
         }
 
         { // Global Array Deallocation

@@ -849,9 +849,13 @@ void nordea_kernel_x (
     { 
         // I. second loop
         REAL3 myres_elem;
-        REAL  cur_myMu  = 0.0;
-        REAL  cur_myVar = ro_scals->nu; 
-        cur_myVar *= cur_myVar;
+        
+        // REAL  cur_myMu  = 0.0;
+        // REAL  cur_myVar = ro_scals->nu; 
+        // cur_myVar *= cur_myVar;
+        REAL  cur_myMu  = ro_scals->alpha / (ind_x * ro_scals->NUM_Y + ind_y + 1); // (***Fix***)
+        REAL  cur_myVar = (ro_scals->nu * ro_scals->nu) / 
+                            (ind_x * ro_scals->NUM_Y + ind_y + 1);       // (***Fix***)
 
         myres_elem = (REAL3)( myDyy[ind_y<<2], myDyy[(ind_y<<2)+1], myDyy[(ind_y<<2)+2] );
         myD_elem   = (REAL3)( myDy [ind_y<<2], myDy [(ind_y<<2)+1], myDy [(ind_y<<2)+2] );
@@ -873,11 +877,14 @@ void nordea_kernel_x (
 #endif
 
         // II. first loop 
-        cur_myMu  = 0.0; // X
-        cur_myVar = exp( 2 * ( ro_scals->beta*log(myX[ind_x]) + 
-                                 myY[ind_y] - 0.5f*cur_myVar*ro_scals->timeline_i  // cur_myVar == nu*nu
+        {
+            // cur_myMu  = 0.0; // X
+            cur_myMu  = ((double)0.0000001) / ((ro_scals->NUM_X + ind_x) * (ro_scals->NUM_Y + ind_y)); // (***Fix***)
+            cur_myVar = exp( 2 * ( ro_scals->beta*log(myX[ind_x]) + 
+                                     myY[ind_y] - 0.5f*cur_myVar*ro_scals->timeline_i
                              )
-                       ); 
+                           );
+        }
         // CACHING ASSUMES ALL ELEMENTS IN X DIMENSION fit in the LOCALGROUP!
         cache_tmp[get_local_id(0)] = res_arr[ get_global_id(0) ];
 
@@ -986,9 +993,12 @@ void nordea_kernel_y (
                             ind_y * ro_scals->NUM_X + ind_x ];
 #endif
 
-        REAL tmp = 0.0;
-        REAL cur_myVarY = ro_scals->nu; cur_myVarY *= cur_myVarY*0.5f; //nu*nu;
-        
+        //REAL tmp = 0.0;
+        //REAL cur_myVarY = ro_scals->nu; cur_myVarY *= cur_myVarY*0.5f; //nu*nu;
+        REAL tmp = ro_scals->alpha / (ind_x * ro_scals->NUM_Y + ind_y + 1); // (***Fix***)
+        REAL cur_myVarY = (ro_scals->nu * ro_scals->nu * 0.5) /
+                            (ind_x * ro_scals->NUM_Y + ind_y + 1);          // (***Fix***)
+
         myDy_elem  = 0.0f - 0.5f*( tmp*myDy[ind_y] + cur_myVarY*myDyy[ind_y] );
  
         // a[ind] = myDy_elem.x; c[ind] = myDy_elem.z;   

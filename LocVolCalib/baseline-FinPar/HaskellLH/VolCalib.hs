@@ -68,8 +68,8 @@ initGrid s0 alpha nu t num_x num_y num_t =
         stdY = 10.0 * nu         * (sqrt t)
         (dx, dy) = (stdX / fromIntegral num_x, stdY / fromIntegral num_y)
         (myXindex, myYindex) = (truncate (s0 / dx), num_y `div` 2)
-        myX = map (\i -> (fromIntegral i) * dx - (fromIntegral myXindex) * dx + s0      ) [0..num_x-1]
-        myY = map (\i -> (fromIntegral i) * dy - (fromIntegral myYindex) * dy + logAlpha) [0..num_y-1]
+        myX = map (\i -> let ii = fromIntegral i in ii * log(ii+1) * dx - (fromIntegral myXindex) * dx + s0      ) [0..num_x-1]
+        myY = map (\i -> let ii = fromIntegral i in ii * log(ii+1) * dy - (fromIntegral myYindex) * dy + logAlpha) [0..num_y-1]
     in  (myXindex, myYindex, myX, myY, myTimeline)
 
 ---------------------------------------------
@@ -148,20 +148,27 @@ doLoop i bound loop_ros myResult  =
 ---------------------------------------------
 ---------------------------------------------
 
+tabulate_2d :: Int -> Int -> (Int -> Int -> Double) -> [[Double]]
+tabulate_2d m n f = map (\ i -> map (\j -> f i j) [0..n-1]) [0..m-1]
+
 updateParams :: [Double] -> [Double] -> [Double] -> Int -> Double -> Double -> Double 
              -> ( [[Double]], [[Double]], [[Double]], [[Double]] )
 updateParams myX myY myTimeline g alpha beta nu =
     let ( numX, numY ) = ( length myX, length myY )    
-        myMuY  = replicate numX (replicate numY (0.0*alpha))
-        myVarY = replicate numX (replicate numY (nu*nu)    )
-        myMuX  = replicate numY (replicate numX 0.0        )
+        -- myMuY  = replicate numX (replicate numY (0.0*alpha))
+        -- myVarY = replicate numX (replicate numY (nu*nu)    )
+        -- myMuX  = replicate numY (replicate numX 0.0        )
+        myMuY  = tabulate_2d numX numY (\ x y -> alpha / (fromIntegral (x*numY + y + 1)))
+        myVarY = tabulate_2d numX numY (\ x y -> let r = fromIntegral (x*numY + y + 1) in (nu*nu) / r )
+        myMuX  = tabulate_2d numY numX (\ y x -> 0.0000001 / fromIntegral ( (numX+x)*(numY+y) ) )
+
         myVarX = map (\ yj -> 
                         map (\ xi -> 
                                 let b = beta * log(xi) + yj
                                     c = 0.5 * nu * nu * (myTimeline !! g)
                                 in  exp (2.0 * (b - c))
-			                ) myX
-		             ) myY
+                            ) myX
+                     ) myY
     in  ( myMuX, myVarX, myMuY, myVarY )
 
 ------------------------------------------------------

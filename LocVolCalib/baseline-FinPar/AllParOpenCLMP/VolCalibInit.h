@@ -21,21 +21,27 @@ void initGrid(
     for( i=0; i<numT; ++i )
         myTimeline[i] = t*i/(numT-1);
 
-    const REAL stdX = 20*alpha*s0*sqrt(t);
+    const REAL stdX = 20.0*alpha*s0*sqrt(t);
     const REAL dx   = stdX/numX;
     myXindex = static_cast<unsigned int>(s0/dx);
 
-    for( i=0; i<numX; ++i )
-        myX[i] = i*dx - myXindex*dx + s0;
+    for( i=0; i<numX; ++i ) {
+        REAL ii = (REAL) i;
+        myX[i] = ii*log(ii+1)*dx - myXindex*dx + s0;          // (***Fix***)
+        //myX[i] = i*dx - myXindex*dx + s0;
+    }
 
-    const REAL stdY     = 10*nu*sqrt(t);
+    const REAL stdY     = 10.0*nu*sqrt(t);
     const REAL dy       = stdY/numY;
     const REAL logAlpha = log(alpha);
 
-    myYindex = numY/2;
+    myYindex = static_cast<unsigned int>(numY/2);
 
-    for( i=0; i<numY; ++i )
-        myY[i] = i*dy - myYindex*dy + logAlpha;
+    for( i=0; i<numY; ++i ) {
+        REAL ii = (REAL) i;
+        myY[i] = ii*log(ii+1)*dy - myYindex*dy + logAlpha;    // (***Fix***)
+        //myY[i] = i*dy - myYindex*dy + logAlpha;
+    }
 }
 
 void initOperator(

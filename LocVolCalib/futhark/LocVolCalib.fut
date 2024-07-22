@@ -17,8 +17,16 @@ def initGrid (s0: f64) (alpha: f64) (nu: f64) (t: f64) (numX: i64) (numY: i64) (
                       10.0 * nu         * f64.sqrt(t))
   let (dx, dy) = (stdX / f64.i64 numX, stdY / f64.i64 numY)
   let (myXindex, myYindex) = (i32.f64 (s0 / dx), i32.i64 numY / 2)
-  let myX = tabulate numX (\i -> f64.i64 i * dx - f64.i32 myXindex * dx + s0)
-  let myY = tabulate numY (\i -> f64.i64 i * dy - f64.i32 myYindex * dy + logAlpha)
+
+  ----------------------------------
+  ------   redundancy fix 1   ------
+  ----------------------------------
+  -- let myX = tabulate numX (\i -> f64.i64 i * dx - f64.i32 myXindex * dx + s0)
+  -- let myY = tabulate numY (\i -> f64.i64 i * dy - f64.i32 myYindex * dy + logAlpha)
+  let myX = tabulate numX (\i0 -> let i = f64.i64 i0 in i * f64.log (i+1) * dx - f64.i32 myXindex * dx + s0)
+  let myY = tabulate numY (\i0 -> let i = f64.i64 i0 in i * f64.log (i+1) * dy - f64.i32 myYindex * dy + logAlpha)
+
+
   in (myXindex, myYindex, myX, myY, myTimeline)
 
 -- make the innermost dimension of the result of size 4 instead of 3?
@@ -46,11 +54,18 @@ def setPayoff [numX][numY] (strike: f64, myX: [numX]f64, _myY: [numY]f64): *[num
 -- Returns new myMuX, myVarX, myMuY, myVarY.
 def updateParams [numX][numY]
                 (myX:  [numX]f64, myY: [numY]f64,
-                 tnow: f64, _alpha: f64, beta: f64, nu: f64)
+                 tnow: f64, alpha: f64, beta: f64, nu: f64)
   : ([numY][numX]f64, [numY][numX]f64, [numX][numY]f64, [numX][numY]f64) =
-  let myMuY  = replicate numX (replicate numY 0.0)
-  let myVarY = replicate numX (replicate numY (nu*nu))
-  let myMuX  = replicate numY (replicate numX 0.0)
+  ----------------------------------
+  ------   redundancy fix 2   ------
+  ----------------------------------
+  -- let myMuY  = replicate numX (replicate numY 0.0)
+  -- let myVarY = replicate numX (replicate numY (nu*nu))
+  -- let myMuX  = replicate numY (replicate numX 0.0)
+  let myMuY  = tabulate_2d numX numY (\ x y -> alpha / (f64.i64 (x*numY + y + 1)))
+  let myVarY = tabulate_2d numX numY (\ x y -> let r = f64.i64 (x*numY + y + 1) in (nu*nu) / r )
+  let myMuX  = tabulate_2d numY numX (\ y x -> 0.0000001 / f64.i64 ( (numX+x)*(numY+y) ) )
+
   let myVarX = map (\yj ->
                       map (\xi -> f64.exp(2.0*(beta*f64.log(xi) + yj - 0.5*nu*nu*tnow)))
                           myX)

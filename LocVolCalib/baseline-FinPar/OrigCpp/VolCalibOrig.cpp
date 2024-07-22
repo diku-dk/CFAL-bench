@@ -45,14 +45,18 @@ void updateParams(  const unsigned numX,
 
     for(unsigned j=0; j<numY; ++j) 
         for(unsigned i=0; i<numX; ++i) {
-           	MuX(j,i)  = 0.0;
+           	//MuX(j,i)  = 0.0;
+            MuX(j,i)  = ((double)0.0000001) / ((numX + i) * (numY + j));    // (***Fix***)
             VarX(j,i) = exp(2*(beta*log(X[i]) + Y[j] - 0.5*nu*nu*Time[g]));
         }
 
     for(unsigned i=0; i<numX; ++i)
         for(unsigned j=0; j<numY; ++j) {
-            MuY(i,j)  = 0.0;
-            VarY(i,j) = nu*nu;
+            //MuY(i,j)  = 0.0;
+            //VarY(i,j) = nu*nu;
+            MuY(i,j) = alpha / (i * numY + j + 1);       // (***Fix***)
+            VarY(i,j) = (nu * nu) / (i * numY + j + 1);  // (***Fix***)
+
         }
 }
 
@@ -80,16 +84,22 @@ void initGrid(  const unsigned numX,
     const REAL dx = stdX/numX;
     indX = static_cast<unsigned>(s0/dx);
 
-    for(unsigned i=0; i<numX; ++i)
-        X[i] = i*dx - indX*dx + s0;
+    for(unsigned i=0; i<numX; ++i) {
+        REAL ii = (REAL) i;
+        X[i] = ii*log(ii+1)*dx - indX*dx + s0;       // (***Fix***)
+        //X[i] = i*dx - indX*dx + s0;
+    }
 
     const REAL stdY = 10*nu*sqrt(t);
     const REAL dy = stdY/numY;
     const REAL logAlpha = log(alpha);
     indY = static_cast<unsigned>(numY/2);
 
-    for(unsigned i=0; i<numY; ++i)
-        Y[i] = i*dy - indY*dy + logAlpha;
+    for(unsigned i=0; i<numY; ++i) {
+        REAL ii = (REAL) i;
+        Y[i] = ii*log(ii+1)*dy - indY*dy + logAlpha;  // (***Fix***)
+        //Y[i] = i*dy - indY*dy + logAlpha;
+    }
 }
 
 /**

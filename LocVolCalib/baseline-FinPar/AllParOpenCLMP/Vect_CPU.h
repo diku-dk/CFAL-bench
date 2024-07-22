@@ -40,8 +40,13 @@ void iteration_expanded_CPU (
                 unsigned int mul3;
                 REAL tmp; //tmp2, tmp1 = dtInv*res_arr[j*NUM_X+i]; //
 
-                REAL cur_myMuX  = 0.0, cur_myMuY = 0.0;
-                REAL cur_myVarY = nu*nu;
+                //REAL cur_myMuX  = 0.0;
+                //REAL cur_myMuY = 0.0;
+                //REAL cur_myVarY = nu*nu;
+                REAL cur_myMuX  = ((double)0.0000001) / ((NUM_X + i) * (NUM_Y + j));    // (***Fix***)
+                REAL cur_myMuY = alpha / (i * NUM_Y + j + 1);                       // (***Fix***)
+                REAL cur_myVarY = (nu * nu) / (i * NUM_Y + j + 1);                  // (***Fix***)
+
                 REAL cur_myVarX = exp(2*(beta*log(myX[i]) + myY[j] - 0.5*nu*nu*myTimeline[time_ind]));
 
                 // second loop
@@ -111,8 +116,11 @@ void iteration_expanded_CPU (
                 const unsigned int ind = k*NUM_X*NUM_Y + i*NUM_Y + j;
 
                 unsigned int mul3j = REAL3_CT*j;
-                double cur_myMuY = 0.0;
-                double cur_myVarY = nu*nu;
+                //REAL cur_myMuY = 0.0;
+                //REAL cur_myVarY = nu*nu;
+                REAL cur_myMuY = alpha / (i * NUM_Y + j + 1);                       // (***Fix***)
+                REAL cur_myVarY = (nu * nu) / (i * NUM_Y + j + 1);                  // (***Fix***)
+
 
                 a[ind] =        - 0.5*(cur_myMuY*myDy[mul3j  ] + 0.5*cur_myVarY*myDyy[mul3j  ]); // a[i*NUM_Y+j] = ...
                 b[ind] =  dtInv - 0.5*(cur_myMuY*myDy[mul3j+1] + 0.5*cur_myVarY*myDyy[mul3j+1]); // b[i*NUM_Y+j] = ...
