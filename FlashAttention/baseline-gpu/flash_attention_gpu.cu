@@ -407,6 +407,8 @@ int main(int argc, char **argv)
 
     cnt = N * d;
 
+    fprintf(stderr, "\nN=%d, d=%d\n", N, d);
+
     fprintf(stderr, "Initializing data...");
 
     if ((Q = (float*)calloc(cnt, sizeof(float))) == NULL)
@@ -496,8 +498,8 @@ int main(int argc, char **argv)
          * exp(S[i]) / sum_j exp(P[i, j] - max(P[i]))
          * is N * (N + 4N) = 5 N^2 flops, but exp is more expensive. */
         fprintf(stderr,
-                "Compute rate: %lf Gflops/s, runtime: %lf\n",
-                4.0 * d * N * N / dur / 1e9,  dur*1e6);
+                "Compute rate: %lf Gflops/s, runtime: %lf ms\n",
+                4.0 * d * N * N / dur / 1e9,  dur*1e3);
 
         cudaFree(Q_d);
         cudaFree(K_d);

@@ -166,15 +166,14 @@ def value_dace(Time: dace.float64[num_t],
         U[:] += V
         
         for ix in range(1, num_x - 1):
-            U[ix, :, :] = U[ix, :, :] - beta1[it, ix, :, np.newaxis] * U[ix - 1, :, :]
+            U[ix, :, :] -= beta1[it, ix, :, np.newaxis] * U[ix - 1, :, :]
         U[num_x - 1, :, :] = U[num_x - 1, :, :] / b1[it, num_x - 1, :, np.newaxis]
         for ix in range(num_x - 2, -1, -1):
             U[ix, :, :] = (U[ix, :, :] - c1[it, ix, :, np.newaxis] * U[ix + 1, :, :]) / b1[it, ix, :, np.newaxis]
 
         ResultE[:, 0, :] = dtInv * U[:, 0, :] - 0.5 * V[:, 0, :]
         for iy in range(1, num_y - 1):
-            ResultE[:, iy, :] = dtInv * U[:, iy, :] - 0.5 * V[:, iy, :]
-            ResultE[:, iy, :] = ResultE[:, iy, :] - beta2[it, iy, :, np.newaxis] * ResultE[:, iy - 1, :]
+            ResultE[:, iy, :] = dtInv * U[:, iy, :] - 0.5 * V[:, iy, :] - beta2[it, iy, :, np.newaxis] * ResultE[:, iy - 1, :]
         ResultE[:, num_y - 1, :] = (dtInv * U[:, num_y - 1, :] - 0.5 * V[:, num_y - 1, :]) / b2[it, num_y - 1, :, np.newaxis]
         for iy in range(num_y - 2, -1, -1):
             ResultE[:, iy, :] = (ResultE[:, iy, :] - c2[it, iy, :, np.newaxis] * ResultE[:, iy + 1, :]) / b2[it, iy, :, np.newaxis]
