@@ -28,8 +28,9 @@ initGrid (T7 s0 alpha nu t numX numY numT) =
       dy = stdY / toFloating numY
       myXindex = floor (s0 / dx)
       myYindex = numY `div` 2
-      myX = generate (I1 numX) (\(I1 i) -> toFloating i * dx - toFloating myXindex * dx + s0)
-      myY = generate (I1 numY) (\(I1 i) -> toFloating i * dy - toFloating myYindex * dy + logAlpha)
+      -- redundancy fix 1
+      myX = generate (I1 numX) (\(I1 i0) -> let i = toFloating i0 in i * log(i+1) * dx - toFloating myXindex * dx + s0)
+      myY = generate (I1 numY) (\(I1 i0) -> let i = toFloating i0 in i * log(i+1) * dy - toFloating myYindex * dy + logAlpha)
   in (T2 myXindex myYindex, T3 myX myY myTimeline)
 
 -- TODO: individually match on less and more, and just fromJust in all known cases
@@ -59,14 +60,15 @@ setPayoff (T3 strikes myX myY) =
               (replicate (Z_ ::. numS ::. numY ::. All_) myX)
               (replicate (Z_ ::. All_ ::. numY ::. numX) strikes)
 
-updateParams :: Acc (Vector Float, Vector Float) -> Exp (Three Float) -> Acc (Matrix Float, Matrix Float, Matrix Float, Matrix Float)
-updateParams (T2 myX myY) (T3 tnow beta nu) = T4 myMuX myVarX myMuY myVarY
+updateParams :: Acc (Vector Float, Vector Float) -> Exp (Float, Float,Float,Float) -> Acc (Matrix Float, Matrix Float, Matrix Float, Matrix Float)
+updateParams (T2 myX myY) (T4 tnow alpha beta nu) = T4 myMuX myVarX myMuY myVarY
   where
     I1 numX = shape myX
     I1 numY = shape myY
-    myMuY  = generate (Z_ ::. numX ::. numY) (const 0)
-    myVarY = generate (Z_ ::. numX ::. numY) (const $ nu*nu)
-    myMuX  = generate (Z_ ::. numY ::. numX) (const 0)
+    -- redundancy fix 2
+    myMuY  = generate (Z_ ::. numX ::. numY) (\(I2 x y) -> alpha / toFloating (x*numY+y+1))
+    myVarY = generate (Z_ ::. numX ::. numY) (\(I2 x y) -> let r = toFloating (x*numY+y+1) in (nu*nu)/r)
+    myMuX  = generate (Z_ ::. numY ::. numX) (\(I2 y x) -> 0.0000001 / toFloating ( (numX+x)*(numY+y) ))
     myVarX = zipWith (\y x -> exp (2*(beta * log x + y - 0.5*nu*nu*tnow)))
               (replicate (Z_ ::. All_ ::. numX) myY)
               (replicate (Z_ ::. numY ::. All_) myX)
@@ -212,7 +214,7 @@ value (T8 numX numY numT s0 t alpha nu beta) strikes =
                 myTimeline_neighbours
                 myResult1
                 (\(T2 tnow tnext) res ->
-                  let T4 mux varx muy vary = updateParams (T2 myX myY) (T3 tnow beta nu)
+                  let T4 mux varx muy vary = updateParams (T2 myX myY) (T4 tnow alpha beta nu)
                   in rollback (T2 tnow tnext) (T9 res mux myDx myDxx varx muy myDy myDyy vary))
   in slice final (Z_ ::. All_ ::. myYindex ::. myXindex)
 
