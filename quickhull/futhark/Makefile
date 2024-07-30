@@ -5,4 +5,4 @@ data/%:
 	python3 input2fut.py < ../input/$* > $@
 
 BENCHMARK=quickhull
-include ../../futhark.mk
+include ../../util/futhark.mk
