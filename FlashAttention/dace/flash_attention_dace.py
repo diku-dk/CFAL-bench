@@ -1,6 +1,7 @@
 import argparse
 import dace
 import numpy as np
+import os
 import time
 
 from dace.transformation.auto.auto_optimize import auto_optimize
@@ -223,6 +224,8 @@ if __name__ == "__main__":
     finish = time.perf_counter()
     print("Flash attention DaCe mean execution: ", (finish - start) / 10, "seconds")
 
+    os.environ["MKL_NUM_THREADS"] = "1"
+
     sdfg = flash_attention_dace_2.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.CPU)
@@ -240,6 +243,7 @@ if __name__ == "__main__":
         sdfg = flash_attention_dace_2.to_sdfg(simplify=False)
         sdfg.simplify()
         auto_optimize(sdfg, dace.DeviceType.GPU, use_gpu_storage=True)
+        func = sdfg.compile()
         O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
         O_dace = cp.asnumpy(O_dev)
         print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
