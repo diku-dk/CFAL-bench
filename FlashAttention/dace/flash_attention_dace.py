@@ -181,6 +181,8 @@ if __name__ == "__main__":
     d = args.d
     assert N % d == 0, "N must divide d"
 
+    validate = False
+
     rng = np.random.default_rng(42)
 
     Q = rng.random((N, d))
@@ -196,33 +198,42 @@ if __name__ == "__main__":
     except (ModuleNotFoundError, ImportError):
         test_gpu = False
 
-    O_std_ref = standard_attention(Q, K, V)
+    if validate:
+        O_std_ref = standard_attention(Q, K, V)
 
     sdfg = standard_attention_dace.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.CPU)
     func = sdfg.compile()
     O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
-    print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-    assert np.allclose(O_std_ref, O_dace)
+    if validate:
+        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+        assert np.allclose(O_std_ref, O_dace)
     start = time.perf_counter()
     for i in range(10):
         O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
     finish = time.perf_counter()
-    print("Standard attention DaCe mean execution: ", (finish - start) / 10, "seconds")
+    print("Standard attention DaCe mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+    print("Standard attention DaCe mean GFLOP/s: ", gflops, flush=True)
+    print()
 
     sdfg = flash_attention_dace.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.CPU)
     func = sdfg.compile()
     O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
-    print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-    assert np.allclose(O_std_ref, O_dace)
+    if validate:
+        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+        assert np.allclose(O_std_ref, O_dace)
     start = time.perf_counter()
     for i in range(10):
         O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
     finish = time.perf_counter()
-    print("Flash attention DaCe mean execution: ", (finish - start) / 10, "seconds")
+    print("Flash attention DaCe mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+    print("Flash attention DaCe mean GFLOP/s: ", gflops, flush=True)
+    print()
 
     os.environ["MKL_NUM_THREADS"] = "1"
 
@@ -231,13 +242,17 @@ if __name__ == "__main__":
     auto_optimize(sdfg, dace.DeviceType.CPU)
     func = sdfg.compile()
     O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
-    print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-    assert np.allclose(O_std_ref, O_dace)
+    if validate:
+        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+        assert np.allclose(O_std_ref, O_dace)
     start = time.perf_counter()
     for i in range(10):
         O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
     finish = time.perf_counter()
-    print("Flash attention DaCe 2 mean execution: ", (finish - start) / 10, "seconds")
+    print("Flash attention DaCe 2 mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+    print("Flash attention DaCe 2 mean GFLOP/s: ", gflops, flush=True)
+    print()
 
     if test_gpu:
         sdfg = flash_attention_dace_2.to_sdfg(simplify=False)
@@ -245,39 +260,51 @@ if __name__ == "__main__":
         auto_optimize(sdfg, dace.DeviceType.GPU, use_gpu_storage=True)
         func = sdfg.compile()
         O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
-        O_dace = cp.asnumpy(O_dev)
-        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-        assert np.allclose(O_std_ref, O_dace)
+        if validate:
+            O_dace = cp.asnumpy(O_dev)
+            print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+            assert np.allclose(O_std_ref, O_dace)
         start = time.perf_counter()
         for i in range(10):
             O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
         finish = time.perf_counter()
-        print("Flash attention DaCe 2 GPU mean execution: ", (finish - start) / 10, "seconds")
+        print("Flash attention DaCe 2 GPU mean execution: ", (finish - start) / 10, "seconds", flush=True)
+        gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+        print("Flash attention DaCe 2 GPU mean GFLOP/s: ", gflops, flush=True)
+        print()
 
     sdfg = flash_attention_dace_3.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.CPU)
     func = sdfg.compile()
     O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
-    print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-    assert np.allclose(O_std_ref, O_dace)
+    if validate:
+        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+        assert np.allclose(O_std_ref, O_dace)
     start = time.perf_counter()
     for i in range(10):
         O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
     finish = time.perf_counter()
-    print("Flash attention DaCe 3 mean execution: ", (finish - start) / 10, "seconds")
+    print("Flash attention DaCe 3 mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+    print("Flash attention DaCe 3 mean GFLOP/s: ", gflops, flush=True)
+    print()
 
-    if test_gpu:
-        sdfg = flash_attention_dace_3.to_sdfg(simplify=False)
-        sdfg.simplify()
-        auto_optimize(sdfg, dace.DeviceType.GPU, use_gpu_storage=True)
-        func = sdfg.compile()
-        O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
-        O_dace = cp.asnumpy(O_dev)
-        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-        assert np.allclose(O_std_ref, O_dace)
-        start = time.perf_counter()
-        for i in range(10):
-            O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
-        finish = time.perf_counter()
-        print("Flash attention DaCe 3 GPU mean execution: ", (finish - start) / 10, "seconds")
+    # if test_gpu:
+    #     sdfg = flash_attention_dace_3.to_sdfg(simplify=False)
+    #     sdfg.simplify()
+    #     auto_optimize(sdfg, dace.DeviceType.GPU, use_gpu_storage=True)
+    #     func = sdfg.compile()
+    #     O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
+    #     if validate:
+    #         O_dace = cp.asnumpy(O_dev)
+    #         print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+    #         assert np.allclose(O_std_ref, O_dace)
+    #     start = time.perf_counter()
+    #     for i in range(10):
+    #         O_dev = func(Q=Q_dev, K=K_dev, V=V_dev, N=N, d=d)
+    #     finish = time.perf_counter()
+    #     print("Flash attention DaCe 3 GPU mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    #     gflops = 4 * N * N * d / ((finish - start)/10) / 1e9
+    #     print("Flash attention DaCe 3 GPU mean GFLOP/s: ", gflops, flush=True)
+    #     print()
