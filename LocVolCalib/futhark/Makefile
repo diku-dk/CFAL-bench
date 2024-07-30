@@ -1,2 +1,2 @@
 BENCHMARK=LocVolCalib
-include ../../futhark.mk
+include ../../util/futhark.mk

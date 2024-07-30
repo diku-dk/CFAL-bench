@@ -1,2 +1,2 @@
 BENCHMARK=nbody
-include ../../futhark.mk
+include ../../util/futhark.mk

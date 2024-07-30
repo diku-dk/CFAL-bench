@@ -1,2 +1,2 @@
 BENCHMARK=mg
-include ../../futhark.mk
+include ../../util/futhark.mk
