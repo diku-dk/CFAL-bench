@@ -172,8 +172,8 @@ def flash_attention_dace_3(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="(Flash)Attention")
-    parser.add_argument("--N", type=int, default=8192)
-    parser.add_argument("--d", type=int, default=64)
+    parser.add_argument("-N", type=int, default=8192)
+    parser.add_argument("-d", type=int, default=64)
     args = parser.parse_args()
 
     N = args.N
