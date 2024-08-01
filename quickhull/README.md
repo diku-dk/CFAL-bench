@@ -55,5 +55,12 @@ readable by the SAC Stdlib functions.
 
 ## GPU baseline
 
-[Here is a GPU implementation that uses C# as host language](https://github.com/timiskhakov/ComputingTheConvexHullOnGpu)
+A quick google search found:
+
+[Here is a GPU implementation that uses C# as host language](https://github.com/timiskhakov/ComputingTheConvexHullOnGpu) and that corresponds to [this blog](https://timiskhakov.github.io/posts/computing-the-convex-hull-on-gpu)
+
+[Here is another one that uses C++ as host language](https://github.com/nan0S/quickhull-gpu)
+
+Are they suitable to use as GPU baseline?
+Can we find any of those?
 
