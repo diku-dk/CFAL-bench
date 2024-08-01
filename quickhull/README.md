@@ -52,3 +52,8 @@ convert them afterwards.
 
 The `points2sac` program can convert the binary data files into a file
 readable by the SAC Stdlib functions.
+
+## GPU baseline
+
+[Here is a GPU implementation that uses C# as host language](https://github.com/timiskhakov/ComputingTheConvexHullOnGpu)
+

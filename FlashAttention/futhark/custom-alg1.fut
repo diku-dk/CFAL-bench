@@ -44,23 +44,7 @@ def FlashAttention [d][m]
 def L2 [n] (xs: [n]real) : real =
     map (\x -> x*x) xs
     |> reduce (+) 0.0
-    |> real_sqrt
-  
---
--- entry: main1
--- input { 65536i64 512i64 }
--- output { 0f32 }
-
-entry main1 (m:i64) (d:i64) : real =
-  let Q = replicate d 1.0 |> replicate d |> replicate m
-  let K = replicate d 1.0 |> replicate (m*d)
-  let V = replicate d 1.0 |> replicate (m*d)
-  
-  let O = FlashAttention Q K V  |> opaque
-   
-  let O_flat = flatten (flatten O)
-  in ( L2 O_flat ) - (real_sqrt (real_i64 (m*d*d)))
-  
+    |> real_sqrt  
   
 entry mk_input (m:i64) (d:i64) : ([m][d][d]real, [m*d][d]real, [m*d][d]real) =
   let Q = replicate d 1.0 |> replicate d |> replicate m
@@ -70,17 +54,28 @@ entry mk_input (m:i64) (d:i64) : ([m][d][d]real, [m*d][d]real, [m*d][d]real) =
 
 --
 -- ==
--- entry: main2
+-- entry: main
+-- "Class 256-64" script input { (mk_input 256i64 64i64) }
+-- "Class 512-64" script input { (mk_input 512i64 64i64) }
+-- "Class 64-128" script input { (mk_input 64i64 128i64) }
+-- "Class 128-128" script input { (mk_input 128i64 128i64) }
+entry main [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) =
+  FlashAttention Q K V
+
+
+--
+-- ==
+-- entry: validate
+-- "Class 256-64" script input { (mk_input 256i64 64i64) }
+-- output { 0.0f32 }
+-- "Class 512-64" script input { (mk_input 512i64 64i64) }
+-- output { 0.0f32 }
 -- "Class 64-128" script input { (mk_input 64i64 128i64) }
 -- output { 0.0f32 }
 -- "Class 128-128" script input { (mk_input 128i64 128i64) }
 -- output { 0.0f32 }
--- "Class 128-64" script input { (mk_input 128i64 64i64) }
--- output { 0.0f32 }
--- "Class 256-64" script input { (mk_input 256i64 64i64) }
--- output { 0.0f32 }
 
-entry main2 [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) : real =
+entry validate [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) : real =
   let O = FlashAttention Q K V
   let O_flat = flatten (flatten O)
   in ( L2 O_flat ) - (real_sqrt (real_i64 (m*d*d)))
