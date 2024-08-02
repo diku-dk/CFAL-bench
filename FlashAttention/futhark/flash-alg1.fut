@@ -87,8 +87,9 @@ def FlashAttention [S][T][R][E]  -- N = S * T * R & d = E * T * R
            let kk = i64.i32 k
            let Ksh = replicate (T*R+1) 0.0f32
                    |> replicate (T*R)
-           let K' = K[block_col*B : block_col*B + T*R][kk*T*R : kk*T*R + T*R]
+           let K' = K[block_col*B : block_col*B + T*R][kk*B : kk*B + T*R]
            let Ksh[:,0:T*R] = K'
+           -- let Ksh = K'
            let ff (Preg: [R][R]f32) (tidd: i64) =
                 let tid = i32.i64 tidd
                 let tidy = tid / TT
@@ -124,6 +125,7 @@ def FlashAttention [S][T][R][E]  -- N = S * T * R & d = E * T * R
                   |> replicate (T*R)
            let V' = V[block_col*B : block_col*B + T*R][kk*T*R : kk*T*R + T*R]
            let Vsh[:,0:T*R] = V'
+           -- let Vsh = V'
            -- do update to O
            let fOupd (Omat: [R][R]f32) (tidd: i64) =
              let tid = i32.i64 tidd
@@ -162,50 +164,39 @@ def FlashAttention [S][T][R][E]  -- N = S * T * R & d = E * T * R
 --  in O'
 
 
-entry mk_input (m:i64) (d:i64) : ([m][d][d]f32, [m*d][d]f32, [m*d][d]f32) =
-  let Q = replicate d 1.0 |> replicate d |> replicate m
-  let K = replicate d 1.0 |> replicate (m*d)
-  let V = replicate d 1.0 |> replicate (m*d)
+entry mk_input (s:i64) (e:i64) (b:i64) : ([s][b][e*b]f32, [s*b][e*b]f32, [s*b][e*b]f32) =
+  -- (n, d) = (s*b, e*b)
+  let Q = replicate (e*b) 1.0 |> replicate b |> replicate s
+  let K = replicate (e*b) 1.0 |> replicate (s*b)
+  let V = replicate (e*b) 1.0 |> replicate (s*b)
   in  (Q, K, V)
 
 --
 -- ==
 -- entry: main16
--- "Class 256-16"  script input { (mk_input 256i64 16i64) }
--- "Class 512-16"  script input { (mk_input 512i64 16i64) }
-entry main16 [N] (Q: [N][1*8*2]f32) (K: [N][1*8*2]f32) (V: [N][1*8*2]f32) =
-  let S = N / (8*2)
-  let K = K :> [S*8*2][1*8*2]f32
-  let V = V :> [S*8*2][1*8*2]f32
-  let Q = unflatten (Q :> [S*(8*2)][1*8*2]f32)
-  in  #[incremental_flattening(only_intra)]
-      map (FlashAttention K V) Q
+-- "Class 256-16"  script input { (mk_input 256i64 1i64 16i64) }
+-- "Class 512-16"  script input { (mk_input 512i64 1i64 16i64) }
+entry main16 [S] (Q: [S][8*2][1*8*2]f32) (K: [S*8*2][1*8*2]f32) (V: [S*8*2][1*8*2]f32) =
+  #[incremental_flattening(only_intra)]
+  map (FlashAttention K V) Q
 
 
 --
 -- ==
 -- entry: main64
--- "Class 256-64"  script input { (mk_input 256i64 64i64) }
--- "Class 512-64"  script input { (mk_input 512i64 64i64) }
-entry main64 [N] (Q: [N][1*16*4]f32) (K: [N][1*16*4]f32) (V: [N][1*16*4]f32) =
-  let S = N / (16*4)
-  let K = K :> [S*16*4][1*16*4]f32
-  let V = V :> [S*16*4][1*16*4]f32
-  let Q = unflatten (Q :> [S*(16*4)][1*16*4]f32)
-  in  #[incremental_flattening(only_intra)]
-      map (FlashAttention K V) Q
+-- "Class 256-64"  script input { (mk_input 256i64 1i64 64i64) }
+-- "Class 512-64"  script input { (mk_input 512i64 1i64 64i64) }
+entry main64 [S] (Q: [S][16*4][1*16*4]f32) (K: [S*16*4][1*16*4]f32) (V: [S*16*4][1*16*4]f32) =
+  #[incremental_flattening(only_intra)]
+  map (FlashAttention K V) Q
 
 --
 -- ==
 -- entry: main128
--- "Class 64-128"  script input { (mk_input 64i64 128i64) }
--- "Class 128-128" script input { (mk_input 128i64 128i64) }
-entry main128 [N] (Q: [N][2*16*4]f32) (K: [N][2*16*4]f32) (V: [N][2*16*4]f32) =
-  let S = N / (16*4)
-  let K = K :> [S*16*4][2*16*4]f32
-  let V = V :> [S*16*4][2*16*4]f32
-  let Q = unflatten (Q :> [S*(16*4)][2*16*4]f32)
-  in  #[incremental_flattening(only_intra)]
-      map (FlashAttention K V) Q
+-- "Class 64-128"  script input { (mk_input 128i64 2i64 64i64) }
+-- "Class 128-128" script input { (mk_input 256i64 2i64 64i64) }
+entry main128 [S] (Q: [S][16*4][2*16*4]f32) (K: [S*16*4][2*16*4]f32) (V: [S*16*4][2*16*4]f32) =
+  #[incremental_flattening(only_intra)]
+  map (FlashAttention K V) Q
 
 
