@@ -39,7 +39,11 @@ initGrid()
   stdX = 20.0 * ALPHA * S0 * sqrt(T);
   dx = stdX / tor(NUM_X);
   indX = toi(S0 / dx);
-  X = {[i] -> tor(i) * dx - tor(indX) * dx + S0 | [i] < [NUM_X]};
+
+  X = {[i] -> tor(i) * log(tor(i + 1)) * dx - tor(indX) * dx + S0 
+            | [i] < [NUM_X]};
+
+
   Dx = {[i] -> [tor(0), 1.0 / (X[1] - X[0]), 1.0 / (X[1] - X[0])]
             | [0] <= [i] < [1];
         [i] -> [-dxu(X, i) / dxl(X, i) / (dxl(X, i) + dxu(X, i)),
@@ -60,7 +64,7 @@ initGrid()
   dy = stdY / tor(NUM_Y);
   indY = NUM_Y / 2;
 
-  Y = {[i] -> tor(i) * dy - tor(indY) * dy + log(ALPHA)
+  Y = {[i] -> tor(i) * log(tor(i + 1)) * dy - tor(indY) * dy + log(ALPHA)
             | [i] < [NUM_Y]};
   Dy = {[i] -> [tor(0), 1.0 / (Y[1] - Y[0]), 1.0 / (Y[1] - Y[0])]
             | [0] <= [i] < [1];
@@ -158,9 +162,13 @@ REAL value(REAL strike, int indX, int indY,
            REAL[NUM_X, 3] Dxx, REAL[NUM_Y, 3] Dyy, 
            REAL[NUM_X, 3] Dx, REAL[NUM_Y, 3] Dy)
 {
-  MuX = with {}: genarray([NUM_Y, NUM_X], tor(0));
-  MuY = with {}: genarray([NUM_X, NUM_Y], tor(0));
-  VarY = with {}: genarray([NUM_X, NUM_Y], NU * NU);
+  MuX = {[i, j] -> 0.0000001 / (tod(NUM_X + i) * tod(NUM_Y + j)) 
+                 | [i, j] < [NUM_Y, NUM_X]};
+  MuY = {[i, j] -> ALPHA / (tod(i) * tod(NUM_Y) + tod(j) + 1.0)
+                 | [i, j] < [NUM_X, NUM_Y]};
+
+  VarY = {[i, j] -> (NU * NU) / tod(i * NUM_Y + j + 1)
+                 | [i, j] <  [NUM_X, NUM_Y]};
 
   ResultE = {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
 
@@ -210,7 +218,7 @@ REAL value(REAL strike, int indX, int indY,
 
 int main()
 {
-  fprintf(stdout, "\n// SaC Volatility Calibration Benchmark:\n");
+  fprintf(stderr, "\n// SaC Volatility Calibration Benchmark:\n");
 
   itime = getInterval("time", 1);
   start(itime);
@@ -219,10 +227,15 @@ int main()
   result = {[i] -> value(tor(i) / 1000.0, indX, indY, X, Y, Dxx, Dyy, Dx, Dy)
                  | [i] < [OUTER]};
   end(itime);
-  print(result);
+
+    for (i = 0; i < OUTER; i++) {
+        fprintf(stderr, "%lf ", result[i]);
+    }
+    fprintf(stderr, "\n");
 
   time, unit = returnResultUnit(itime);
-  printf("This took %f%s.\n", time, unit);
+//  fprintf("This took %f%s.\n", time, unit);
+  printf("%lf\n", time);
 
   return 0;
 }
