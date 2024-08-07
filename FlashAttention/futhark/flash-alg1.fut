@@ -268,13 +268,12 @@ entry main64 [S] (Q0: [S][64][64]f32) (K0: [S][64][64]f32) (V0: [S][64][64]f32) 
   in ( L2 O_flat ) - ( f32.sqrt (f32.i64 (S*64*64)) )
 --  in  O
 
-
 --
 -- ==
 -- entry: main128
--- "Class 8192-64 "  script input { (mk_input 256i64 4i64 32i64) }
+-- "Class 8192-128 "  script input { (mk_input 256i64 4i64 32i64) }
 -- output { 0.0f32 }
--- "Class 16384-64"  script input { (mk_input 512i64 4i64 32i64) }
+-- "Class 16384-128"  script input { (mk_input 512i64 4i64 32i64) }
 -- output { 0.0f32 }
 
 entry main128 [S] (Q0: [S][32][128]f32) (K0: [S][32][128]f32) (V0: [S][32][128]f32) =

@@ -55,10 +55,10 @@ entry mk_input (m:i64) (d:i64) : ([m][d][d]real, [m*d][d]real, [m*d][d]real) =
 --
 -- ==
 -- entry: main
--- "Class 256-64" script input { (mk_input 256i64 64i64) }
--- "Class 512-64" script input { (mk_input 512i64 64i64) }
--- "Class 64-128" script input { (mk_input 64i64 128i64) }
--- "Class 128-128" script input { (mk_input 128i64 128i64) }
+-- "Class 16384-64 " script input { (mk_input 256i64 64i64) }
+-- "Class 32768-64 " script input { (mk_input 512i64 64i64) }
+-- "Class 8192-128 " script input { (mk_input 64i64 128i64) }
+-- "Class 16384-128" script input { (mk_input 128i64 128i64) }
 entry main [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) =
   FlashAttention Q K V
 
@@ -66,13 +66,13 @@ entry main [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) =
 --
 -- ==
 -- entry: validate
--- "Class 256-64" script input { (mk_input 256i64 64i64) }
+-- "Class 16384-64 " script input { (mk_input 256i64 64i64) }
 -- output { 0.0f32 }
--- "Class 512-64" script input { (mk_input 512i64 64i64) }
+-- "Class 32768-64 " script input { (mk_input 512i64 64i64) }
 -- output { 0.0f32 }
--- "Class 64-128" script input { (mk_input 64i64 128i64) }
+-- "Class 8192-128 " script input { (mk_input 64i64 128i64) }
 -- output { 0.0f32 }
--- "Class 128-128" script input { (mk_input 128i64 128i64) }
+-- "Class 16384-128" script input { (mk_input 128i64 128i64) }
 -- output { 0.0f32 }
 
 entry validate [m][d] (Q: [m][d][d]real) (K: [m*d][d]real) (V: [m*d][d]real) : real =
