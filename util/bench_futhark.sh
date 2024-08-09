@@ -24,6 +24,16 @@ export PATH=/vol/itt/data/cfal/team-futhark/bin/:$PATH
 
 time2flops="util/futhark-time2flops.py"
 
+make -C FlashAttention/futhark run_multicore
+make -C FlashAttention/futhark run_cuda
+
+echo "FlashAttention GPU GFLOP/s"
+$time2flops FlashAttention/futhark/custom-alg1-opt_cuda.json custom-alg1-opt.fut:validate \
+	    'Class 16384-64 ' 68.72 \
+	    'Class 32768-64 ' 274.88 \
+	    'Class 32768-64 ' 34.36 \
+	    'Class 16384-128' 127.44
+
 make -C MG/futhark run_multicore
 make -C MG/futhark run_cuda
 
