@@ -31,7 +31,7 @@ echo "FlashAttention GPU GFLOP/s"
 $time2flops FlashAttention/futhark/custom-alg1-opt_cuda.json custom-alg1-opt.fut:validate \
 	    'Class 16384-64 ' 68.72 \
 	    'Class 32768-64 ' 274.88 \
-	    'Class 32768-64 ' 34.36 \
+	    'Class 8192-128 ' 34.36 \
 	    'Class 16384-128' 127.44
 
 make -C MG/futhark run_multicore
