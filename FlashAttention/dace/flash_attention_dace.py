@@ -7,6 +7,9 @@ import time
 from dace.transformation.auto.auto_optimize import auto_optimize
 
 
+import warnings
+warnings.filterwarnings("ignore")
+
 def stable_softmax_vector(x):
     m = np.max(x)
     d = np.sum(np.exp(x - m))
@@ -209,6 +212,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="(Flash)Attention")
     parser.add_argument("-N", type=int, default=8192)
     parser.add_argument("-d", type=int, default=64)
+    parser.add_argument("-Ti", type=int, default=64) 
+    parser.add_argument("-Tj", type=int, default=64)
     args = parser.parse_args()
 
     N = args.N
@@ -313,25 +318,27 @@ if __name__ == "__main__":
     num_threads = int(os.environ.get("OMP_NUM_THREADS", "1"))
     print("OMP_NUM_THREADS:", num_threads)
 
-    Ti_val = N // num_threads
-    Tj_val = N // num_threads
+    # Ti_val = N // num_threads
+    # Tj_val = N // num_threads
+    Ti_val = args.Ti
+    Tj_val = args.Tj
 
-    sdfg = flash_attention_dace_3.to_sdfg(simplify=False)
-    sdfg.simplify()
-    auto_optimize(sdfg, dace.DeviceType.CPU)
-    func = sdfg.compile()
-    O_dace = func(Q=Q, K=K, V=V, N=N, d=d, Ti=Ti_val, Tj=Tj_val)
-    if validate:
-        print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
-        assert np.allclose(O_std_ref, O_dace)
-    start = time.perf_counter()
-    for i in range(10):
-        O_dace = func(Q=Q, K=K, V=V, N=N, d=d, Ti=Ti_val, Tj=Tj_val)
-    finish = time.perf_counter()
-    print("Flash attention DaCe 3 mean execution: ", (finish - start) / 10, "seconds", flush=True)
-    gflops = 4 * N * N * (d + 5) / ((finish - start)/10) / 1e9
-    print("Flash attention DaCe 3 mean GFLOP/s: ", gflops, flush=True)
-    print()
+    # sdfg = flash_attention_dace_3.to_sdfg(simplify=False)
+    # sdfg.simplify()
+    # auto_optimize(sdfg, dace.DeviceType.CPU)
+    # func = sdfg.compile()
+    # O_dace = func(Q=Q, K=K, V=V, N=N, d=d, Ti=Ti_val, Tj=Tj_val)
+    # if validate:
+    #     print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
+    #     assert np.allclose(O_std_ref, O_dace)
+    # start = time.perf_counter()
+    # for i in range(10):
+    #     O_dace = func(Q=Q, K=K, V=V, N=N, d=d, Ti=Ti_val, Tj=Tj_val)
+    # finish = time.perf_counter()
+    # print("Flash attention DaCe 3 mean execution: ", (finish - start) / 10, "seconds", flush=True)
+    # gflops = 4 * N * N * (d + 5) / ((finish - start)/10) / 1e9
+    # print("Flash attention DaCe 3 mean GFLOP/s: ", gflops, flush=True)
+    # print()
 
     sdfg = flash_attention_dace_4.to_sdfg(simplify=False)
     sdfg.simplify()
