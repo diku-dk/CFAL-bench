@@ -8,47 +8,42 @@ def real_sqrt = f32.sqrt
 def imap xs f = map f xs
 def imap3 xs ys zs f = map3 f xs ys zs
 
-def chunk : i64 = 256
+def chunk : i64 = 1024
+def fseq  : i64 = 32
 
-def copy2shr (n:i64) (as: [n*8]real) : *[n*8]real = #[unsafe]
-  let g = i32.i64 n
-  let cp2sh (i : i32) = #[unsafe]
-        ( ( as[i],       as[  g + i], as[2*g + i], as[3*g + i] )
-        , ( as[4*g + i], as[5*g + i], as[6*g + i], as[7*g + i] )
-        )
+def copy2shr [n] (xs: [n]real) : *[n]real = #[unsafe]
+  let xs' = copy xs
+  in  if opaque(true) then xs'
+      else xs' with [0] = 0f32
 
-  let (as14, as58) = iota n |> map i32.i64 |> map cp2sh |> unzip
-  let (a1s, a2s, a3s, a4s) = unzip4 as14
-  let (a5s, a6s, a7s, a8s) = unzip4 as58
-  let ash = a1s ++ a2s ++ a3s ++ a4s ++
-            a5s ++ a6s ++ a7s ++ a8s |> opaque
-  in  ash :> [n*8]real
-
-def reduceEffSeq8 [n] (f: real -> real) (bop: real->real->real) (ne: real) (xs: [n*8]real) : real = #[unsafe]
-  let g = i32.i64 n
-  let redPerThd (tid: i32) =
-    loop r = ne for i < 8i32 do
-      f (#[unsafe] xs[i*g + tid]) |> bop r
+def reduceEffSeq [g] (f: real -> real) (bop: real->real->real) (ne: real) (xs: [g*fseq]real) : real = #[unsafe]
+  let redPerThd (tid: i64) =
+    loop r = ne for i < fseq do
+        bop r (f xs[i*g + tid])
   -- per-thread reduce
-  let rs = map (redPerThd <-< i32.i64) (iota n)
+  let rs = map redPerThd (iota g)
   in  reduce_comm bop ne rs
 
 def softmaxChunkML (q: i64) (xs_glb: [q*chunk]real) : (real,real) = #[unsafe]
-  let g = chunk/8 in
+  let g = chunk/fseq in
   loop (mi_old : real, li_old : real) = (real_lowest, 0.0)
   for i < q do
-    let xs = copy2shr g ( xs_glb[i*chunk: i*chunk + chunk] :> [g*8]real )
-    let xs = xs :> [g*8]real
+    let xs = copy2shr ( xs_glb[i*chunk: i*chunk + chunk] :> [g*fseq]real )
+    let xs = xs
     --
-    let maxi = reduceEffSeq8 id real_max real_lowest xs
-    let sumi = reduceEffSeq8 (\x -> real_exp (x - maxi)) (+) 0.0 xs
+    let maxi = reduceEffSeq id real_max real_lowest xs
+    let sumi = reduceEffSeq (\x -> real_exp (x - maxi)) (+) 0.0 xs
     --
     let mi_new = real_max mi_old maxi
-    let eij = f32.exp (maxi - mi_new)
+    let eij = real_exp (maxi - mi_new)
     let eli = li_old * (f32.exp (mi_old - mi_new))
     let li_new = eli + sumi * eij
-    --  
     in  (mi_new, li_new)
+    -- this saves one f32.exp operation:
+--    let exp_term = real_exp (mi_old - maxi)
+--    in  if mi_old < maxi
+--        then ( maxi,   li_old * exp_term + sumi )
+--        else ( mi_old, li_old + sumi / exp_term )  
 
 def softmaxOnline [m][n] (xss: [m][n]real) : [m][n]real = #[unsafe]
   let q = assert (n % chunk == 0) (n / chunk)
@@ -99,7 +94,6 @@ entry mk_input (m:i64) (d:i64) : ([m][d][d]real, [m*d][d]real, [m*d][d]real) =
   let V = replicate d 1.0 |> replicate (m*d)
   in  (Q, K, V)
 
-
 --
 -- ==
 -- entry: main64
@@ -109,7 +103,6 @@ entry mk_input (m:i64) (d:i64) : ([m][d][d]real, [m*d][d]real, [m*d][d]real) =
 entry main64 [m] (Q: [m][64][64]real) (K: [m*64][64]real) (V: [m*64][64]real) =
   FlashAttention Q K V
 
-
 --
 -- ==
 -- entry: main128
@@ -118,7 +111,6 @@ entry main64 [m] (Q: [m][64][64]real) (K: [m*64][64]real) (V: [m*64][64]real) =
 
 entry main128 [m] (Q: [m][128][128]real) (K: [m*128][128]real) (V: [m*128][128]real) =
   FlashAttention Q K V
-
 
 --
 -- ==
