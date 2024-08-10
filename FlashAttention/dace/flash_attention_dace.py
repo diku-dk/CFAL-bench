@@ -72,13 +72,13 @@ Ti, Tj = (dace.symbol(s) for s in ('Ti', 'Tj'))
 
 
 @dace.program
-def stable_softmax_dace(x: dace.float64[N, N]):
+def stable_softmax_dace(x: dace.float32[N, N]):
     e_x = np.exp(x - np.max(x, axis=1)[:, np.newaxis])
     return e_x / np.sum(e_x, axis=1)[:, np.newaxis]
 
 
 @dace.program
-def standard_attention_dace(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.float64[N, d]):
+def standard_attention_dace(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d]):
     S = Q @ K.T
     P = stable_softmax_dace(S)
     return P @ V
@@ -110,7 +110,7 @@ def flash_attention(Q, K, V):
 
 
 @dace.program
-def flash_attention_dace(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.float64[N, d]):
+def flash_attention_dace(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d]):
 
     S = Q @ K.T
 
@@ -130,7 +130,7 @@ def flash_attention_dace(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.f
 
 
 @dace.program
-def flash_attention_dace_2(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.float64[N, d]):
+def flash_attention_dace_2(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d]):
 
     m = np.full([N], -np.inf, Q.dtype)
     l = np.zeros([N], Q.dtype)
@@ -149,7 +149,7 @@ def flash_attention_dace_2(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace
 
 
 @dace.program
-def flash_attention_dace_3(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.float64[N, d]):
+def flash_attention_dace_3(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d]):
 
     m = np.full([N], -np.inf, Q.dtype)
     l = np.zeros([N], Q.dtype)
@@ -174,7 +174,7 @@ def flash_attention_dace_3(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace
 
 
 @dace.program
-def flash_attention_dace_4(Q: dace.float64[N, d], K: dace.float64[N, d], V: dace.float64[N, d], O: dace.float64[N, d]):
+def flash_attention_dace_4(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d], O: dace.float32[N, d]):
 
     # m = np.full([N], -np.inf, Q.dtype)
     # l = np.zeros([N], Q.dtype)
@@ -224,9 +224,9 @@ if __name__ == "__main__":
 
     rng = np.random.default_rng(42)
 
-    Q = rng.random((N, d))
-    K = rng.random((N, d))
-    V = rng.random((N, d))
+    Q = rng.random((N, d), dtype=np.float32)
+    K = rng.random((N, d), dtype=np.float32)
+    V = rng.random((N, d), dtype=np.float32)
 
     # try:
     #     import cupy as cp
