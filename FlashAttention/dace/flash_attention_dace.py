@@ -255,7 +255,7 @@ if __name__ == "__main__":
         O_dace = func(Q=Q, K=K, V=V, N=N, d=d)
     finish = time.perf_counter()
     print("Standard attention DaCe mean execution: ", (finish - start) / 10, "seconds", flush=True)
-    gflops = 4 * N * N * (d + 5) / ((finish - start)/10) / 1e9
+    gflops = N * N * (4 * d + 5) / ((finish - start)/10) / 1e9
     print("Standard attention DaCe mean GFLOP/s: ", gflops, flush=True)
     print()
 
