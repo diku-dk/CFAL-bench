@@ -98,7 +98,7 @@ int main()
   printf("L2 norm of output is %lf, should be %lf\n", 
               L2(O), Math::sqrt(tor(d * N)));
   printf("Compute rate: %f Gflops / %s\n", 
-        2d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
+        4d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
 
   return 0;
 }
