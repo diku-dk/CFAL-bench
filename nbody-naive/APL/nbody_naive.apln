@@ -1,16 +1,58 @@
 :Namespace nbody_naive
 
-⍝ calc←{{p v⊣p+←t×v←v+t×+/d×⍤2⊢m×[1]3*⍨÷.5*⍨1e¯9++⌿×⍨d←∘.-⍤1⍨p⊣p v←⍵}⍣k⊢⍵⊣k t m←⍺}
-calc←{{p v⊣p+←t×v←v+t×{+⌿d×[0]m×3*⍨÷.5*⍨1e¯9++/×⍨d←⍺-[1]⍵}⍤1 99⍨⊃p v←⍵}⍣k⊢⍵⊣k t m←⍺}
+⍝ N ∊ 1e3 1e4 1e5
+⍝ t ∊ 1e5 1e3 1e1
 
-Run←{K T N←3↑⍵,10 0.1 1000
-	⎕←'Iterations:',K,'Particles:',N
-	m←20×÷1+⍳N ⋄ v←N 3⍴0 ⋄ p←?N 3⍴0
-	start←24 60 60 1000⊥¯4↑⎕TS
-	p v←K T m calc p v
-	end←24 60 60 1000⊥¯4↑⎕TS
-	⎕←'Runtime: ',(⍕(end-start)÷1000),'secs'
-	1:shy←m p v
+⍝ calc←{{p v⊣p+←t×v←v+t×+/d×⍤2⊢m×[1]3*⍨÷.5*⍨1e¯9++⌿×⍨d←∘.-⍤1⍨p⊣p v←⍵}⍣k⊢⍵⊣k t m←⍺}
+⍝ calc←{k t m←⍺ ⋄ p v←⍵
+⍝ 	{p v←⍵
+⍝ 		p+←t×v←v+t×{+⌿d×[0]m×3*⍨÷.5*⍨1e¯9++/×⍨d←⍺-[1]⍵}⍤1 99⍨p
+⍝ 	p v}⍣k⊢p v
+⍝ }
+
+calc←{k←0⊃⍺ ⋄ t←1⊃⍺ ⋄ m←2⊃⍺ ⋄ N←≢m
+	{px←0⊃⍵ ⋄ py←1⊃⍵ ⋄ pz←2⊃⍵ ⋄ vx←3⊃⍵ ⋄ vy←4⊃⍵ ⋄ vz←5⊃⍵
+		ax←N⍴0 ⋄ ay←N⍴0 ⋄ az←N⍴0
+		_←{
+			x←⍵⊃px ⋄ y←⍵⊃py ⋄ z←⍵⊃pz
+			dx←px-x ⋄ dy←py-y ⋄ dz←pz-z
+			w←m[⍵]×3*⍨÷.5*⍨1e¯9+(dx×dx)+(dy×dy)+dz×dz
+			ax+←dx×w ⋄ ay+←dy×w ⋄ az+←dz×w
+		⍬}¨⍳N
+		px+←t×vx←vx+ax ⋄ py+←t×vy←vy+ay ⋄ pz+←t×vz←vz+az
+	px py pz vx vy vz}⍣k⊢⍵
 }
+
+m←⍬ ⋄ vx←⍬ ⋄ vy←⍬ ⋄ vz←⍬ ⋄ px←⍬ ⋄ py←⍬ ⋄ pz←⍬ ⋄ K←⍬ ⋄ T←⍬ ⋄ N←⍬
+
+init←{
+	K⊢←0⊃⍵ ⋄ T⊢←1⊃⍵ ⋄ N⊢←2⊃⍵
+	m⊢←20×÷1+⍳N
+	vx⊢←?N⍴0 ⋄ vy⊢←?N⍴0 ⋄ vz⊢←?N⍴0
+	px⊢←?N⍴0 ⋄ py⊢←?N⍴0 ⋄ pz⊢←?N⍴0
+	K T N
+}
+
+run←{pv←K T m calc px py pz vx vy vz}
+
+init 10 0.1 1000
+
+⎕←'Iterations: ',(⍕K),' Particles: ',⍕N
+ 
+⍞←'Generating data...'
+m←20×÷1+⍳N ⋄ v←N 3⍴0 ⋄ p←?N 3⍴0
+
+⍞←'Warming up...'
+pv←run⍬
+
+⍞←'Timing...'
+start←24 60 60 1000⊥¯4↑⎕TS
+pv←run⍬
+end←24 60 60 1000⊥¯4↑⎕TS
+
+⎕←'Done.'
+⎕←''
+
+⎕←'Runtime: ',(⍕(end-start)÷1000),'secs'
 
 :EndNamespace
