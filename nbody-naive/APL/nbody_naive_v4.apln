@@ -13,7 +13,7 @@ calc←{k←0⊃⍺ ⋄ t←1⊃⍺ ⋄ m←2⊃⍺ ⋄ bs←100⌈1000000÷≢m
 			w←÷((1e¯9+(dx×dx)+(dy×dy)+dz×dz)*.5)*3
 			vx+←(dx×w)+.×m[⍵] ⋄ vy+←(dy×w)+.×m[⍵] ⋄ vz+←(dz×w)+.×m[⍵]
 		⍵+bs}⍣(N÷bs)⊢⍳bs
-		px⊢←⌷px+t×vx ⋄ py⊢←⌷py+t×vy ⋄ pz⊢←⌷pz+t×vz
+		px⊢←px+t×vx ⋄ py⊢←py+t×vy ⋄ pz⊢←pz+t×vz
 	}⍣k⊢⍬
 }
 
