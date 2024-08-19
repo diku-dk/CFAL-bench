@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <cstdint>
+#include "util.cu.h"
 
 __host__ int gpuAssert(cudaError_t code) {
   if(code != cudaSuccess) {
@@ -13,8 +15,60 @@ __host__ int gpuAssert(cudaError_t code) {
   return 0;
 }
 
+__global__ void accelerateAllPar(const double4* pos_mass, double3*  accel, int N) {
+  extern __shared__ double shmem[];
+  
+  D3 acc(0.0, 0.0, 0.0);
+  double4 pos_i;
 
-__global__ void accelerate(const double4* pos_mass, double3*  accel, int N) {
+  { // read the position of the current body
+    double4* pos = (double4*)shmem;
+    if(threadIdx.x == 0) {
+      pos[0] = pos_mass[blockIdx.x]; 
+    }
+    __syncthreads();
+    pos_i = pos[0];
+  }
+
+  // per-thread partial aggregation of results
+  for(int tid = threadIdx.x; tid < N; tid += blockDim.x) {
+      double3 dist;
+      double4 pos_j_k = pos_mass[tid];
+
+      dist.x = pos_j_k.x - pos_i.x;
+      dist.y = pos_j_k.y - pos_i.y;
+      dist.z = pos_j_k.z - pos_i.z;
+      double dist_sq = dist.x*dist.x + dist.y*dist.y + dist.z*dist.z;
+      double inv_dist = 1.0 / sqrt(dist_sq + 1e-9);
+      double inv_dist3 = inv_dist*inv_dist*inv_dist;
+
+      acc.x += dist.x * pos_j_k.w * inv_dist3;
+      acc.y += dist.y * pos_j_k.w * inv_dist3;
+      acc.z += dist.z * pos_j_k.w * inv_dist3;
+  }
+  __syncthreads();
+  
+  { // publish partial results in shared memory and perform block-level scan
+    volatile D3* accs = (volatile D3*)shmem;
+    accs[threadIdx.x].x = acc.x;
+    accs[threadIdx.x].y = acc.y;
+    accs[threadIdx.x].z = acc.z;
+    __syncthreads();
+    
+    // block-level scan
+    acc = scanIncBlock<AddD3>(accs, threadIdx.x);
+  }
+  //__syncthreads();
+  
+  // last thread publishes the acceleration result to global memory
+  if (threadIdx.x == blockDim.x-1) {
+    double3 acc_res = make_double3(acc.x, acc.y, acc.z);
+    accel[blockIdx.x] = acc_res;
+  }
+}
+
+
+__global__ void accelerateOutPar(const double4* pos_mass, double3*  accel, int N) {
 
   int bid = blockIdx.x;
   int tid = threadIdx.x;
@@ -87,18 +141,39 @@ __global__ void update(double4* pos, double3* vel, double3* accel, double dt, in
 
 
 void nbody(double4* positions, double3* velocities, double dt, int n, int steps, int block_size) {
+  double3* accel;
+  cudaMalloc(((void**)&accel), n * sizeof(double3));
+
   const int num_threads = min(n, block_size);
   const int num_blocks = (n + num_threads - 1) / num_threads;
   dim3 grid(num_blocks);
   dim3 block(num_threads);
-  double3* accel;
-  cudaMalloc(((void**)&accel), n * sizeof(double3));
-
-  for (int i = 0; i < steps; ++i) {
-    accelerate<<<grid, block, num_threads * sizeof(double4)>>>(positions, accel, n);
-    update<<<grid, block>>>(positions, velocities, accel, dt, n);
+    
+  int block_size_all;
+  if(n <= 256) {
+    block_size_all = n;
+  } else if (n <= 1024) {
+    block_size_all = 256;
+  } else {
+    block_size_all = min(1024, n/4);
   }
-  cudaDeviceSynchronize();
+  dim3 blockAll(block_size_all);
+
+  const int threshold = 16384;
+
+  if(n > threshold) {
+    for (int i = 0; i < steps; ++i) {
+      accelerateOutPar<<<grid, block, num_threads * sizeof(double4)>>>(positions, accel, n);
+      update<<<grid, block>>>(positions, velocities, accel, dt, n);
+    }
+  } else { // n <= 1024
+    for (int i = 0; i < steps; ++i) {
+      accelerateAllPar<<<n, blockAll, block_size_all * sizeof(D3)>>>(positions, accel, n);
+      update<<<grid, block>>>(positions, velocities, accel, dt, n);
+    }
+  }
+
+  cudaDeviceSynchronize();  
   cudaFree(accel);
 }
 
