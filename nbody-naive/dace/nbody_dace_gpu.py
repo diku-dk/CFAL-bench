@@ -59,10 +59,10 @@ def nbody_dace_gpu(pos_mass: dace.float64[N, 4] @ dace.StorageType.GPU_Global,
                             diff_z = posj[2] - posi[2]
                             dist_sq = diff_x*diff_x + diff_y*diff_y + diff_z*diff_z
                             inv_dist = 1.0 / dace.math.sqrt(dist_sq + eps)
-                            inv_dist3 = inv_dist * inv_dist * inv_dist
-                            accel_out[0] = accel_in[0] + diff_x * massj * inv_dist3
-                            accel_out[1] = accel_in[1] + diff_y * massj * inv_dist3
-                            accel_out[2] = accel_in[2] + diff_z * massj * inv_dist3
+                            inv_dist3 = inv_dist * inv_dist * inv_dist * massj
+                            accel_out[0] = accel_in[0] + diff_x * inv_dist3
+                            accel_out[1] = accel_in[1] + diff_y * inv_dist3
+                            accel_out[2] = accel_in[2] + diff_z * inv_dist3
                     with dace.tasklet(side_effects=True):
                         __syncthreads()
                 if block_start + tid < N:
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     sdfg.apply_transformations_repeated([MapFusion, TaskletFusion])
     sdfg.simplify()
 
-    print("\nValidating correctness ...")
+    print("\nValidating correctness ...", flush=True)
 
     for tb_sz in (32, 64, 128, 256, 512):
 
@@ -110,8 +110,8 @@ if __name__ == '__main__':
 
         sdfg.specialize({'tb_sz': tb_sz})
         sdfg(pos_mass=p_tmp, vel=v_tmp, dt=dt, N=num_particles, iterations=num_iterations)
-        print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(p_tmp), pos_mass)}')
-        print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(v_tmp), vel)}')
+        print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(p_tmp), pos_mass)}', flush=True)
+        print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(v_tmp), vel)}', flush=True)
 
     num_particles = args['N']
     num_iterations = args['iterations']
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     vel_gpu = cp.asarray(vel)
     dt = 0.01
 
-    print('\nBenchmarking ...')
+    print('\nBenchmarking ...', flush=True)
     print()
 
     num_warmup = 2
@@ -149,5 +149,5 @@ if __name__ == '__main__':
             mean = np.mean(runtimes)
             std = np.std(runtimes)
             repeatitions += 10
-        flops = (18.0 * num_particles * num_particles + 12.0 * num_particles) * num_iterations / (1e9 * mean)
+        flops = (19.0 * num_particles * num_particles + 12.0 * num_particles) * num_iterations / (1e9 * mean)
         print(f"DaCe GPU (thread block size = {tb_sz}) runtime: mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
