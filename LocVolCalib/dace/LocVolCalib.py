@@ -40,10 +40,10 @@ def initGrid_dace(s0: float, alpha: float, nu: float, t: float,
         Time[i] = t * i / (numT - 1)
     # X
     for i in dace.map[0:numX]:
-        X[i] = i * dx - indX * dx + s0
+        X[i] = i * np.log(i+1) * dx - indX * dx + s0
     # Y
     for i in dace.map[0:numY]:
-        Y[i] = i * dy - indY * dy + logAlpha
+        Y[i] = i * np.log(i+1) * dy - indY * dy + logAlpha
 
     return indX, indY
 
@@ -106,14 +106,13 @@ def updateParams_dace(alpha: float, beta: float, nu: float,
 
     for ju in dace.map[0:numY]:
         for iu in dace.map[0:numX]:
-            # MuX[ju, iu] = 0.0
+            MuX[ju, iu] = 1e-7 / ((numX + iu) * (numY + ju))
             VarX[ju, iu] = np.exp(2.0 * (beta * np.log(X[iu]) + Y[ju] - 0.5 * nu * nu * Time[g]))
-            # MuY[iu, ju] = 0.0
-    # MuX[:] = 0.0
-    # VarX[:] = np.exp(2 * np.add.outer(Y - 0.5 * nu * nu * Time[g], beta * np.log(X)))
-
-    # MuY[:] = 0.0
-    VarY[:] = nu * nu
+    
+    for iv in dace.map[0:numX]:
+        for jv in dace.map[0:numY]:
+            MuY[iv, jv] = alpha / (iv * numY + jv + 1)
+            VarY[iv, jv] = (nu * nu) / (iv * numY + jv + 1)
 
 
 @dace.program
@@ -139,61 +138,6 @@ def tridiag_dace(a: dace.float64[N], b: dace.float64[N], c: dace.float64[N], y: 
         y[itrd] = (y[itrd] - c[itrd] * y[itrd + 1]) / b[itrd]
 
 
-# @dace.program
-# def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], c: dace.float64[numXY, numXY],
-#                   Time: dace.float64[numT], U: dace.float64[numY, numX], V: dace.float64[numX, numY],
-#                   Dx: dace.float64[numX, 3], Dxx: dace.float64[numX, 3],
-#                   MuX: dace.float64[numY, numX], VarX: dace.float64[numY, numX],
-#                   Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3],
-#                   MuY: dace.float64[numX, numY], VarY: dace.float64[numX, numY],
-#                   ResultE: dace.float64[numX, numY]):
-
-#     dtInv = 1.0 / (Time[gidx + 1] - Time[gidx])
-
-#     # explicit x
-#     for j, i in dace.map[0:numY, 0:numX]:
-#         U[j, i] = dtInv * ResultE[i, j] + 0.5 * ResultE[i, j] * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
-#         if i > 0:
-#             U[j, i] = U[j, i] + 0.5 * ResultE[i - 1, j] * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
-#         if i < numX - 1:
-#             U[j, i] = U[j, i] + 0.5 * ResultE[i + 1, j] * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
-
-#     # explicit y
-#     for i, j in dace.map[0:numX, 0:numY]:
-#         V[i, j] = ResultE[i, j] * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
-#         if j > 0:
-#             V[i, j] = V[i, j] + ResultE[i, j - 1] * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
-#         if j < numY - 1:
-#             V[i, j] = V[i, j] + ResultE[i, j + 1] * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
-#         U[j, i] = U[j, i] + V[i, j]
-
-#     # implicit x
-#     for j in dace.map[0:numY]:
-#         for i in range(numX):
-#             a[j, i] = -0.5 * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
-#             b[j, i] = dtInv - 0.5 * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
-#             c[j, i] = -0.5 * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
-
-#         # uu = U[j, :]
-
-#         tridiag_dace(a[j, :numX], b[j, :numX], c[j, :numX], U[j, :])
-
-#     # implicit y
-#     for i in dace.map[0:numX]:
-#         for j in range(numY):
-#             a[i, j] = -0.5 * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
-#             b[i, j] = dtInv - 0.5 * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
-#             c[i, j] = -0.5 * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
-#             ResultE[i, j] = dtInv * U[j, i] - 0.5 * V[i, j]
-
-#         # yy = ResultE[i, :]
-
-#         # for j in range(numY):
-#         #     yy[j] = dtInv * U[j, i] - 0.5 * V[i, j]
-
-#         tridiag_dace(a[i, :numY], b[i, :numY], c[i, :numY], ResultE[i, :])
-
-
 @dace.program
 def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], c: dace.float64[numXY, numXY],
                   Time: dace.float64[numT], U: dace.float64[numY, numX], V: dace.float64[numX, numY],
@@ -207,39 +151,52 @@ def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], 
 
     # explicit x
     for j, i in dace.map[0:numY, 0:numX]:
-        U[j, i] = dtInv * ResultE[i, j] + 0.25 * ResultE[i, j] * VarX[j, i] * Dxx[i, 1]
+        U[j, i] = dtInv * ResultE[i, j] + 0.5 * ResultE[i, j] * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
         if i > 0:
-            U[j, i] = U[j, i] + 0.25 * ResultE[i - 1, j] * VarX[j, i] * Dxx[i, 0]
+            U[j, i] = U[j, i] + 0.5 * ResultE[i - 1, j] * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
         if i < numX - 1:
-            U[j, i] = U[j, i] + 0.25 * ResultE[i + 1, j] * VarX[j, i] * Dxx[i, 2]
+            U[j, i] = U[j, i] + 0.5 * ResultE[i + 1, j] * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
 
     # explicit y
-    # for i, j in dace.map[0:numX, 0:numY]:
-    for j, i in dace.map[0:numY, 0:numX]:
-        V[i, j] = 0.5 * ResultE[i, j] * VarY[i, j] * Dyy[j, 1]
+    for i, j in dace.map[0:numX, 0:numY]:
+        V[i, j] = ResultE[i, j] * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
         if j > 0:
-            V[i, j] = V[i, j] + 0.5 * ResultE[i, j - 1] * VarY[i, j] * Dyy[j, 0]
+            V[i, j] = V[i, j] + ResultE[i, j - 1] * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
         if j < numY - 1:
-            V[i, j] = V[i, j] + 0.5 * ResultE[i, j + 1] * VarY[i, j] * Dyy[j, 2]
+            V[i, j] = V[i, j] + ResultE[i, j + 1] * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
         U[j, i] = U[j, i] + V[i, j]
 
     # implicit x
     for j in dace.map[0:numY]:
-        for i in dace.map[0:numX]:
-            a[j, i] = -0.25 * VarX[j, i] * Dxx[i, 0]
-            b[j, i] = dtInv - 0.25 * VarX[j, i] * Dxx[i, 1]
-            c[j, i] = -0.25 * VarX[j, i] * Dxx[i, 2]
+        for i in range(numX):
+            a[j, i] = -0.5 * (MuX[j, i] * Dx[i, 0] + 0.5 * VarX[j, i] * Dxx[i, 0])
+            b[j, i] = dtInv - 0.5 * (MuX[j, i] * Dx[i, 1] + 0.5 * VarX[j, i] * Dxx[i, 1])
+            c[j, i] = -0.5 * (MuX[j, i] * Dx[i, 2] + 0.5 * VarX[j, i] * Dxx[i, 2])
 
         # uu = U[j, :]
 
         tridiag_dace(a[j, :numX], b[j, :numX], c[j, :numX], U[j, :])
+        # au = a[j, :numX]
+        # bu = b[j, :numX]
+        # cu = c[j, :numX]
+        # yu = U[j, :]
+        # # forward swap
+        # for itrd in range(1, numX - 1):
+        #     beta_u = au[itrd] / bu[itrd - 1]
+        #     bu[itrd] = bu[itrd] - beta_u * cu[itrd - 1]
+        #     yu[itrd] = yu[itrd] - beta_u * yu[itrd - 1]
+        # # backward
+        # yu[numX - 1] = yu[numX - 1] / bu[numX - 1]
+        # for itrd in range(numX - 2, -1, -1):
+        #     yu[itrd] = (yu[itrd] - cu[itrd] * yu[itrd + 1]) / bu[itrd]
+
 
     # implicit y
     for i in dace.map[0:numX]:
-        for j in dace.map[0:numY]:
-            a[i, j] = -0.25 * VarY[i, j] * Dyy[j, 0]
-            b[i, j] = dtInv - 0.25 * VarY[i, j] * Dyy[j, 1]
-            c[i, j] = -0.25 * VarY[i, j] * Dyy[j, 2]
+        for j in range(numY):
+            a[i, j] = -0.5 * (MuY[i, j] * Dy[j, 0] + 0.5 * VarY[i, j] * Dyy[j, 0])
+            b[i, j] = dtInv - 0.5 * (MuY[i, j] * Dy[j, 1] + 0.5 * VarY[i, j] * Dyy[j, 1])
+            c[i, j] = -0.5 * (MuY[i, j] * Dy[j, 2] + 0.5 * VarY[i, j] * Dyy[j, 2])
             ResultE[i, j] = dtInv * U[j, i] - 0.5 * V[i, j]
 
         # yy = ResultE[i, :]
@@ -248,6 +205,76 @@ def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], 
         #     yy[j] = dtInv * U[j, i] - 0.5 * V[i, j]
 
         tridiag_dace(a[i, :numY], b[i, :numY], c[i, :numY], ResultE[i, :])
+        # av = a[i, :numY]
+        # bv = b[i, :numY]
+        # cv = c[i, :numY]
+        # yv = ResultE[i, :]
+        # # forward swap
+        # for itrd in range(1, numY - 1):
+        #     beta_v = av[itrd] / bv[itrd - 1]
+        #     bv[itrd] = bv[itrd] - beta_v * cv[itrd - 1]
+        #     yv[itrd] = yv[itrd] - beta_v * yv[itrd - 1]
+        # # backward
+        # yv[numY - 1] = yv[numY - 1] / bv[numY - 1]
+        # for itrd in range(numY - 2, -1, -1):
+        #     yv[itrd] = (yv[itrd] - cv[itrd] * yv[itrd + 1]) / bv[itrd]
+
+
+
+# @dace.program
+# def rollback_dace(a: dace.float64[numXY, numXY], b: dace.float64[numXY, numXY], c: dace.float64[numXY, numXY],
+#                   Time: dace.float64[numT], U: dace.float64[numY, numX], V: dace.float64[numX, numY],
+#                   Dx: dace.float64[numX, 3], Dxx: dace.float64[numX, 3],
+#                   MuX: dace.float64[numY, numX], VarX: dace.float64[numY, numX],
+#                   Dy: dace.float64[numY, 3], Dyy: dace.float64[numY, 3],
+#                   MuY: dace.float64[numX, numY], VarY: dace.float64[numX, numY],
+#                   ResultE: dace.float64[numX, numY]):
+
+#     dtInv = 1.0 / (Time[gidx + 1] - Time[gidx])
+
+#     # explicit x
+#     for j, i in dace.map[0:numY, 0:numX]:
+#         U[j, i] = dtInv * ResultE[i, j] + 0.25 * ResultE[i, j] * VarX[j, i] * Dxx[i, 1]
+#         if i > 0:
+#             U[j, i] = U[j, i] + 0.25 * ResultE[i - 1, j] * VarX[j, i] * Dxx[i, 0]
+#         if i < numX - 1:
+#             U[j, i] = U[j, i] + 0.25 * ResultE[i + 1, j] * VarX[j, i] * Dxx[i, 2]
+
+#     # explicit y
+#     # for i, j in dace.map[0:numX, 0:numY]:
+#     for j, i in dace.map[0:numY, 0:numX]:
+#         V[i, j] = 0.5 * ResultE[i, j] * VarY[i, j] * Dyy[j, 1]
+#         if j > 0:
+#             V[i, j] = V[i, j] + 0.5 * ResultE[i, j - 1] * VarY[i, j] * Dyy[j, 0]
+#         if j < numY - 1:
+#             V[i, j] = V[i, j] + 0.5 * ResultE[i, j + 1] * VarY[i, j] * Dyy[j, 2]
+#         U[j, i] = U[j, i] + V[i, j]
+
+#     # implicit x
+#     for j in dace.map[0:numY]:
+#         for i in dace.map[0:numX]:
+#             a[j, i] = -0.25 * VarX[j, i] * Dxx[i, 0]
+#             b[j, i] = dtInv - 0.25 * VarX[j, i] * Dxx[i, 1]
+#             c[j, i] = -0.25 * VarX[j, i] * Dxx[i, 2]
+
+#         # uu = U[j, :]
+
+#         tridiag_dace(a[j, :numX], b[j, :numX], c[j, :numX], U[j, :])
+
+#     # implicit y
+#     for i in dace.map[0:numX]:
+#         for j in dace.map[0:numY]:
+#             a[i, j] = -0.25 * VarY[i, j] * Dyy[j, 0]
+#             b[i, j] = dtInv - 0.25 * VarY[i, j] * Dyy[j, 1]
+#             c[i, j] = -0.25 * VarY[i, j] * Dyy[j, 2]
+#             ResultE[i, j] = dtInv * U[j, i] - 0.5 * V[i, j]
+
+#         # yy = ResultE[i, :]
+
+#         # for j in range(numY):
+#         #     yy[j] = dtInv * U[j, i] - 0.5 * V[i, j]
+
+#         tridiag_dace(a[i, :numY], b[i, :numY], c[i, :numY], ResultE[i, :])
 
 
 @dace.program
@@ -286,9 +313,14 @@ def LocVolCalib_dace(s0: float, alpha: float, beta: float, nu: float, t: float,
     initOperator_dace(Y, Dy, Dyy)
     for io in dace.map[0:outer]:
         strike = 0.001 * dace.float64(io)
-        result[io] = value_dace(strike, alpha, beta, nu, a[io], b[io], c[io], X, Y, Time,
-                                U[io], V[io], Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io],
-                                ResultE[io], xidx=indX, yidx=indY)
+        # result[io] = value_dace(strike, alpha, beta, nu, a[io], b[io], c[io], X, Y, Time,
+        #                         U[io], V[io], Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io],
+        #                         ResultE[io], xidx=indX, yidx=indY)
+        setPayoff_dace(strike, X, ResultE[io])
+        for it in range(numT - 2, -1, -1):
+            updateParams_dace(alpha, beta, nu, X, Y, Time, MuX[io], VarX[io], MuY[io], VarY[io], g=it)
+            rollback_dace(a[io], b[io], c[io], Time, U[io], V[io], Dx, Dxx, MuX[io], VarX[io], Dy, Dyy, MuY[io], VarY[io], ResultE[io], gidx=it)
+        result[io] = ResultE[io, indX, indY]
 
 
 # @dace.program
