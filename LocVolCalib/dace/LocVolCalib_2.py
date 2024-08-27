@@ -211,17 +211,17 @@ def value_dace(Time: dace.float64[num_t],
         dtInv = 1.0 / (Time[it + 1] - Time[it])
 
         U[:] = (dtInv + 0.5 * VarX[it, 1, :, :, np.newaxis]) * ResultE[:, :, :]
-        U[1:-1] += (0.5 * VarX[it, 0, 1:-1, :, np.newaxis] * ResultE[:-2, :, :] +
+        U[1:-1] = U[1:-1] + (0.5 * VarX[it, 0, 1:-1, :, np.newaxis] * ResultE[:-2, :, :] +
                     0.5 * VarX[it, 2, 1:-1, :, np.newaxis] * ResultE[2:, :, :])
 
         V[:] = 0.5 * VarY[it, 1, :, :, np.newaxis] * ResultE[:, :, :]
-        V[:, 1:-1] += (0.5 * VarY[it, 0, :, 1:-1, np.newaxis] * ResultE[:, :-2, :] +
+        V[:, 1:-1] = V[:, 1:-1] + (0.5 * VarY[it, 0, :, 1:-1, np.newaxis] * ResultE[:, :-2, :] +
                        0.5 * VarY[it, 2, :, 1:-1, np.newaxis] * ResultE[:, 2:, :])
 
-        U[:] += V
+        U[:] = U + V
         
         for ix in range(1, num_x - 1):
-            U[ix, :, :] -= beta1[it, ix, :, np.newaxis] * U[ix - 1, :, :]
+            U[ix, :, :] = U[ix, :, :] - beta1[it, ix, :, np.newaxis] * U[ix - 1, :, :]
         U[num_x - 1, :, :] = U[num_x - 1, :, :] / b1[it, num_x - 1, :, np.newaxis]
         for ix in range(num_x - 2, -1, -1):
             U[ix, :, :] = (U[ix, :, :] - c1[it, ix, :, np.newaxis] * U[ix + 1, :, :]) / b1[it, ix, :, np.newaxis]
