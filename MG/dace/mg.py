@@ -1356,10 +1356,10 @@ def main(framework: str):
         # sdfg.apply_transformations([Vectorization], options={'vector_len': 2})
         return sdfg.compile()
     
-    def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True):
+    def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True, use_wcr_tiling: bool = True):  
         sdfg = prog.to_sdfg(simplify=False)
         sdfg.simplify()
-        auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_gpu_storage=True)
+        auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_wcr_tiling=use_wcr_tiling, use_gpu_storage=True)
         return sdfg.compile()
     
     combo_func = None
@@ -1399,7 +1399,7 @@ def main(framework: str):
         # gpu_storage(sdfg)
         # sdfg.apply_gpu_transformations()
         # interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
-        norm2u3_func = compile_program_gpu(norm2u3_dace)
+        norm2u3_func = compile_program_gpu(norm2u3_dace, use_wcr_tiling=False)
     
     runtime += time.perf_counter()
     print(" Compilation time: %f seconds" % runtime)
@@ -1673,8 +1673,8 @@ def main(framework: str):
 #Starting of execution
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='NPB-PYTHON-SER MG')
-    parser.add_argument("-c", "--CLASS", required=True, help="WORKLOADs CLASSes")
-    parser.add_argument("-f", "--framework", choices=['python', 'dace_cpu', 'dace_gpu'], default='python', help="Framework to use")
+    parser.add_argument("-c", "--CLASS", default='A', help="WORKLOADs CLASSes")
+    parser.add_argument("-f", "--framework", choices=['python', 'dace_cpu', 'dace_gpu'], default='dace_cpu', help="Framework to use")
     args = parser.parse_args()
 
     npbparams.set_mg_info(args.CLASS)
