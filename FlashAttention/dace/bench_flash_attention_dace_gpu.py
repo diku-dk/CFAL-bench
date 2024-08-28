@@ -1,3 +1,4 @@
+import cupy as cp
 import dace
 import numpy as np
 import os
@@ -6,21 +7,29 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from timeit import repeat
-from flash_attention_dace import standard_attention_dace, flash_attention_dace_4
-from dace.transformation.auto.auto_optimize import auto_optimize
+from flash_attention_dace import custom_attention_dace
+from dace.transformation.auto.auto_optimize import auto_optimize, apply_gpu_storage
 
 
 datasizes = [(64, 16384), (64, 32768), (128, 8192), (128, 16384)]
-tilesizes = [(64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024), (2048, 2048)]
+tilesizes = [64, 128, 256, 512, 1024, 2048, 4096, 8192]
 
 
 if __name__ == "__main__":
 
     # Flash Attention
-    fa_sdfg = flash_attention_dace_4.to_sdfg(simplify=False)
-    fa_sdfg.simplify()
-    auto_optimize(fa_sdfg, dace.DeviceType.CPU)
-    fa_func = fa_sdfg.compile()
+    sdfg = custom_attention_dace.to_sdfg(simplify=False)
+    apply_gpu_storage(sdfg)
+    for sd in sdfg.all_sdfgs_recursive():
+        if sd.parent_sdfg is not None and sd.parent_sdfg is sdfg:
+            sd.simplify()
+            auto_optimize(sd, dace.DeviceType.GPU, use_gpu_storage=True)
+    for state in sdfg.states():
+        for node in state.nodes():
+            if isinstance(node, dace.nodes.MapEntry):
+                node.schedule = dace.ScheduleType.Sequential
+    sdfg.simplify()
+    fa_func = sdfg.compile()
 
     rng = np.random.default_rng(42)
 
@@ -31,19 +40,19 @@ if __name__ == "__main__":
 
         d, N = datasize
         print(f"\nData size: {d} x {N}")
-        Q = rng.random((N, d), dtype=np.float32)
-        K = rng.random((N, d), dtype=np.float32)
-        V = rng.random((N, d), dtype=np.float32)
-        O = np.empty_like(Q)
+        Q = cp.asarray(rng.random((N, d), dtype=np.float32))
+        K = cp.asarray(rng.random((N, d), dtype=np.float32))
+        V = cp.asarray(rng.random((N, d), dtype=np.float32))
+        O = cp.empty_like(Q)
 
         for tilesize in tilesizes:
 
-            Ti, Tj = tilesize
+            Ti = tilesize
 
             num_warmup = 2
 
             def _func():
-                fa_func(Q=Q, K=K, V=V, O=O, N=N, d=d, Ti=Ti, Tj=Tj)
+                fa_func(Q=Q, K=K, V=V, O=O, N=N, d=d, Ti=Ti)
             
             for _ in range(num_warmup):
                 _func()
@@ -58,4 +67,4 @@ if __name__ == "__main__":
                 std = np.std(runtimes)
                 repeatitions += 10
             flops = (N * N * (4 * d + 5)) / (mean * 1e9)
-            print(f"DaCe CPU runtime (Ti={Ti}, Tj={Tj}): mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
+            print(f"DaCe GPU runtime (Ti={Ti}): mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
