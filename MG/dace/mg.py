@@ -1666,6 +1666,31 @@ def main(framework: str):
             else:
                 print("  %-8s:%9.3f  (%6.2f%%)" % (t_names[i], t, t * 100.0 / tmax))
         print("  (* Time hasn't gauged: operation is not supported by @njit)")
+    
+    def _func():
+        resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        for it in range(1, nit+1):
+            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+            resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+    
+    from timeit import repeat
+    num_warmup = 2
+    for _ in range(num_warmup):
+        _func()
+    runtimes = repeat(lambda: _func(), number=1, repeat=10)
+    mean = numpy.mean(runtimes)
+    std = numpy.std(runtimes)
+    repeatitions = 10
+    while std > 0.01 * mean and len(runtimes) < 100:
+        print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
+        runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
+        mean = numpy.mean(runtimes)
+        std = numpy.std(runtimes)
+        repeatitions += 10
+    mflops = 58.0 * nit * nn * 1.0e-6 / mean
+    print(f"DaCe {'CPU' if args.framework == 'dace_cpu' else 'GPU'} runtime: mean {mean} s ({mflops} mflop/s), std {std * 100 / mean:.2f}%", flush=True)
 
 
 #END main()
