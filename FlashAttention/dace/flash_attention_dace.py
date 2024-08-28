@@ -388,14 +388,14 @@ if __name__ == "__main__":
         #         arr.storage = dace.StorageType.GPU_Global
         func = sdfg.compile()
         O_dev = cp.empty_like(Q_dev)
-        func(Q=Q_dev, K=K_dev, V=V_dev, O=O_dev, N=N, d=d, Ti=Ti_val)
+        func(Q=Q_dev, K=K_dev, V=V_dev, O=O_dev, N=N, d=d, Ti=d)
         if validate:
             O_dace = cp.asnumpy(O_dev)
             print(np.linalg.norm(O_std_ref - O_dace) / np.linalg.norm(O_std_ref))
             assert np.allclose(O_std_ref, O_dace)
         start = time.perf_counter()
         for i in range(10):
-            func(Q=Q_dev, K=K_dev, V=V_dev, O=O_dev, N=N, d=d, Ti=Ti_val)
+            func(Q=Q_dev, K=K_dev, V=V_dev, O=O_dev, N=N, d=d, Ti=d)
         finish = time.perf_counter()
         print("Custom attention DaCe GPU mean execution: ", (finish - start) / 10, "seconds", flush=True)
         gflops = N * N * (4 * d + 5) / ((finish - start)/10) / 1e9
