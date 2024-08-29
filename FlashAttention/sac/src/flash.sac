@@ -62,13 +62,13 @@ noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
 
 int main()
 {
-  if (argc() != 5) {
-    printf("%s -mt <n> <d> <N>\n", argv(0));
+  if (argc() != 7) {
+    printf("%s -mt <n> -mt_bind simple <d> <N>\n", argv(0));
     N = 0;
     d = 0;
   } else {
-    d, unused = strtoi(argv(3), 10);
-    N, unused = strtoi(argv(4), 10);
+    d, unused = strtoi(argv(5), 10);
+    N, unused = strtoi(argv(6), 10);
     if (mod(N, d) != 0) {
       fprintf(stderr, "Please make sure d | N\n");
       d = 0;
@@ -90,14 +90,13 @@ int main()
   start(i_flash);
 
   O = FlashAttention(Q, K, V);
-  print(shape(O));
 
   end(i_flash);
   time, unit = returnResultUnit(i_flash);
 
-  printf("L2 norm of output is %lf, should be %lf\n", 
-              L2(O), Math::sqrt(tor(d * N)));
-  printf("Compute rate: %f Gflops / %s\n", 
+  fprintf(stderr, "L2 norm of output is %lf, should be %lf\n", 
+                    L2(O), Math::sqrt(tor(d * N)));
+  printf("%f\n", 
         4d * tod(N) * tod(N) * (tod(d) + 1d) / time / 1e9, unit);
 
   return 0;
