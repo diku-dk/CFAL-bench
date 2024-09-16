@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #SBATCH --partition=csmpi_fpga_long
 #SBATCH --job-name=cfal-dace
