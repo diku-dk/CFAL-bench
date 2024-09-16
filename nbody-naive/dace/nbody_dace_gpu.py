@@ -4,7 +4,7 @@ import cupy as cp
 import numpy as np
 import numpy.typing as npt
 
-from dace.transformation.dataflow import MapFusion, TaskletFusion
+from dace.transformation.dataflow import MapExpansion, MapFusion, TaskletFusion
 from timeit import repeat
 
 
@@ -38,11 +38,11 @@ def nbody_dace_gpu(pos_mass: dace.float64[N, 4] @ dace.StorageType.GPU_Global,
 
         for block_start in dace.map[0:N:tb_sz] @ dace.ScheduleType.GPU_Device:
             for tid in dace.map[0:tb_sz] @ dace.ScheduleType.GPU_ThreadBlock:
-                pos_mass_shared = dace.define_local((tb_sz, 4), dtype=np.float64, storage=dace.StorageType.GPU_Shared)
+                pos_mass_shared = dace.define_local((tb_sz, 4), dtype=dace.float64, storage=dace.StorageType.GPU_Shared)
                 accel = dace.define_local([3], dtype=dace.float64, storage=dace.StorageType.Register)
                 accel[:] = 0.0
                 pos_mass_i = pos_mass[block_start + tid]
-                for j in range(0, N, tb_sz):
+                for j in dace.map[0:N:tb_sz] @ dace.ScheduleType.Sequential:
                     if j + tid < N:
                         pos_mass_shared[tid, 0:4] = pos_mass[j + tid, 0:4]
                     with dace.tasklet(side_effects=True):
@@ -66,7 +66,7 @@ def nbody_dace_gpu(pos_mass: dace.float64[N, 4] @ dace.StorageType.GPU_Global,
                     with dace.tasklet(side_effects=True):
                         __syncthreads()
                 if block_start + tid < N:
-                    vel[block_start + tid, 0:3] += dt * accel
+                    vel[block_start + tid] += accel * dt
 
         pos_mass[:, 0:3] += vel * dt
 
@@ -82,34 +82,41 @@ if __name__ == '__main__':
     argparser.add_argument("-iterations", type=int, default=10)	
     args = vars(argparser.parse_args())
 
-    num_particles = 1000
-    num_iterations = 10
-
-    rng = np.random.default_rng(0)
-    pos_mass = rng.random((num_particles, 4))
-    pos_mass_gpu = cp.asarray(pos_mass)
-    vel = rng.random((num_particles, 3))
-    vel_gpu = cp.asarray(vel)
-    dt = 0.01
-
-    pos_mass_dace = cp.asarray(pos_mass)
-    vel_dace = cp.asarray(vel)
-
-    nbody_cpython(pos_mass, vel, dt, num_iterations)
+    print(f"N = {args['N']}, iterations = {args['iterations']}", flush=True)
 
     sdfg = nbody_dace_gpu.to_sdfg(simplify=True)
     sdfg.apply_transformations_repeated([MapFusion, TaskletFusion])
     sdfg.simplify()
+    for state in sdfg.states():
+        for node in state.nodes():
+            if isinstance(node, dace.nodes.MapEntry) and len(node.map.params) > 1:
+                MapExpansion.apply_to(sdfg, map_entry=node)
+    
+    rng = np.random.default_rng(0)
 
     print("\nValidating correctness ...", flush=True)
 
+    num_particles = 1000
+    num_iterations = 10
+    pos_mass = rng.random((num_particles, 4))
+    vel = rng.random((num_particles, 3))
+    dt = 0.01
+
+    pos_mass_dace = cp.asarray(pos_mass)
+    vel_dace = cp.asarray(vel)
+    cp.cuda.runtime.deviceSynchronize()
+
+    nbody_cpython(pos_mass, vel, dt, num_iterations)
+
     for tb_sz in (32, 64, 128, 256, 512):
 
-        p_tmp = cp.copy(pos_mass_gpu)
-        v_tmp = cp.copy(vel_gpu)
+        p_tmp = cp.copy(pos_mass_dace)
+        v_tmp = cp.copy(vel_dace)
 
         sdfg.specialize({'tb_sz': tb_sz})
-        sdfg(pos_mass=p_tmp, vel=v_tmp, dt=dt, N=num_particles, iterations=num_iterations)
+        func = sdfg.compile()
+        func(pos_mass=p_tmp, vel=v_tmp, dt=dt, N=num_particles, iterations=num_iterations)
+        cp.cuda.runtime.deviceSynchronize()
         print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(p_tmp), pos_mass)}', flush=True)
         print(f'DaCe GPU (thread block size = {tb_sz}) relative error: {relerror(cp.asnumpy(v_tmp), vel)}', flush=True)
 

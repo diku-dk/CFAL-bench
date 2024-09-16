@@ -21,11 +21,11 @@ def nbody_cpython(pos_mass: npt.NDArray[np.float64],
 
     for _ in range(iterations):
 
-        diff = pos_mass[0:3, np.newaxis, :] - pos_mass[0:3, :, np.newaxis]
-        dist_sq = np.sum(diff * diff, axis=0)
+        dist = pos_mass[0:3, np.newaxis, :] - pos_mass[0:3, :, np.newaxis]
+        dist_sq = np.sum(dist * dist, axis=0)
         inv_dist = 1.0 / np.sqrt(dist_sq + eps)
         inv_dist3 = inv_dist * inv_dist * inv_dist
-        accel = np.sum(diff * pos_mass[3, np.newaxis, :] * inv_dist3[np.newaxis, :, :], axis=2)
+        accel = np.sum(dist * pos_mass[3, np.newaxis, :] * inv_dist3[np.newaxis, :, :], axis=2)
         vel[:] = vel + dt * accel
         pos_mass[0:3] = pos_mass[0:3] + dt * vel
 
@@ -39,11 +39,11 @@ def nbody_dace_cpu(pos_mass: dace.float64[4, N],
 
     for _ in range(iterations):
 
-        diff = pos_mass[0:3, np.newaxis, :] - pos_mass[0:3, :, np.newaxis]
-        dist_sq = np.sum(diff * diff, axis=0)
+        dist = pos_mass[0:3, np.newaxis, :] - pos_mass[0:3, :, np.newaxis]
+        dist_sq = np.sum(dist * dist, axis=0)
         inv_dist = 1.0 / np.sqrt(dist_sq + eps)
-        inv_dist3 = inv_dist * inv_dist * inv_dist
-        accel = np.sum(diff * pos_mass[3, np.newaxis, :] * inv_dist3[np.newaxis, :, :], axis=2)
+        inv_dist3 = inv_dist * inv_dist * inv_dist * pos_mass[3]
+        accel = np.sum(dist * inv_dist3[np.newaxis, :, :], axis=2)
         vel[:] = vel + dt * accel
         pos_mass[0:3] = pos_mass[0:3] + dt * vel
 
@@ -58,6 +58,8 @@ if __name__ == "__main__":
     argparser.add_argument("-N", type=int, default=50000)
     argparser.add_argument("-iterations", type=int, default=10)	
     args = vars(argparser.parse_args())
+
+    print(f"N = {args['N']}, iterations = {args['iterations']}", flush=True)
 
     num_particles = 1000
     num_iterations = 10
