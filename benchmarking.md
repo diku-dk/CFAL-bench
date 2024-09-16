@@ -118,3 +118,35 @@ batch script or `srun`.
 Then it is a matter of `sbatch bench_omp.sh ...` or 
 `sbatch bench_sac_mt.sh ...` to run the benchmarks. If the scripts are run 
 without arguments, they print their usage.
+
+## DaCe
+
+### Setup
+
+To install DaCe and run the benchmarks, Python is needed. Version 3.7 and above is currently supported, but newer
+versions are recommended. A virtual environment is also optional, but recommended. We will provide later automated
+scripts for creating a virtual environment and installing DaCe.
+
+Get DaCe from GitHub and install it as follows:
+```bash
+git clone --recurse-submodules -b auto-opt-fixes https://github.com/spcl/dace.git
+cd dace
+python -m pip install -e .
+```
+
+In GPU benchmarks, CuPy is used to copy input data to GPU global memory. To install CuPy, run:
+```bash
+python -m pip install cupy-cuda12x
+```
+
+### Benchmarking
+
+To run the benchmarks, execute from the top-level directory (`CFAL-bench`) the following script:
+```bash
+(sbatch) util/bench_dace.sh BENCHMARK_NAME
+```
+where `BENCHMARK_NAME` is one of the following:
+- `FlashAttention`
+- `LocVolCalib`
+- `MG`
+- `nbody-naive`
