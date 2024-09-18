@@ -223,6 +223,10 @@ with-compiler: ghc-9.4.8
 
 allow-newer:
   lens-accelerate:lens
+
+-- These are still necessary for the linker to find Cuda
+package $projectname
+  extra-lib-dirs: /usr/local/cuda/lib64 /usr/local/cuda/nvvm/lib64
 EOF
 }
 
