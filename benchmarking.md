@@ -73,6 +73,23 @@ programs were in PATH:
 export PATH=$HOME/.local/bin:$PATH
 ```
 
+### Obtaining Maximum Bandwidth
+
+`cn132` has a NUMA architecture, so to get the most bandwidth, running under
+numactl helps. See STREAM for the configuration that gets the most on `cn132`.
+
+So for example change
+
+```
+bin/nbody
+```
+
+to
+
+```
+numactl --interleave --all bin/nbody
+```
+
 ## Futhark
 
 ### Setup
