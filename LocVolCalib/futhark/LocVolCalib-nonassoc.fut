@@ -84,18 +84,13 @@ def tridagPar [n] (a:  [n]f64, b: [n]f64, c: [n]f64, y: [n]f64 ): *[n]f64 =
                      then (b[i], 0.0-a[i]*c[i-1], 1.0, 0.0)
                      else (1.0,  0.0,             0.0, 1.0))
                   (iota n)
-          |> map (\ (t0, t1, t2, t3) -> 
-                     (1, t1/t0, t2/t0, t3/t0)
-                 )
-
   let scmt = scan (\(a0,a1,a2,a3) (b0,b1,b2,b3) ->
-                     let value = 1/ (b0*a0 + b1*a2)
-                     in ( 1.0,
+                     let value = 1.0/(a0*b0)
+                     in ( (b0*a0 + b1*a2)*value,
                           (b0*a1 + b1*a3)*value,
                           (b2*a0 + b3*a2)*value,
                           (b2*a1 + b3*a3)*value))
                   (1.0,  0.0, 0.0, 1.0) mats
-
   let b    = map (\(t0,t1,t2,t3) -> (t0*b0 + t1) / (t2*b0 + t3)) scmt
   ------------------------------------------------------
   -- Recurrence 2: y[i] = y[i] - (a[i]/b[i-1])*y[i-1] --
