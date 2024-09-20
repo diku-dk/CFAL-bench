@@ -14,11 +14,11 @@ import Data.Array.Accelerate.Control.Lens
 
 type Two a = (a,a)
 type Three a = (a,a,a)
-type Input = (Int, Int, Int, Int, Float, Float, Float, Float, Float)
+type Input = (Int, Int, Int, Int, Double, Double, Double, Double, Double)
 
 
-initGrid :: Exp (Float, Float, Float, Float, Int, Int, Int)
-         -> (Exp (Int, Int), Acc (Vector Float, Vector Float, Vector Float))
+initGrid :: Exp (Double, Double, Double, Double, Int, Int, Int)
+         -> (Exp (Int, Int), Acc (Vector Double, Vector Double, Vector Double))
 initGrid (T7 s0 alpha nu t numX numY numT) =
   let logAlpha = log alpha
       myTimeline = generate (I1 numT) (\(I1 i) -> t * toFloating i / (toFloating numT - 1.0))
@@ -36,7 +36,7 @@ initGrid (T7 s0 alpha nu t numX numY numT) =
 -- TODO: individually match on less and more, and just fromJust in all known cases
 -- probably makes no difference: we separately generate code for the border and interior,
 -- and in both cases LLVM should see that only one branch ever gets taken
-initOperator :: Acc (Vector Float) -> Acc (Vector (Two (Three Float)))
+initOperator :: Acc (Vector Double) -> Acc (Vector (Two (Three Double)))
 initOperator x = stencil
   (\(a,b,c) -> T3 a b c & match (\case
     T3 (Just_ less) (Just_ here) (Just_ more) ->
@@ -51,7 +51,7 @@ initOperator x = stencil
   (function $ const Nothing_)
   (map Just_ x)
 
-setPayoff :: Acc (Vector Float, Vector Float, Vector Float) -> Acc (Array DIM3 Float)
+setPayoff :: Acc (Vector Double, Vector Double, Vector Double) -> Acc (Array DIM3 Double)
 setPayoff (T3 strikes myX myY) =
   let I1 numX = shape myX
       I1 numY = shape myY
@@ -60,7 +60,7 @@ setPayoff (T3 strikes myX myY) =
               (replicate (Z_ ::. numS ::. numY ::. All_) myX)
               (replicate (Z_ ::. All_ ::. numY ::. numX) strikes)
 
-updateParams :: Acc (Vector Float, Vector Float) -> Exp (Float, Float,Float,Float) -> Acc (Matrix Float, Matrix Float, Matrix Float, Matrix Float)
+updateParams :: Acc (Vector Double, Vector Double) -> Exp (Double, Double,Double,Double) -> Acc (Matrix Double, Matrix Double, Matrix Double, Matrix Double)
 updateParams (T2 myX myY) (T4 tnow alpha beta nu) = T4 myMuX myVarX myMuY myVarY
   where
     I1 numX = shape myX
@@ -74,7 +74,7 @@ updateParams (T2 myX myY) (T4 tnow alpha beta nu) = T4 myMuX myVarX myMuY myVarY
               (replicate (Z_ ::. numY ::. All_) myX)
 
 -- unused: in Accelerate, you can't `map` this function over matrices. Instead, see tridagParSh
-tridagPar :: Acc (Vector Float, Vector Float, Vector Float, Vector Float) -> Acc (Vector Float)
+tridagPar :: Acc (Vector Double, Vector Double, Vector Double, Vector Double) -> Acc (Vector Double)
 tridagPar (T4 a b c y) =
   let I1 n = shape a
       -- recurrence 1
@@ -112,7 +112,7 @@ tridagPar (T4 a b c y) =
       y'''    = reverse y''
   in y'''
 -- 'vectorized' version of the above
-tridagParSh :: Shape sh => Acc (Array (sh:.Int) Float, Array (sh:.Int) Float, Array (sh:.Int) Float, Array (sh:.Int) Float) -> Acc (Array (sh:.Int) Float)
+tridagParSh :: Shape sh => Acc (Array (sh:.Int) Double, Array (sh:.Int) Double, Array (sh:.Int) Double, Array (sh:.Int) Double) -> Acc (Array (sh:.Int) Double)
 tridagParSh (T4 a b c y) =
   let sh@(_ ::. n) = shape a
       -- recurrence 1
@@ -150,8 +150,8 @@ tridagParSh (T4 a b c y) =
       y'''    = reverseOn _1 y''
   in y'''
 
-explicitMethod :: Acc (Vector (Three Float), Vector (Three Float), Matrix Float, Matrix Float, Array DIM3 Float)
-               -> Acc (Array DIM3 Float)
+explicitMethod :: Acc (Vector (Three Double), Vector (Three Double), Matrix Double, Matrix Double, Array DIM3 Double)
+               -> Acc (Array DIM3 Double)
 explicitMethod (T5 myD myDD myMu myVar result) =
   let I3 s n m = shape result
   in zipWith5
@@ -167,9 +167,9 @@ explicitMethod (T5 myD myDD myMu myVar result) =
       -- Currently using a 3x3x3 stencil and ignoring stuff, 
       -- because Accelerate doesn't export a 1x1x3 stencil. 
       -- Hopefully the other 24 array reads get optimised away.
-      (stencil @_ @(Three (Three (Three (Exp Float)))) (\(_,(_,(a,b,c),_),_) -> T3 a b c) (function $ const 0) result)
+      (stencil @_ @(Three (Three (Three (Exp Double)))) (\(_,(_,(a,b,c),_),_) -> T3 a b c) (function $ const 0) result)
 
-implicitMethod :: Acc (Vector (Three Float), Vector (Three Float), Matrix Float, Matrix Float, Array DIM3 Float) -> Exp Float -> Acc (Array DIM3 Float)
+implicitMethod :: Acc (Vector (Three Double), Vector (Three Double), Matrix Double, Matrix Double, Array DIM3 Double) -> Exp Double -> Acc (Array DIM3 Double)
 implicitMethod (T5 myD myDD myMu myVar u) dtInv =
   let Z_ ::. s ::. n ::. m = shape u
       (a, b, c) = unzip3 $ zipWith4 (\mu var (T3 d0 d1 d2) (T3 dd0 dd1 dd2) -> T3
@@ -182,11 +182,11 @@ implicitMethod (T5 myD myDD myMu myVar u) dtInv =
                                   (replicate (Z_ ::. s ::. n    ::. All_) myDD)
   in tridagParSh $ T4 a b c u
 
-rollback :: Exp ( Float, Float)
-         -> Acc ( Array DIM3 Float
-                , Matrix Float, Vector (Three Float), Vector (Three Float), Matrix Float
-                , Matrix Float, Vector (Three Float), Vector (Three Float), Matrix Float)
-         -> Acc (Array DIM3 Float)
+rollback :: Exp ( Double, Double)
+         -> Acc ( Array DIM3 Double
+                , Matrix Double, Vector (Three Double), Vector (Three Double), Matrix Double
+                , Matrix Double, Vector (Three Double), Vector (Three Double), Matrix Double)
+         -> Acc (Array DIM3 Double)
 rollback (T2 tnow tnext) (T9 myResult myMuX myDx myDxx myVarX myMuY myDy myDyy myVarY) =
   let dtInv = 1/(tnext-tnow)
 
@@ -203,7 +203,7 @@ rollback (T2 tnow tnext) (T9 myResult myMuX myDx myDxx myVarX myMuY myDy myDyy m
       myResultTr2 = implicitMethod (T5 myDy myDyy myMuY myVarY y) dtInv
   in transposeOn _1 _2 myResultTr2
 
-value :: Exp (Int, Int, Int, Float, Float, Float, Float, Float) -> Acc (Vector Float) -> Acc (Vector Float)
+value :: Exp (Int, Int, Int, Double, Double, Double, Double, Double) -> Acc (Vector Double) -> Acc (Vector Double)
 value (T8 numX numY numT s0 t alpha nu beta) strikes =
   let (T2 myXindex myYindex, T3 myX myY myTimeline) = initGrid $ T7 s0 alpha nu t numX numY numT
       (myDx, myDxx) = unzip $ initOperator myX
@@ -218,7 +218,7 @@ value (T8 numX numY numT s0 t alpha nu beta) strikes =
                   in rollback (T2 tnow tnext) (T9 res mux myDx myDxx varx muy myDy myDyy vary))
   in slice final (Z_ ::. All_ ::. myYindex ::. myXindex)
 
-main' :: Acc (Scalar Input) -> Acc (Vector Float)
+main' :: Acc (Scalar Input) -> Acc (Vector Double)
 main' s = let (T9 outerloopcount numX numY numT s0 t alpha nu beta) = the s in
   let strikes = generate (I1 outerloopcount) (\(I1 i) -> 0.001 * toFloating i)
   in value (T8 numX numY numT s0 t alpha nu beta) strikes
