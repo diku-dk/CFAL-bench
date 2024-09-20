@@ -7,6 +7,23 @@ use Benchmarking: all;
 #define tor tod
 #define VEC 8
 
+#define DEBUG
+
+double L2(double[*] x)
+{
+  return sqrt(sum(x * x));
+}
+
+void Print(double[m, n] x)
+{
+    for (i = 0; i < m; i++) {
+        for (j = 0; j < n; j++) {
+            printf("%e ", x[i, j]);
+        }
+        printf("\n");
+    }
+}
+
 /**
  * Initializes VarX as outer product of VarX1 and VarX2.
  */
@@ -18,12 +35,12 @@ REAL[NUM_Y], REAL[NUM_X] updateParams(REAL[NUM_X] X, REAL[NUM_Y] Y, REAL t)
   return (VarX1, VarX2);
 }
 
-inline REAL dxu(REAL[.] xx, int i)
+inline REAL dxl(REAL[.] xx, int i)
 {
   return xx[i] - xx[i - 1];
 }
 
-inline REAL dxl(REAL[.] xx, int i)
+inline REAL dxu(REAL[.] xx, int i)
 {
   return xx[i + 1] - xx[i];
 }
@@ -44,11 +61,11 @@ initGrid()
             | [i] < [NUM_X]};
 
 
-  Dx = {[i] -> [tor(0), 1.0 / (X[1] - X[0]), 1.0 / (X[1] - X[0])]
+  Dx = {[i] -> [tor(0), -1.0 / (X[1] - X[0]), 1.0 / (X[1] - X[0])]
             | [0] <= [i] < [1];
         [i] -> [-dxu(X, i) / dxl(X, i) / (dxl(X, i) + dxu(X, i)),
                 (dxu(X, i) / dxl(X, i) - dxl(X, i) / dxu(X, i)) / (dxl(X, i) + dxu(X, i)),
-                dxu(X, i) / dxl(X, i) / (dxl(X, i) + dxu(X, i))]
+                dxl(X, i) / dxu(X, i) / (dxl(X, i) + dxu(X, i))]
             | [1] <= [i] < [NUM_X - 1];
         [i] -> [-1.0 / (X[NUM_X - 1] - X[NUM_X - 2]), 1.0 / (X[NUM_X - 1] - X[NUM_X - 2]), tor(0)]
             | [NUM_X - 1] <= [i] < [NUM_X]};
@@ -66,14 +83,15 @@ initGrid()
 
   Y = {[i] -> tor(i) * log(tor(i + 1)) * dy - tor(indY) * dy + log(ALPHA)
             | [i] < [NUM_Y]};
-  Dy = {[i] -> [tor(0), 1.0 / (Y[1] - Y[0]), 1.0 / (Y[1] - Y[0])]
+  Dy = {[i] -> [tor(0), -1.0 / (Y[1] - Y[0]), 1.0 / (Y[1] - Y[0])]
             | [0] <= [i] < [1];
         [i] -> [-dxu(Y, i) / dxl(Y, i) / (dxl(Y, i) + dxu(Y, i)),
                 (dxu(Y, i) / dxl(Y, i) - dxl(Y, i) / dxu(Y, i)) / (dxl(Y, i) + dxu(Y, i)),
-                dxu(Y, i) / dxl(Y, i) / (dxl(Y, i) + dxu(Y, i))]
+                dxl(Y, i) / dxu(Y, i) / (dxl(Y, i) + dxu(Y, i))]
             | [1] <= [i] < [NUM_Y - 1];
         [i] -> [-1.0 / (Y[NUM_Y - 1] - Y[NUM_Y - 2]), 1.0 / (Y[NUM_Y - 1] - Y[NUM_Y - 2]), tor(0)]
             | [NUM_Y - 1] <= [i] < [NUM_Y]};
+
   Dyy = {[i] -> [ 2.0 / dxl(Y, i) / (dxl(Y, i) + dxu(Y, i)),
                  -2.0 * (1.0 / dxl(Y, i) + 1.0 / dxu(Y, i)) / (dxl(Y, i) + dxu(Y, i)),
                   2.0 / dxu(Y, i) / (dxl(Y, i) + dxu(Y, i))]
@@ -162,33 +180,53 @@ REAL value(REAL strike, int indX, int indY,
            REAL[NUM_X, 3] Dxx, REAL[NUM_Y, 3] Dyy, 
            REAL[NUM_X, 3] Dx, REAL[NUM_Y, 3] Dy)
 {
-  MuX = {[i, j] -> 0.0000001 / (tod(NUM_X + i) * tod(NUM_Y + j)) 
-                 | [i, j] < [NUM_Y, NUM_X]};
+  MuX = {[j, i] -> 0.0000001 / (tod(NUM_X + i) * tod(NUM_Y + j)) 
+                 | [j, i] < [NUM_Y, NUM_X]};
   MuY = {[i, j] -> ALPHA / (tod(i) * tod(NUM_Y) + tod(j) + 1.0)
                  | [i, j] < [NUM_X, NUM_Y]};
 
   VarY = {[i, j] -> (NU * NU) / tod(i * NUM_Y + j + 1)
                  | [i, j] <  [NUM_X, NUM_Y]};
 
+//  printf("MuX %e\n", L2(MuX));
+//  printf("MuY %e\n", L2(MuY));
+//  printf("VarY %e\n", L2(VarY));
+
   ResultE = {[i, j] -> max(X[i] - strike, 0.0) | [i, j] < [NUM_X, NUM_Y]};
+//  printf("ResultE %e\n", L2(ResultE));
+
+//  print(MuX);
+//  print(ResultE);
+//  print(Dxx);
 
   for (t = NUM_T - 2; t >= 0; t--) {
     dtInv = tor(NUM_T - 1) / T;
 
     VarX1, VarX2 = updateParams(X, Y, T * tor(t) / tor(NUM_T - 1));
-  
-    /* explicit y */
-    V = {[i, j] -> sum({[k] -> MuY[i, j] * Dy[j, k] + 
-                               0.5 * ResultE[i, j - 1 + k] * 
-                                    VarY[i, j] * Dyy[j, k]
-                            | [0] <= [k] < [3]})
-                 | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
-         [i, j] -> 0d
-                 | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
-        };
-  
+    VarX = {[j, i] -> VarX1[j] * VarX2[i]};
+
+#ifdef DEBUG
+    if (t == NUM_T - 2) {
+      printf("dtInv = %e\n", dtInv);
+      printf("ResultE\n");
+      Print(ResultE);
+      printf("VarX\n");
+      Print(VarX);
+      printf("MuX\n");
+      Print(MuX);
+      printf("Dx\n");
+      Print(Dx);
+      printf("Dxx\n");
+      Print(Dxx);
+    }
+#endif
+
     /* explicit x */
-    U = {[j, i] -> dtInv * ResultE[i, j]
+    U = {[j, i] -> dtInv * ResultE[i, j] + 0.5 *
+                    sum({[k] -> MuX[j, i] * Dx[i, k] + 
+                                0.5 * ResultE[i - 1 + k, j] *
+                                VarX1[j] * VarX2[i] * Dxx[i, k]
+                              | [1] <= [k] < [3]})
                  | [0, 0] <= [j, i] < [NUM_Y, 1];
          [j, i] -> dtInv * ResultE[i, j] + 0.5 *
                     sum({[k] -> MuX[j, i] * Dx[i, k] + 
@@ -196,12 +234,45 @@ REAL value(REAL strike, int indX, int indY,
                                 VarX1[j] * VarX2[i] * Dxx[i, k]
                               | [0] <= [k] < [3]})
                  | [0, 1] <= [j, i] < [NUM_Y, NUM_X - 1];
-         [j, i] -> dtInv * ResultE[i, j]
+         [j, i] -> dtInv * ResultE[i, j] + 0.5 *
+                    sum({[k] -> MuX[j, i] * Dx[i, k] + 
+                                0.5 * ResultE[i - 1 + k, j] *
+                                VarX1[j] * VarX2[i] * Dxx[i, k]
+                              | [0] <= [k] < [2]})
                  | [0, NUM_X - 1] <= [j, i] < [NUM_Y, NUM_X]
          };
-  
+
+#ifdef DEBUG
+    if (t == NUM_T - 2) {
+      printf("U\n");
+      Print(U);
+    }
+#endif
+//    print(U);
+//    printf("U L2 %e\n", L2(U));
+ 
+    /* explicit y */
+    V = {[i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
+                                  MuY[i, j] * Dy[j, k] + 
+                                  0.5 * VarY[i, j] * Dyy[j, k])
+                            | [1] <= [k] < [3]})
+                 | [0, 0] <= [i, j] < [NUM_X, 1];
+         [i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
+                                  MuY[i, j] * Dy[j, k] + 
+                                  0.5 * VarY[i, j] * Dyy[j, k])
+                            | [0] <= [k] < [3]})
+                 | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
+         [i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
+                                  MuY[i, j] * Dy[j, k] + 
+                                  0.5 * VarY[i, j] * Dyy[j, k])
+                            | [0] <= [k] < [2]})
+                 | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
+        };
+
     U = {[j, i] -> U[j, i] + V[i, j]};
   
+//    printf("V L2 %e\n", L2(V));
+
     /* implicit x */
     U_vec = reshape([NUM_Y / VEC, VEC, NUM_X], U);
     VarX1_vec = reshape([NUM_Y / VEC, VEC], VarX1);
@@ -223,15 +294,27 @@ int main()
   itime = getInterval("time", 1);
   start(itime);
   indX, indY, X, Y, Dxx, Dyy, Dx, Dy = initGrid();
+//  printf("X  %e\n", L2(X));
+//  printf("Y  %e\n", L2(Y));
+//  printf("Dx %e\n", L2(Dx));
+//  printf("Dy %e\n", L2(Dy));
 
+#ifdef DEBUG
+  result = value(tor(0) / 1000.0, indX, indY, X, Y, Dxx, Dyy, Dx, Dy);
+#else
   result = {[i] -> value(tor(i) / 1000.0, indX, indY, X, Y, Dxx, Dyy, Dx, Dy)
                  | [i] < [OUTER]};
+#endif
   end(itime);
 
+#ifdef DEBUG
+  printf("%lf\n", result);
+#else
     for (i = 0; i < OUTER; i++) {
         fprintf(stderr, "%lf ", result[i]);
     }
     fprintf(stderr, "\n");
+#endif
 
   time, unit = returnResultUnit(itime);
 //  fprintf("This took %f%s.\n", time, unit);

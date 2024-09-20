@@ -1,0 +1,35 @@
+:Namespace nbody_naive
+
+⍝ N ∊ 1e3 1e4 1e5
+⍝ t ∊ 1e5 1e3 1e1
+
+⍝ calc←{{p v⊣p+←t×v←v++/d×⍤2⊢m×[1]3*⍨÷.5*⍨1e¯9++⌿×⍨d←∘.-⍤1⍨p⊣p v←⍵}⍣k⊢⍵⊣k t m←⍺}
+
+calc←{k←0⊃⍺ ⋄ t←1⊃⍺ ⋄ m←2⊃⍺ ⋄ bs←100⌈1000000÷≢m
+	px←0⊃⍵ ⋄ py←1⊃⍵ ⋄ pz←2⊃⍵ ⋄ vx←3⊃⍵ ⋄ vy←4⊃⍵ ⋄ vz←5⊃⍵
+	px py pz vx vy vz⊣{
+		{
+			dx←px∘.-px[⍵] ⋄ dy←py∘.-py[⍵] ⋄ dz←pz∘.-pz[⍵]
+			w←÷((1e¯9+(dx×dx)+(dy×dy)+dz×dz)*.5)*3
+			vx+←(dx×w)+.×m[⍵] ⋄ vy+←(dy×w)+.×m[⍵] ⋄ vz+←(dz×w)+.×m[⍵]
+		⍵+bs}⍣(N÷bs)⊢⍳bs
+		px⊢←px+t×vx ⋄ py⊢←py+t×vy ⋄ pz⊢←pz+t×vz
+	}⍣k⊢⍬
+}
+
+K←⍬ ⋄ T←⍬ ⋄ N←⍬ ⋄ m←⍬
+vx←⍬ ⋄ vy←⍬ ⋄ vz←⍬ ⋄ px←⍬ ⋄ py←⍬ ⋄ pz←⍬
+p←⍬ ⋄ v←⍬
+
+init←{
+	K⊢←0⊃⍵ ⋄ T⊢←1⊃⍵ ⋄ N⊢←2⊃⍵
+	m⊢←20×÷1+⍳N
+	vx⊢←?N⍴0 ⋄ vy⊢←?N⍴0 ⋄ vz⊢←?N⍴0
+	px⊢←?N⍴0 ⋄ py⊢←?N⍴0 ⋄ pz⊢←?N⍴0
+	p⊢←px,py,⍪pz ⋄ v⊢←vx,vy,⍪vz
+	K T N
+}
+
+run←{pv←K T m calc px py pz vx vy vz}
+
+:EndNamespace

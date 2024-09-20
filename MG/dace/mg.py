@@ -1356,10 +1356,10 @@ def main(framework: str):
         # sdfg.apply_transformations([Vectorization], options={'vector_len': 2})
         return sdfg.compile()
     
-    def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True):
+    def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True, use_wcr_tiling: bool = True):  
         sdfg = prog.to_sdfg(simplify=False)
         sdfg.simplify()
-        auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_gpu_storage=True)
+        auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_wcr_tiling=use_wcr_tiling, use_gpu_storage=True)
         return sdfg.compile()
     
     combo_func = None
@@ -1399,7 +1399,7 @@ def main(framework: str):
         # gpu_storage(sdfg)
         # sdfg.apply_gpu_transformations()
         # interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
-        norm2u3_func = compile_program_gpu(norm2u3_dace)
+        norm2u3_func = compile_program_gpu(norm2u3_dace, use_wcr_tiling=False)
     
     runtime += time.perf_counter()
     print(" Compilation time: %f seconds" % runtime)
@@ -1666,6 +1666,31 @@ def main(framework: str):
             else:
                 print("  %-8s:%9.3f  (%6.2f%%)" % (t_names[i], t, t * 100.0 / tmax))
         print("  (* Time hasn't gauged: operation is not supported by @njit)")
+    
+    def _func():
+        resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        for it in range(1, nit+1):
+            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+            resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+    
+    from timeit import repeat
+    num_warmup = 2
+    for _ in range(num_warmup):
+        _func()
+    runtimes = repeat(lambda: _func(), number=1, repeat=10)
+    mean = numpy.mean(runtimes)
+    std = numpy.std(runtimes)
+    repeatitions = 10
+    while std > 0.01 * mean and len(runtimes) < 100:
+        print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
+        runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
+        mean = numpy.mean(runtimes)
+        std = numpy.std(runtimes)
+        repeatitions += 10
+    mflops = 58.0 * nit * nn * 1.0e-6 / mean
+    print(f"DaCe {'CPU' if args.framework == 'dace_cpu' else 'GPU'} runtime: mean {mean} s ({mflops} mflop/s), std {std * 100 / mean:.2f}%", flush=True)
 
 
 #END main()
@@ -1673,8 +1698,8 @@ def main(framework: str):
 #Starting of execution
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='NPB-PYTHON-SER MG')
-    parser.add_argument("-c", "--CLASS", required=True, help="WORKLOADs CLASSes")
-    parser.add_argument("-f", "--framework", choices=['python', 'dace_cpu', 'dace_gpu'], default='python', help="Framework to use")
+    parser.add_argument("-c", "--CLASS", default='A', help="WORKLOADs CLASSes")
+    parser.add_argument("-f", "--framework", choices=['python', 'dace_cpu', 'dace_gpu'], default='dace_cpu', help="Framework to use")
     args = parser.parse_args()
 
     npbparams.set_mg_info(args.CLASS)

@@ -86,9 +86,32 @@ advance(struct Body[N] positions, struct Body[N] velocities, double[N] masses,
   return (positions, velocities);
 }
 
+inline
+struct Body[N], struct Body[N]
+nbody(struct Body[N] positions, struct Body[N] velocities, double[N] masses,
+      double dt, int iterations)
+{
+    for (t = 0; t < iterations; t++) {
+        acc = acc_v(positions, masses);
+        
+        velocities = with {
+                        (. <= iv <= .): add(velocities[iv], 
+                                            mul(dt, acc[iv]));
+                     }: genarray([N], zero(Body {0d, 0d, 0d}));
+        
+        positions =  with {
+                        (. <= iv <= .): add(positions[iv], 
+                                            mul(dt, velocities[iv]));
+                     }: genarray([N], zero(Body {0d, 0d, 0d}));
+    }
+
+    return (positions, velocities);
+}
+
 int main()
 {
-    off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
+    /* In the multithreaded case we have -mt <N> -mt_bind simple before N and iter */
+    off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 4 : 0;
     N = toi(argv(off + 1));
     ITER = toi(argv(off + 2));
     itime = getInterval("time", 1);
@@ -100,9 +123,7 @@ int main()
                }: genarray([N], zero(Body {0d, 0d, 0d}));
     masses = {[i] -> 1d | [i] < [N]};
     
-    for (t = 0; t < ITER; t++) {
-      positions, velocities = advance(positions, velocities, masses, 0.01);
-    }
+    positions, velocities = nbody(positions, velocities, masses, 0.01, ITER);
     
     end(itime);
     

@@ -5,10 +5,27 @@ import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
 import qualified Prelude
+import Criterion.Measurement
 
 main :: Prelude.IO ()
-main = defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
+main = do
+  once "CPU" CPU.run
+  once "GPU" GPU.run
+  defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
   where
+    once nm rn = do
+      print nm
+      mapM_ once' rn [(4, 256, input256), (20, 256, input256), (20, 512, input512)]
+    once' rn (i,n,input) = do
+      print (i,n)
+      (measured, endtime) <- measure (nf (rn (\a ->
+              mg n
+                (if iter Prelude.== 4 then weightsA else weightsB) (use $ fromList Z [iter])
+                a
+                (generate (Z_ ::. constant n ::. constant n ::. constant n) $ const 0)
+        )) input) 2
+      print (secs $ measTime measured)
+
     makeInput' = CPU.runN makeInput
     input256 = makeInput' $ fromList Z [256]
     input512 = makeInput' $ fromList Z [512]
