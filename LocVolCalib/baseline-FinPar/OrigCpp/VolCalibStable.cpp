@@ -253,13 +253,27 @@ rollback(   const unsigned numX,
 
             U(j,i) = dtInv * ResultE(i,j);
 
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
+            /**
+             * VarX is very large in later rows. For dataset small, first iteration,
+             * last row is order e54-e56.
+             * It seems that Dxx(i, 0) + Dxx(i, 1) + Dxx(i, 2) is very small (0?)
+             * So the magnitude of
+             *   0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) ) +
+             *   0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) )
+             *   0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) )
+             * is roughly that of 0.5 * ResultE(i+1,j) * MuX(j,i)*Dx(i,2) which is of
+             * order 1e1 - 1e3. So there is an incredible difference this and
+             * the partial sums. As floating point addition is only accurate in relative
+             * error, this gives us virtually no significant digits. 
+             **/
 
             U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
         }
     }
 
