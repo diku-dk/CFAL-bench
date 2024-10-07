@@ -105,6 +105,9 @@ void initGrid(  const unsigned numX,
 
     for(unsigned i=0; i<numX; ++i) {
         REAL ii = (REAL) i;
+        /* For data set small, this is
+         *  -indX * dx + s0 = -3 * indX + 0.03 =
+         *  -3 * (dx + 0.01) */
         X[i] = ii*log(ii+1)*dx - indX*dx + s0;       // (***Fix***)
         //X[i] = i*dx - indX*dx + s0;
     }
@@ -155,13 +158,17 @@ void initOperator(  const int   n,
         dxl      = xx[i]   - xx[i-1];
         dxu      = xx[i+1] - xx[i];
 
+        
         D[i*3 + 0]  = -dxu/dxl/(dxl+dxu);
         D[i*3 + 1]  = (dxu/dxl - dxl/dxu)/(dxl+dxu);
         D[i*3 + 2]  =  dxl/dxu/(dxl+dxu);
 
-        DD[i*3 + 0] =  2.0/dxl/(dxl+dxu);
-        DD[i*3 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
-        DD[i*3 + 2] =  2.0/dxu/(dxl+dxu); 
+        //DD[i*3 + 0] =  2.0/dxl/(dxl+dxu);
+        //DD[i*3 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
+        //DD[i*3 + 2] =  2.0/dxu/(dxl+dxu); 
+        DD[i * 3 + 0] =  2.0 / (dxl * (xx[i + 1] - xx[i - 1]));
+        DD[i * 3 + 1] = -2.0 / (dxl * dxu);
+        DD[i * 3 + 2] =  2.0 / (dxu * (xx[i + 1] - xx[i - 1]));
     }
 
     //	upper boundary
@@ -267,13 +274,14 @@ rollback(   const unsigned numX,
              * error, this gives us virtually no significant digits. 
              **/
 
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
+
             U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
 
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
         }
     }
 
