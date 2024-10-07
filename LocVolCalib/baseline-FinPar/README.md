@@ -133,3 +133,14 @@ Local Volatility Calibration is implemented in the working directories:
     This is free software; see the source for copying conditions.  There is NO
     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+# SaC Validation
+
+SaC does not validate. We have slightly different rounding in `X[0]` and 
+`X[numX - 1]` (about 2 decimal places). This is amplified in computing Dx
+and Dxx due to ill-conditioned subtraction of close values, and also in
+VarX due to exp and log being ill-conditioned around respectively large
+inputs and inputs close to 1. Dx, Dxx are also ill-conditioned but it
+seems we are lucky there and only get a few wrong places.
+
+And then in U we also have a very unconditioned sum. Perhaps SaC is able
+to do some algebraic simplification, I would have to check.

@@ -2,24 +2,48 @@
 
 ⎕IO←0
 
-DS←256 ⋄ IT←4 ⋄ k←2⍟DS
-
-CI←+⌿¨|RI←,¯1+⍳3 3 3
-A←(¯8÷3)  (0)  (÷6)(÷12)[CI]
-P←(÷2     4    8     16)[CI]
-Q←(÷1     2    4      8)[CI]
-Sa←(¯3÷8) (÷32)(÷¯64) 0 [CI]
-Sb←(¯3÷17)(÷33)(÷¯61) 0 [CI]
-S←Sa
-
 pp←{⍺←'' ⋄ ⍵⊣⎕←⍺(L2 ⍵)}
-st←{⊃⍵{k x y z←⍺ ⋄ ⍵+k×x⊖y⌽[1]z⌽⍺⍺}⌿(⍺,¨RI),⊂(⍴⍵)⍴0}
-dn←{((≢⍴⍵)⍴⊂1+2×⍳(≢⍵)÷2)⌷⍵}
-up←{X⊣X[i;i;i←1+2×⍳≢⍵]←⍵⊣X←0⍴⍨2×⍴⍵}
+⍝ DS←256 ⋄ IT← 4 ⋄ Si←0 ⍝ Class A
+DS←256 ⋄ IT←20 ⋄ Si←1 ⍝ Class B
+⍝ DS←512 ⋄ IT←20 ⋄ Si←1 ⍝ Class C
 
-M←{⍺≤1:S st ⍵ ⋄ z+S st ⍵-A st⊢z←Q st up(⍺-1)∇dn P st ⍵}
-L2←{((+⌿,⍵×⍵)÷×⌿⍴⍵)*.5}
-MG←{L2 ⍺-A st ⍺{⍵+k M ⍺-A st ⍵}⍣IT⊢⍵}
+Gflops←{(58×IT×DS*3)÷2*30}
+
+:Namespace MG_k_cpu
+	DS←0 ⋄ IT←0 ⋄ k←0
+	
+	CI←+/|RI←⍉¯1+3 3 3⊤⍳27
+	A←(¯8÷3)  (0)  (÷6)(÷12)
+	P←(÷2     4    8     16)
+	Q←(÷1     2    4      8)
+	Sa←(¯3÷8) (÷32)(÷¯64) 0 
+	Sb←(¯3÷17)(÷33)(÷¯61) 0 
+	S←Sa
+
+	⍝ st←{⊃⍵{k x y z←⍺ ⋄ ⍵+k×x⊖y⌽[1]z⌽⍺⍺}⌿(⍺,¨RI),⊂(⍴⍵)⍴0}
+	st←{k←⍺
+		x←⍵×k[0]
+		x+←k[1]×(1⊖⍵)+(¯1⊖⍵)+r0←(1⌽⍵)+(¯1⌽⍵)+r01←(1⌽[1]⍵)+¯1⌽[1]⍵
+		x+←k[2]×(1⊖r0)+(¯1⊖r0)+r1←(1⌽r01)+¯1⌽r01
+		x+←k[3]×(1⊖r1)+¯1⊖r1
+		x
+	}
+	dn←{⍵[i;i;i←1+2×⍳(≢⍵)÷2]}
+	up←{X⊣X[i;i;i←1+2×⍳≢⍵]←⍵⊣X←0⍴⍨2×⍴⍵}
+
+	M←{⍺≤1:S st ⍵ ⋄ z+S st ⍵-A st⊢z←Q st up(⍺-1)∇dn P st ⍵}
+	L2←{((+⌿,⍵×⍵)÷×⌿⍴⍵)*.5}
+	MG←{L2 ⍺-A st ⍺{⍵+k M ⍺-A st ⍵}⍣IT⊢⍵}
+
+	u←⍬ ⋄ v←⍬ ⋄ res←⍬
+
+	init←{v⊢←0⊃⍵ ⋄ u⊢←1⊃⍵ ⋄ DS⊢←0⊃⍺ ⋄ IT⊢←1⊃⍺ ⋄ S⊢←(2⊃⍺)⊃Sa Sb ⋄ k⊢←2⍟DS ⋄ res⊢←⍬}
+	warmup←{⍬⊣v MG u}
+	run←{⍬⊣res⊢←v MG u}
+	result←{res}
+:EndNamespace
+	
+MG_k←MG_k_cpu
 
 seed←314159265
 rlcg←{⎕FR←1287 ⋄ a←5*13 ⋄ b←⍺ ⋄ m←2*46 ⋄ z←(2*¯46)×{b∘←m|a×b}¨⍳⍵ ⋄ ⎕FR←645 ⋄ 1×z}
@@ -30,16 +54,20 @@ Run←{
 	u←DS DS DS⍴0
 	
 	⎕←'Warming up...'
-	r←u+k M v-A st u
+	_←DS IT Si MG_k.init v u
+	_←MG_k.warmup⍬ ⍝ r←u+k M v-A st u
 	
 	⎕←'Running MG...'
+	_←DS IT Si MG_k.init v u
 	start←24 60 60 1000⊥¯4↑⎕TS
-	r←v MG u
+	_←MG_k.run⍬ ⍝ r←v MG u
 	end←24 60 60 1000⊥¯4↑⎕TS
+	r←MG_k.result⍬
 	
-	⎕←'MG time elapsed: ',(⍕(end-start)÷1000),'secs'
+	⎕←'MG time elapsed: ',(⍕time←(end-start)÷1000),'secs'
+	⎕←'MG Gflops/s: ',⍕(Gflops⍬)÷time
 	⎕←'L2 Norm: ',⍕r
-	1:shy←r
+	1:shy←Gflops time
 }
 
 :EndNamespace

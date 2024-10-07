@@ -10,7 +10,6 @@ typedef double REAL;
 
 using namespace std;
 
-#define DEBUG
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -25,36 +24,6 @@ using namespace std;
 
 #define U(i,j)        U[(i)*numX + j]
 #define V(i,j)        V[(i)*numY + j]
-
-void Perturb(double *x, unsigned n, double delta)
-{
-//    for (size_t i = 0; i < n; i++) {
-//        x[i] = x[i] * (1.0 + delta);
-//    }
-        x[0] = x[0] * (1.0 + delta);
-        x[n - 1] = x[n - 1] * (1.0 + delta);
-}
-
-void PrintL2(const char *str, double *x, unsigned m, unsigned n)
-{
-    double sum = 0.0;
-    for (unsigned i = 0; i < m; i++) {
-        for (unsigned j = 0; j < n; j++) {
-            sum += x[i * n + j] * x[i * n + j];
-        }
-    }
-    printf("%s L2 = %e\n", str, sqrt(sum));
-}
-
-void Print(double *x, unsigned m, unsigned n)
-{
-    for (unsigned i = 0; i < m; i++) {
-        for (unsigned j = 0; j < n; j++) {
-            printf("%.17e ", x[i * n + j]);
-        }
-        printf("\n");
-    }
-}
 
 /***********************************/
 
@@ -73,33 +42,39 @@ void updateParams(  const unsigned numX,
                     REAL* MuX, REAL* VarX, // output
                     REAL* MuY, REAL* VarY  // output
 ) {
-    REAL c = 0.5 * nu * nu * Time[g];
-#ifdef DEBUG
-    printf("t = %.17e\n", Time[g]);
-    printf("Y[2] = exp(%.17e)\n", Y[2] - c);
-    printf("VarX[2, 0] = %.17e * %.17e = %.17e\n", pow(X[0], 2.0 * beta), 
-                exp(fma(-0.5 * nu * nu, Time[g], Y[2])),
-                pow(X[0], 2.0 * beta) * exp(fma(-0.5 * nu * nu, Time[g], Y[2])));
-    printf("Long double Y[2] = %.17Le\n", expl((long double)Y[2] - 0.5 * nu * nu * Time[g]));
-#endif
+
     for(unsigned j=0; j<numY; ++j) 
         for(unsigned i=0; i<numX; ++i) {
            	//MuX(j,i)  = 0.0;
             MuX(j,i)  = ((double)0.0000001) / ((numX + i) * (numY + j));    // (***Fix***)
-//            VarX(j,i) = exp(2*(beta*log(X[i]) + Y[j] - 0.5*nu*nu*Time[g]));
-            /* Same expression, but log(x) is ill-conditioned around 1 */
-//            VarX(j, i) = pow(X[i], 2.0 * beta) * 
-//                            exp(fma(-0.5 * nu * nu, Time[g], Y[j])); // (***Fix***)
-            VarX(j, i) = exp(Y[j] - c) * pow(X[i], 2.0 * beta);
-
+            /**
+             * (***Fix***)
+             * This expression is rewritten from
+             *  VarX(j,i) = exp(2*(beta*log(X[i]) + Y[j] - 0.5*nu*nu*Time[g]));
+             * The condition number of a function f is
+             *   c(x) = |x f'(x) / f(x)|
+             * The condition number of e^x is x (ill-conditioned for large x), 
+             * of log(x) is 1 / |log(x)| (ill-conditioned around x = 1),
+             * of x^b is b (ill-conditioned for large b).
+             * Subtraction x - y is ill-conditioned whenever |x| + |y| is much 
+             * smaller than | x - y |
+             *
+             * So the new expression still has problems, but at least less.
+             * (This is a suboptimal way of computing VarX, should compute
+             *  {pow(X[i], 2.0 * beta) | i < numX} and 
+             *  {exp(Y[j] - 0.5 * nu * nu * Time[g]) | j < numY}
+             *  and do the multiplications on the fly...)
+             **/
+            VarX(j, i) = pow(X[i], 2.0 * beta) * 
+                             exp(Y[j] - 0.5 * nu * nu * Time[g]);
         }
 
     for(unsigned i=0; i<numX; ++i)
         for(unsigned j=0; j<numY; ++j) {
-            MuY(i,j)  = 0.0;
-            VarY(i,j) = nu*nu;
-            //MuY(i,j) = alpha / (i * numY + j + 1);       // (***Fix***)
-            //VarY(i,j) = (nu * nu) / (i * numY + j + 1);  // (***Fix***)
+            //MuY(i,j)  = 0.0;
+            //VarY(i,j) = nu*nu;
+            MuY(i,j) = alpha / (i * numY + j + 1);       // (***Fix***)
+            VarY(i,j) = (nu * nu) / (i * numY + j + 1);  // (***Fix***)
 
         }
 }
@@ -122,42 +97,29 @@ void initGrid(  const unsigned numX,
  ) {
 
     for(unsigned i=0; i<numT; ++i)
-        Time[i] = t*i/(numT - 1);
+        Time[i] = t*i/(numT-1);
 
     const REAL stdX = 20*alpha*s0*sqrt(t);
     const REAL dx = stdX/numX;
     indX = static_cast<unsigned>(s0/dx);
-#ifdef DEBUG
-    printf("indX = %d\n", indX);
-    printf("dx = %.17e\n", dx);
-    printf("stdX = %.17e\n", stdX);
-#endif
 
     for(unsigned i=0; i<numX; ++i) {
         REAL ii = (REAL) i;
-        X[i] = ii*log(ii+1) - indX*dx + s0;
-        /* f(x) = log(x), f'(x) = 1 / |x|, so ill-conditioned around ii
-         * near zero. For ii = 0, the term cancels out, so should be ok. */
+        /* For data set small, this is
+         *  -indX * dx + s0 = -3 * indX + 0.03 =
+         *  -3 * (dx + 0.01) */
+        X[i] = ii*log(ii+1)*dx - indX*dx + s0;       // (***Fix***)
         //X[i] = i*dx - indX*dx + s0;
     }
 
-    const REAL stdY = 10.0 * nu * sqrt(t);
+    const REAL stdY = 10*nu*sqrt(t);
     const REAL dy = stdY/numY;
     const REAL logAlpha = log(alpha);
     indY = static_cast<unsigned>(numY/2);
-    REAL y_constant = - (REAL)indY*dy + logAlpha;
-#ifdef DEBUG
-  printf("log(alpha) = %.17e\n", logAlpha);
-  printf("indY = %d\n", indY);
-  printf("dy = %.17e\n", dy);
-  printf("y_constant = %.17e\n", y_constant);
-#endif
 
     for(unsigned i=0; i<numY; ++i) {
         REAL ii = (REAL) i;
-//        Y[i] = 0.001 * i;
-        Y[i] = ii*log(ii+1)*dy + y_constant;  // (***Fix***)
-//        Y[i] = ii*log(ii+1)*dy - indY*dy + logAlpha;
+        Y[i] = ii*log(ii+1)*dy - indY*dy + logAlpha;  // (***Fix***)
         //Y[i] = i*dy - indY*dy + logAlpha;
     }
 }
@@ -189,31 +151,24 @@ void initOperator(  const int   n,
 	
     //	standard case
     for(int i=1; i<n-1; i++) {
+        /* As log(i) approx log(i + 1) for large i, we have
+         * |x[i] - x[i + 1]| approx dx log(i) which is much smaller
+         * than  i*log(i+1)*dx - indX*dx + s0 for large i.
+         * So this is ill-conditioned at the upper part of D, DD. */
         dxl      = xx[i]   - xx[i-1];
         dxu      = xx[i+1] - xx[i];
 
-        /* (***fix***) (same expressions, but simplified).
-         * Note that D[i, 0] + D[i, 2] = 
-         * (dxl^2 - dxu^2) / (dxl * dxu * (xx[i + 1] - xx[i - 1])) =
-         * (dxl^2 - dxu^2) / (dxl * dxu * (dxu - dxl)) =
-         * -(dxl + dxu) / (dxl * dxu)
-         */
-        D[i*3 + 0]  = -dxu / (dxl * (xx[i + 1] - xx[i - 1]));
-        D[i*3 + 1]  = (dxu - dxl) / (dxu * dxl);
-        D[i*3 + 2]  =  dxl / (dxu * (xx[i + 1] - xx[i - 1]));
-
-        //D[i*3 + 0]  = -dxu/dxl/(dxl+dxu);
-        //D[i*3 + 1]  = (dxu/dxl - dxl/dxu)/(dxl+dxu);
-        //D[i*3 + 2]  =  dxl/dxu/(dxl+dxu);
-
-        /* (***fix***) (same expressions, but simplified) */
-        DD[i*3 + 0] =  2.0 / (dxl * (xx[i + 1] - xx[i - 1]));
-        DD[i*3 + 1] = -2.0 / (dxu * dxl);
-        DD[i*3 + 2] =  2.0 / (dxu * (xx[i + 1] - xx[i - 1]));
+        
+        D[i*3 + 0]  = -dxu/dxl/(dxl+dxu);
+        D[i*3 + 1]  = (dxu/dxl - dxl/dxu)/(dxl+dxu);
+        D[i*3 + 2]  =  dxl/dxu/(dxl+dxu);
 
         //DD[i*3 + 0] =  2.0/dxl/(dxl+dxu);
         //DD[i*3 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
         //DD[i*3 + 2] =  2.0/dxu/(dxl+dxu); 
+        DD[i * 3 + 0] =  2.0 / (dxl * (xx[i + 1] - xx[i - 1]));
+        DD[i * 3 + 1] = -2.0 / (dxl * dxu);
+        DD[i * 3 + 2] =  2.0 / (dxu * (xx[i + 1] - xx[i - 1]));
     }
 
     //	upper boundary
@@ -278,49 +233,46 @@ void
 rollback(   const unsigned numX, 
             const unsigned numY, 
             const unsigned g,
-            REAL* a, REAL* b,  REAL* c, REAL* Time, REAL* U, REAL* V,
+            REAL* a, REAL* b,  REAL* c, 
+            /***Fix***/
+            REAL t, unsigned numT, REAL* U, REAL* V,
             REAL* Dx, REAL* Dxx, REAL* MuX,  REAL* VarX,
             REAL* Dy, REAL* Dyy, REAL* MuY,  REAL* VarY,
 
             REAL* ResultE  // output
-            , unsigned numT
 ) {
-    const REAL dtInv = 1.0 / (Time[g+1]-Time[g]);
+    /**
+     * (***Fix***)
+     * Rewritten from
+     *       const REAL dtInv = 1.0 / (Time[g+1]-Time[g]);
+     * Time[g] = t * g / (numT - 1), so Time[g + 1] - Time[g] = 
+     *   t / (numT - 1)
+     * As |Time[g + 1]| + |Time[g]| = (2g + 1) * t / (numT - 1), the old
+     * could compute dtInv with high error for large g.
+     **/
+//    const REAL dtInv = 1.0 / (Time[g+1]-Time[g]);
+    const REAL dtInv = (numT - 1) / t;
     int        i, j;
-
-//    PrintL2("MuX", MuX, numY, numX);
-//    PrintL2("MuY", MuY, numX, numY);
-//    PrintL2("VarY", VarY, numX, numY);
-//    PrintL2("ResultE", ResultE, numX, numY);
-
-//    Print(MuX, numY, numX);
-//    Print(ResultE, numX, numY);
-//    Print(Dxx, numX, 3);
-
-//    Print(ResultE, numX, numY);
-//    Print(VarX, numY, numX);
-
-#ifdef DEBUG
-    if (g == numT - 2) {
-      printf("dtInv = %e\n", dtInv);
-      printf("ResultE\n");
-      Print(ResultE, numX, numY);
-      printf("VarX\n");
-      Print(VarX, numY, numX);
-      printf("MuX\n");
-      Print(MuX, numY, numX);
-      printf("Dx\n");
-      Print(Dx, numX, 3);
-      printf("Dxx\n");
-      Print(Dxx, numX, 3);
-    }
-#endif
 
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
 
             U(j,i) = dtInv * ResultE(i,j);
+
+            /**
+             * VarX is very large in later rows. For dataset small, first iteration,
+             * last row is order e54-e56.
+             * It seems that Dxx(i, 0) + Dxx(i, 1) + Dxx(i, 2) is very small (0?)
+             * So the magnitude of
+             *   0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) ) +
+             *   0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) )
+             *   0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) )
+             * is roughly that of 0.5 * ResultE(i+1,j) * MuX(j,i)*Dx(i,2) which is of
+             * order 1e1 - 1e3. So there is an incredible difference this and
+             * the partial sums. As floating point addition is only accurate in relative
+             * error, this gives us virtually no significant digits. 
+             **/
 
             if (0 < i) 
             U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
@@ -329,19 +281,9 @@ rollback(   const unsigned numX,
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+
         }
     }
-
-#ifdef DEBUG
-    if (g == numT - 2) {
-      printf("U\n");
-      Print(U, numY, numX);
-    }
-#endif
-//    Print(U, numY, numX);
-
-//    printf("dtInv = %e\n", dtInv);
-//    PrintL2("U", U, numY, numX);
 
 	//	explicit y
     for( i=0; i<numX; i++) {
@@ -357,15 +299,6 @@ rollback(   const unsigned numX,
             U(j,i) += V(i,j); 
         }
     }
-#ifdef DEBUG
-    if (g == numT - 2) {
-      printf("V\n");
-      Print(V, numX, numY);
-    }
-#endif
-
-//    PrintL2("V", V, numY, numX);
-
 
     //	implicit x
     for(j=0; j<numY; j++) {
@@ -395,13 +328,6 @@ rollback(   const unsigned numX,
 
         tridag(numY, a, b, c, yy);
     }
-
-#ifdef DEBUG
-    if (g == numT - 2) {
-      printf("ResultE\n");
-      Print(ResultE, numX, numY);
-    }
-#endif
 }
 
 REAL value(   const REAL s0,
@@ -427,32 +353,8 @@ REAL value(   const REAL s0,
                   s0, alpha, nu, t, 
                   indX, indY, X, Y, Time );
 
-//    for (int i = 0; i < numX; i++) {
-//        printf("%e ", X[i]);
-//    }
-//    printf("\n");
-
-
-//    PrintL2("MuX", MuX, numY, numX);
-//    PrintL2("MuY", MuY, numX, numY);
-//    PrintL2("VarY", VarY, numX, numY);
-
     initOperator( numX, X, Dx, Dxx );
     initOperator( numY, Y, Dy, Dyy );
-#ifdef DEBUG
-    printf("X\n");
-    Print(X, numX, 1);
-    printf("Y\n");
-    Print(Y, numY, 1);
-#endif
-
-//    for (int i = 0; i < 3 * numX; i += 3) {
-//        printf("%e %e %e\n", Dxx[i], Dxx[i + 1], Dxx[i + 2]);
-//    }
-//    printf("\n");
-
-//    PrintL2("Dx", Dx, numX, 3);
-//    PrintL2("Dy", Dy, numY, 3);
 
     setPayoff(numX, numY, strike, X, ResultE);
 
@@ -461,10 +363,10 @@ REAL value(   const REAL s0,
                       X, Y, Time, MuX, VarX, MuY, VarY );
 
         rollback( numX, numY, i,  
-                  a, b, c, Time, U, V,
+                  a, b, c, t, numT, U, V,
                   Dx, Dxx, MuX, VarX,
                   Dy, Dyy, MuY, VarY,
-                  ResultE, numT
+                  ResultE
                 );
     }
 
@@ -518,11 +420,7 @@ int main() {
             gettimeofday(&t_start, NULL);
 
             REAL strike;
-#ifdef DEBUG
-            for (unsigned i = 0; i < 1; i++) {
-#else
             for( unsigned i = 0; i < OUTER_LOOP_COUNT; ++ i ) {
-#endif
                 strike = 0.001*i;
                 result[i] = value(  s0, strike, t, 
                                     alpha, nu, beta,
@@ -549,9 +447,6 @@ int main() {
             delete[] Time; delete[] ResultE;
         }
     }
-        for (unsigned i = 0; i < OUTER_LOOP_COUNT; i++) {
-            printf("%.17e\n", result[i]);
-        }
 
     {   // validation and writeback of the result
         bool is_valid = validate( result, OUTER_LOOP_COUNT );

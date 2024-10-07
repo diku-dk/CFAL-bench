@@ -73,69 +73,33 @@ updateParams (T2 myX myY) (T4 tnow alpha beta nu) = T4 myMuX myVarX myMuY myVarY
               (replicate (Z_ ::. All_ ::. numX) myY)
               (replicate (Z_ ::. numY ::. All_) myX)
 
--- unused: in Accelerate, you can't `map` this function over matrices. Instead, see tridagParSh
-tridagPar :: Acc (Vector Double, Vector Double, Vector Double, Vector Double) -> Acc (Vector Double)
-tridagPar (T4 a b c y) =
-  let I1 n = shape a
-      -- recurrence 1
-      b0 = b ! (Z_ ::. 0)
-      mats = generate (I1 n) (\i@(I1 i')-> if 0 < i'
-                                 then T4 (b ! i) (negate $ (a ! i) *(c ! I1 (i'-1))) 1 0
-                                 else T4 1 0 0 1)
-      scmt = scanl (\(T4 a0 a1 a2 a3) (T4 b0 b1 b2 b3) ->
-                     let value = 1/(a0*b0)
-                     in T4 ((b0*a0 + b1*a2)*value)
-                           ((b0*a1 + b1*a3)*value)
-                           ((b2*a0 + b3*a2)*value)
-                           ((b2*a1 + b3*a3)*value))
-                  (T4 1 0 0 1) mats
-      b'    = map (\(T4 t0 t1 t2 t3) -> (t0*b0 + t1) / (t2*b0 + t3)) scmt
-      -- recurrence 2
-      y0   = y ! (Z_::.0)
-      lfuns= generate (I1 n) (\i@(I1 i') ->
-                   if 0 < i'
-                   then T2 (y!i) (0.0-(a!i)/(b'!I1 (i'-1)))
-                   else T2 0 1)
-      cfuns= scanl (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
-                (T2 0 1) lfuns
-      y'    = map (\(T2 a b)  -> a + b*y0) cfuns
-      -- recurrence 3
-      yn   = y' !! (n-1) / b' !! (n-1)
-      lfuns' = generate (I1 n) (\(I1 k)  ->
-                    let i = n-k-1
-                    in  if   0 < k
-                        then T2 (y' !! i / b' !! i) (0.0-c !! i / b' !! i)
-                        else T2 0 1)
-      cfuns' = scanl (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
-                  (T2 0 1) lfuns'
-      y''    = map (\(T2 a b) -> a + b*yn) cfuns'
-      y'''    = reverse y''
-  in y'''
--- 'vectorized' version of the above
+-- 'vectorized' version of tridagPar
 tridagParSh :: Shape sh => Acc (Array (sh:.Int) Double, Array (sh:.Int) Double, Array (sh:.Int) Double, Array (sh:.Int) Double) -> Acc (Array (sh:.Int) Double)
 tridagParSh (T4 a b c y) =
   let sh@(_ ::. n) = shape a
-      -- recurrence 1
+      -- recurrence 1: 2x2 matrix mult, normalized to the first element always being a 1
       b0 = slice b (Any_ ::. (0 :: Exp Int))
       mats = generate sh (\i@(ix ::. i')-> if 0 < i'
-                                 then T4 (b ! i) (negate $ (a ! i) *(c ! (ix ::. i'-1))) 1 0
-                                 else T4 1 0 0 1)
-      scmt = scanl (\(T4 a0 a1 a2 a3) (T4 b0 b1 b2 b3) ->
-                     let value = 1/(a0*b0)
-                     in T4 ((b0*a0 + b1*a2)*value)
-                           ((b0*a1 + b1*a3)*value)
-                           ((b2*a0 + b3*a2)*value)
+                                 then let bi = 1 / (b ! i) in 
+                                  T3 (negate $ (a ! i) * (c!(ix ::. i'-1)) * bi) bi 0
+                                 else T3 0 0 1)
+      scmt = scanl1 (\(T3 a1 a2 a3) (T3 b1 b2 b3) ->
+                     let value = 1/(1+b1*a2)
+                     in T3 ((   a1 + b1*a3)*value)
+                           ((b2    + b3*a2)*value)
                            ((b2*a1 + b3*a3)*value))
-                  (T4 1 0 0 1) mats
-      b'    = zipWith (\(T4 t0 t1 t2 t3) b0' -> (t0*b0' + t1) / (t2*b0' + t3)) scmt $ replicate (Any_ ::. n) b0
+                  -- (T3 0 0 1) 
+                  mats
+      b'    = zipWith (\(T3 t1 t2 t3) b0' -> (b0' + t1) / (t2*b0' + t3)) scmt $ replicate (Any_ ::. n) b0
       -- recurrence 2
       y0   = slice y (Any_ ::. (0 :: Exp Int))
       lfuns= generate sh (\i@(ix ::. i') ->
                    if 0 < i'
                    then T2 (y!i) (0.0-(a!i)/(b'!(ix ::. i'-1)))
                    else T2 0 1)
-      cfuns= scanl (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
-                (T2 0 1) lfuns
+      cfuns = scanl1 (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
+                -- (T2 0 1) 
+                lfuns
       y'    = zipWith (\(T2 a b) y0'  -> a + b*y0') cfuns $ replicate (Any_ ::. n) y0
       -- recurrence 3
       yn   = zipWith (/) (slice y' (Any_ ::. (n-1 :: Exp Int))) (slice b' (Any_ ::. (n-1 :: Exp Int)))
@@ -144,8 +108,9 @@ tridagParSh (T4 a b c y) =
                     in  if   0 < k
                         then T2 (y' ! (ix ::. i) / b' ! (ix ::. i)) (0.0-c ! (ix ::. i) / b' ! (ix ::. i))
                         else T2 0 1)
-      cfuns' = scanl (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
-                  (T2 0 1) lfuns'
+      cfuns' = scanl1 (\(T2 a0 a1) (T2 b0 b1) -> T2 (b0 + b1*a0) (a1*b1))
+                  -- (T2 0 1) 
+                  lfuns'
       y''    = zipWith (\(T2 a b) yn' -> a + b*yn') cfuns' $ replicate (Any_ ::. n) yn
       y'''    = reverseOn _1 y''
   in y'''
@@ -203,6 +168,7 @@ rollback (T2 tnow tnext) (T9 myResult myMuX myDx myDxx myVarX myMuY myDy myDyy m
       myResultTr2 = implicitMethod (T5 myDy myDyy myMuY myVarY y) dtInv
   in transposeOn _1 _2 myResultTr2
 
+--        4    4    4    1  1  1    1   1    [0]
 value :: Exp (Int, Int, Int, Double, Double, Double, Double, Double) -> Acc (Vector Double) -> Acc (Vector Double)
 value (T8 numX numY numT s0 t alpha nu beta) strikes =
   let (T2 myXindex myYindex, T3 myX myY myTimeline) = initGrid $ T7 s0 alpha nu t numX numY numT
@@ -218,8 +184,10 @@ value (T8 numX numY numT s0 t alpha nu beta) strikes =
                   in rollback (T2 tnow tnext) (T9 res mux myDx myDxx varx muy myDy myDyy vary))
   in slice final (Z_ ::. All_ ::. myYindex ::. myXindex)
 
+--                 1              4   4    4    1  1  1    1   1
 main' :: Acc (Scalar Input) -> Acc (Vector Double)
 main' s = let (T9 outerloopcount numX numY numT s0 t alpha nu beta) = the s in
+  -- [0]
   let strikes = generate (I1 outerloopcount) (\(I1 i) -> 0.001 * toFloating i)
   in value (T8 numX numY numT s0 t alpha nu beta) strikes
 
@@ -228,6 +196,6 @@ iterateOver :: (Elt a, Arrays b) => Acc (Vector a) -> Acc b -> (Exp a -> Acc b -
 iterateOver xs initial f =
   let Z_ ::. n = shape xs
   in afst $ awhile
-    (map (< 1) . asnd)
+    (map (< n) . asnd)
     (\(T2 current i) -> T2 (f (xs!I1 (the i)) current) (map (+1) i))
     (T2 initial $ unit 0)
