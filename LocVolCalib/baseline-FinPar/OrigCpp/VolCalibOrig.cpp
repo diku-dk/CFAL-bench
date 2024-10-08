@@ -10,8 +10,8 @@ typedef double REAL;
 
 using namespace std;
 
-#define BREAK1
-//#define BREAK2
+//#define BREAK1
+#define BREAK2
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -239,6 +239,9 @@ rollback(   const unsigned numX,
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
     #endif
 #endif
         }
