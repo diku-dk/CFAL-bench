@@ -256,23 +256,25 @@ REAL value(REAL strike, int indX, int indY,
 #endif
 
     /* explicit x */
-    U = {[j, i] -> dtInv * ResultE[i, j] + 0.5 *
-                    sum({[k] -> ResultE[i + k - 1, j] * 
-                                    (MuX[j, i] * Dx[i, k] + 
-                                     0.5 * VarX[j, i] * Dxx[i, k])
-                              | [1] <= [k] < [3]})
+    U = {[j, i] -> dtInv * ResultE[i, j] + 
+          0.5 * ResultE[i    , j] * (MuX[j, i] * Dx[i, 1] + 
+                            0.5 * VarX[j, i] * Dxx[i, 1]) +
+          0.5 * ResultE[i + 1, j] * (MuX[j, i] * Dx[i, 2] + 
+                            0.5 * VarX[j, i] * Dxx[i, 2])
                  | [0, 0] <= [j, i] < [NUM_Y, 1];
-         [j, i] -> dtInv * ResultE[i, j] + 0.5 *
-                    sum({[k] -> ResultE[i + k - 1, j] * 
-                                    (MuX[j, i] * Dx[i, k] + 
-                                     0.5 * VarX[j, i] * Dxx[i, k])
-                              | [0] <= [k] < [3]})
+         [j, i] -> dtInv * ResultE[i, j] +
+          0.5 * ResultE[i - 1, j] * (MuX[j, i] * Dx[i, 0] + 
+                            0.5 * VarX[j, i] * Dxx[i, 0]) +
+          0.5 * ResultE[i    , j] * (MuX[j, i] * Dx[i, 1] + 
+                            0.5 * VarX[j, i] * Dxx[i, 1]) +
+          0.5 * ResultE[i + 1, j] * (MuX[j, i] * Dx[i, 2] + 
+                            0.5 * VarX[j, i] * Dxx[i, 2])
                  | [0, 1] <= [j, i] < [NUM_Y, NUM_X - 1];
-         [j, i] -> dtInv * ResultE[i, j] + 0.5 *
-                    sum({[k] -> ResultE[i + k - 1, j] * 
-                                    (MuX[j, i] * Dx[i, k] + 
-                                     0.5 * VarX[j, i] * Dxx[i, k])
-                              | [0] <= [k] < [2]})
+         [j, i] -> dtInv * ResultE[i, j] +
+          0.5 * ResultE[i - 1, j] * (MuX[j, i] * Dx[i, 0] + 
+                            0.5 * VarX[j, i] * Dxx[i, 0]) +
+          0.5 * ResultE[i    , j] * (MuX[j, i] * Dx[i, 1] + 
+                            0.5 * VarX[j, i] * Dxx[i, 1])
                  | [0, NUM_X - 1] <= [j, i] < [NUM_Y, NUM_X]
          };
 
@@ -286,20 +288,22 @@ REAL value(REAL strike, int indX, int indY,
 //    printf("U L2 %e\n", L2(U));
  
     /* explicit y */
-    V = {[i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
-                                  MuY[i, j] * Dy[j, k] + 
-                                  0.5 * VarY[i, j] * Dyy[j, k])
-                            | [1] <= [k] < [3]})
+    V = {[i, j] ->  ResultE[i, j    ] * (MuY[i, j] * Dy[j, 1] + 
+                          0.5 * VarY[i, j] * Dyy[j, 1]) +
+                    ResultE[i, j + 1] * (MuY[i, j] * Dy[j, 2] + 
+                          0.5 * VarY[i, j] * Dyy[j, 2])
                  | [0, 0] <= [i, j] < [NUM_X, 1];
-         [i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
-                                  MuY[i, j] * Dy[j, k] + 
-                                  0.5 * VarY[i, j] * Dyy[j, k])
-                            | [0] <= [k] < [3]})
+         [i, j] ->  ResultE[i, j - 1] * (MuY[i, j] * Dy[j, 0] + 
+                          0.5 * VarY[i, j] * Dyy[j, 0]) +
+                    ResultE[i, j    ] * (MuY[i, j] * Dy[j, 1] + 
+                          0.5 * VarY[i, j] * Dyy[j, 1]) +
+                    ResultE[i, j + 1] * (MuY[i, j] * Dy[j, 2] + 
+                          0.5 * VarY[i, j] * Dyy[j, 2])
                  | [0, 1] <= [i, j] < [NUM_X, NUM_Y - 1];
-         [i, j] -> sum({[k] -> ResultE[i, j - 1 + k] * (
-                                  MuY[i, j] * Dy[j, k] + 
-                                  0.5 * VarY[i, j] * Dyy[j, k])
-                            | [0] <= [k] < [2]})
+         [i, j] ->  ResultE[i, j - 1] * (MuY[i, j] * Dy[j, 0] + 
+                          0.5 * VarY[i, j] * Dyy[j, 0]) +
+                    ResultE[i, j    ] * (MuY[i, j] * Dy[j, 1] + 
+                          0.5 * VarY[i, j] * Dyy[j, 1])
                  | [0, NUM_Y - 1] <= [i, j] < [NUM_X, NUM_Y]
         };
 
