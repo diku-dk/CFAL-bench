@@ -10,6 +10,7 @@ typedef double REAL;
 
 using namespace std;
 
+#define BREAK
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -215,7 +216,17 @@ rollback(   const unsigned numX,
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
+#ifdef BREAK
+            /* Mathematically equivalent, but some values in U are off by
+             * a factor 10. */
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
 
+            U(j,i) += 0.5 * ResultE(i,  j) * (2.0 * dtInv + MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
+
+            if (i < numX-1) 
+            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+#else
             U(j,i) = dtInv * ResultE(i,j);
 
             if (0 < i) 
@@ -225,6 +236,7 @@ rollback(   const unsigned numX,
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+#endif
         }
     }
 

@@ -6,9 +6,9 @@ endif
 
 INCLUDES    += -I../includeC
 
-SOURCES_CPP =VolCalibDebug.cpp
+SOURCES_CPP =VolCalibOrig.cpp
 HELPERS     =../includeC/ParseInput.h
-OBJECTS     =VolCalibDebug.o  
+OBJECTS     =VolCalibOrig.o  
 EXECUTABLE  =VolCalib
 
 #g++ -I. -I/usr/local/cuda/include  -O3 NordeaVect.cpp -lOpenCL
@@ -22,6 +22,11 @@ cpu: $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(EXECUTABLE) $(OBJECTS)
 
+print_implicitx: PrintImplicitX.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
+
+print: print_implicitx
+	cat ../Data/Small/input.data ../Data/Small/output.data | ./print_implicitx
 
 run_small: $(EXECUTABLE)
 	cat ../Data/Small/input.data ../Data/Small/output.data | ./$(EXECUTABLE) 2> Debug.txt
