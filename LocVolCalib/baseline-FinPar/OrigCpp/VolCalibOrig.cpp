@@ -10,8 +10,7 @@ typedef double REAL;
 
 using namespace std;
 
-//#define BREAK1
-#define BREAK2
+#define BREAK 2
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -217,7 +216,18 @@ rollback(   const unsigned numX,
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
-#ifdef BREAK1
+#if BREAK == 0
+            /* Original */
+            U(j,i) = dtInv * ResultE(i,j);
+
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
+
+            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
+            if (i < numX-1) 
+            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+
+#elif BREAK == 1
             /* Pull ResultE(i, j) into the sum.
              * Mathematically equivalent, but some values in U are off by
              * a factor 10. */
@@ -228,21 +238,17 @@ rollback(   const unsigned numX,
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-#else
-    #ifdef BREAK2
+#elif BREAK == 2
             /* Change order */
-    #else
             U(j,i) = dtInv * ResultE(i,j);
 
-
-            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
+            if (0 < i) 
+            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
 
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-    #endif
+            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
 #endif
         }
     }
