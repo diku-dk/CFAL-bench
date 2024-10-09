@@ -19,7 +19,7 @@
 
 #include <cmath>
 #include <stdint.h>
-
+#include <stdbool.h>
 
 #define WITH_FLOATS     0
 #define WORKGROUP_SIZE  512 
@@ -27,6 +27,8 @@
 #define PERTURB 1
 
 typedef double REAL;
+
+bool first_iter = true;
 
 #include "Util.h"
 #include "../includeC/ParseInput.h"
@@ -268,8 +270,11 @@ rollback(   const unsigned numX,
         }
     }
 
-    printf("Explicit x:\n");
-    Print(U, numY, numX);
+    if (first_iter) {
+        printf("Explicit x:\n");
+        Print(U, numY, numX);
+        first_iter = false;
+    }
 
 	//	explicit y
     for( i=0; i<numX; i++) {
@@ -344,19 +349,25 @@ REAL value(   const REAL s0,
 
     setPayoff(numX, numY, strike, X, ResultE);
 
-    int i = numT - 2;
-    updateParams( numX, numY, i, alpha, beta, nu, 
-                  X, Y, Time, MuX, VarX, MuY, VarY );
+    for (int i = numT - 2; i >= 0; --i) {
+        updateParams( numX, numY, i, alpha, beta, nu, 
+                      X, Y, Time, MuX, VarX, MuY, VarY );
 #if PERTURB == 1
-    Perturb(VarX, numY * numX, 0x1.0p-52);
+        if (first_iter) {
+            Perturb(VarX, numY * numX, 0x1.0p-52);
+        }
 #endif
 
-    rollback( numX, numY, i,  
-              a, b, c, Time, U, V,
-              Dx, Dxx, MuX, VarX,
-              Dy, Dyy, MuY, VarY,
-              ResultE
-            );
+        rollback( numX, numY, i,  
+                  a, b, c, Time, U, V,
+                  Dx, Dxx, MuX, VarX,
+                  Dy, Dyy, MuY, VarY,
+                  ResultE
+                );
+
+        printf("Iter %d, value[0] = %.17e\n", 
+                numT - 2 - i, ResultE(indX, indY));
+    }
 
     REAL res = ResultE(indX,indY);
 
