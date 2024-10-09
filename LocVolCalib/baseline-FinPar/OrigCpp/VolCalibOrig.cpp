@@ -231,6 +231,8 @@ rollback(   const unsigned numX,
             /* Pull ResultE(i, j) into the sum.
              * Mathematically equivalent, but some values in U are off by
              * a factor 10. */
+            U(j,i) = 0.0;
+
             if (0 < i) 
             U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
 
