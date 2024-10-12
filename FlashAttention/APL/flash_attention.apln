@@ -10,7 +10,6 @@ L2←{(0.5*⍨+⌿×⍨,⍵)-0.5*⍨×⌿⍺}
 kernel←#.flash_attention_k
 
 Run←{N d←⍵⊃cases
-	⎕←'Initializing data...'
 	data←N d∘⍴¨1 1 1
 	_←kernel.init data
 	Gflops←((N*2)×(4×d)+5)÷2*30
@@ -28,17 +27,15 @@ Run←{N d←⍵⊃cases
 	⍝ ⎕←'Naive L2: ',⍕N d L2 res
 	⍝ ⎕←'Naive Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
 		
-	⎕←'Warming up...'
 	_←kernel.flash_attn ⍬
-	
-	⎕←'Running Flash Attention...'
 	start←24 60 60 1000⊥¯4↑⎕TS
 	_←kernel.flash_attn ⍬
 	end←24 60 60 1000⊥¯4↑⎕TS
 	res←kernel.result⍬
-	⎕←'Flash Attention L2: ',⍕N d L2 res
-	⎕←'Flash Attention time elapsed: ',(⍕time←(end-start)÷1000),'secs'
-	⎕←'Flash Attention throughput: ',(⍕Gflops÷time),' Gflops/sec'
+	time←(end-start)÷1000
+	⍝ ⎕←'Flash Attention L2: ',⍕N d L2 res
+	⍝ ⎕←'Flash Attention time elapsed: ',(⍕time),'secs'
+	⎕←(⍕d N),' Flash Attention throughput: ',(⍕Gflops÷time),' Gflops/sec'
 	
 	1:shy←res
 }
