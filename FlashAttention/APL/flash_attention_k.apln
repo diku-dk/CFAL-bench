@@ -7,7 +7,7 @@ init←{Q⊢←float 0⊃⍵ ⋄ K⊢←float 1⊃⍵ ⋄ V⊢←float 2⊃⍵ �
 
 attn←{⍬⊣res⊢←(fx÷[0]+/fx←*S-[0]⌈/S←Q+.×⍉K)+.×V}
 
-flash_attn←{M←2*23
+flash_attn←{M←⍺ ⍝ 2*23
 	Qs←⍴Q ⋄ N←0⊃Qs ⋄ d←1⊃Qs ⋄ Br←d⌊Bc←⌈M÷4×d ⋄ Tr←⌈N÷Br ⋄ Tc←⌈N÷Bc
 	Q←Tr Br d⍴Q ⋄ K←Tc Bc d⍴K ⋄ V←Tc Bc d⍴V
 	O←Tr Br d⍴0.5-0.5 ⋄ l←Tr Br⍴0.5-0.5 ⋄ m←Tr Br⍴⌈⌿⍬

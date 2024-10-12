@@ -9,7 +9,7 @@ L2←{(0.5*⍨+⌿×⍨,⍵)-0.5*⍨×⌿⍺}
 
 kernel←#.flash_attention_k
 
-Run←{N d←⍵⊃cases
+Run←{N d←⍵⊃cases ⋄ ⍺←⊢ ⋄ M←⍺⊣2*23
 	data←N d∘⍴¨1 1 1
 	_←kernel.init data
 	Gflops←((N*2)×(4×d)+5)÷2*30
@@ -27,9 +27,9 @@ Run←{N d←⍵⊃cases
 	⍝ ⎕←'Naive L2: ',⍕N d L2 res
 	⍝ ⎕←'Naive Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
 		
-	_←kernel.flash_attn ⍬
+	_←⍺ kernel.flash_attn ⍬
 	start←24 60 60 1000⊥¯4↑⎕TS
-	_←kernel.flash_attn ⍬
+	_←⍺ kernel.flash_attn ⍬
 	end←24 60 60 1000⊥¯4↑⎕TS
 	res←kernel.result⍬
 	time←(end-start)÷1000
