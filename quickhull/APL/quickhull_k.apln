@@ -1,0 +1,31 @@
+:Namespace quickhull_k
+
+P←⍬ ⋄ X←⍬ ⋄ Y←⍬ ⋄ res←⍬
+
+qhull0←{L←⍵[⍋⍵[;0];] ⋄ R←1⌽(≢L)↑1 1 ⋄ K←(+⍀R)-1
+	msk←¯1=×-/((1⊖R1)-R1)[K;]×⌽R1[K;]-L⊣R1←R⌿L
+	L←(L⌿⍨~msk)⍪⊖msk⌿L ⋄ R←(≢L)↑R⌿⍨~msk
+	L⌿⍨{R←⍵ ⋄ K←(+⍀R)-1
+		D←⌷(-/D[K;]×⌽R1[K;]-L)÷(0.5*⍨+/×⍨D←(1⊖R1)-R1←R⌿L)[K]
+		R[M[R⌿⍋K[M←⍒D]]]←1
+		msk←0≤D ⋄ L⌿⍨←msk ⋄ R⌿⍨←msk
+	R}⍣≡R
+}
+
+qhull1←{Lx←⍺[i←⍋⍺] ⋄ Ly←⍵[i] ⋄ Ax←Lx[0] ⋄ Ay←Ly[0] ⋄ Bx←Lx[j←¯1+≢Lx] ⋄ By←Ly[j]
+	D←0.5*⍨(×⍨Dx←Bx-Ax)+×⍨Dy←By-Ay ⋄ D←((Dx÷D)×Ay-Ly)-(Dy÷D)×Ax-Lx
+	i←(⍸~K),⌽⍸K←D<0 ⋄ R←(i=0)∨i=j ⋄ R[M[R⌿⍋K[i][M←⍒|D[i]]]]←1=1 ⋄ Lx←Lx[i] ⋄ Ly←Ly[i]
+	Lx Ly⊣{Ri←⍸R ⋄ K←(+⍀R)-1 ⋄ Ax←Lx[Ri] ⋄ Ay←Ly[Ri] ⋄ Bx←1⌽Ax ⋄ By←1⌽Ay
+		D←0.5*⍨(×⍨Dx←Bx-Ax)+×⍨Dy←By-Ay ⋄ Dx←(Dx÷D)[K] ⋄ Dy←(Dy÷D)[K]
+		D←(Dx×Ay[K]-Ly)-Dy×Ax[K]-Lx
+		j←⍸R∨0<D ⋄ D←D[j] ⋄ K←K[j] ⋄ Lx⊢←Lx[j] ⋄ Ly⊢←Ly[j] ⋄ R⊢←R[j]
+		R[M[R⌿⍋K[M←⍒D]]]←1=1
+	∧⌿R}⍣⊣⊢0
+}
+
+init←{P⊢←(⍵+1e¯100)-1e¯100 ⋄ X⊢←P[;0] ⋄ Y⊢←P[;1] ⋄ res⊢←⍬}
+run0←{⍬⊣res⊢←qhull0 P}
+run1←{⍬⊣res⊢←X qhull1 Y}
+result←{res}
+
+:EndNamespace
