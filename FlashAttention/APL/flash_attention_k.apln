@@ -10,13 +10,13 @@ attn←{⍬⊣res⊢←(fx÷[0]+/fx←*S-[0]⌈/S←Q+.×⍉K)+.×V}
 flash_attn←{M←⍺ ⍝ 2*23
 	Qs←⍴Q ⋄ N←0⊃Qs ⋄ d←1⊃Qs ⋄ Br←d⌊Bc←⌈M÷4×d ⋄ Tr←⌈N÷Br ⋄ Tc←⌈N÷Bc
 	Q←Tr Br d⍴Q ⋄ K←Tc Bc d⍴K ⋄ V←Tc Bc d⍴V
-	O←Tr Br d⍴0.5-0.5 ⋄ l←Tr Br⍴0.5-0.5 ⋄ m←Tr Br⍴⌈⌿⍬
-	_←{i←⍵ ⋄ Oi←O[i;;] ⋄ Qi←Q[i;;] ⋄ mi←m[i;] ⋄ li←l[i;]
-		_←{j←⍵ ⋄ Kj←K[j;;] ⋄ Vj←V[j;;]
+	O←Tr Br d⍴0.5-0.5 ⋄ l←Br⍴0.5-0.5 ⋄ m←Br⍴⌈⌿⍬
+	_←{i←⍵ ⋄ Oi←O[i;;] ⋄ Qi←Q[i;;] ⋄ mi←Br⍴m ⋄ li←l
+		O[i;;]←Oi⊣{j←⍵ ⋄ Kj←K[j;;] ⋄ Vj←V[j;;]
 			mij←⌈/Sij←Qi+.×⍉Kj ⋄ lij←+/Pij←*Sij-[0]mij
 			li∆←(eli←li×*mi-mi∆)+lij×eij←*mij-mi∆←mi⌈mij
-			O[i;;]←li∆÷[0]⍨(eli×[0]Oi)+eij×[0]Pij+.×Vj
-			l[i;]←li∆ ⋄ m[i;]←mi∆	
+			Oi⊢←li∆÷[0]⍨(eli×[0]Oi)+eij×[0]Pij+.×Vj
+			li⊢←li∆ ⋄ mi⊢←mi∆	
 		⌷⍵+1}⍣Tc⊢0
 	⌷⍵+1}⍣Tr⊢0
 	res⊢←N d⍴O
