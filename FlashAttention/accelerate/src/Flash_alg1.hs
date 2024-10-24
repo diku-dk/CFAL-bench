@@ -7,8 +7,7 @@ module Flash_alg1 where
 import Data.Array.Accelerate hiding (encodeFloat,(^))
 import Prelude hiding (replicate, zipWith, zipWith3, map, sum, min, Ord(..), maximum)
 
--- untested!
--- direct port of flash_alg1.sac to accelerate
+
 totalProgram :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Matrix Float)
 totalProgram (T3 n d m) = let T3 q k v = mkInput (the n) (the d) in flashAttention q k v (the m)
 
@@ -83,10 +82,10 @@ matmul x y =
   case (shape x, shape y) of
     (shx ::. rows ::. _cols, shy ::. _rows ::. cols) ->
       fold1 (+) $ 
-        transpose' $
           zipWith (*)
-            (replicate (Any_ ::. All_ ::. All_ ::. cols) x)
-            (replicate (Any_ ::. rows ::. All_ ::. All_) y)
+            (replicate (Any_ ::. All_ ::. cols ::. All_) x)
+            (transpose'
+              (replicate (Any_ ::. rows ::. All_ ::. All_) y))
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int:.Int) a) -> Acc (Array (sh :. Int:.Int) a)
 transpose' x =
