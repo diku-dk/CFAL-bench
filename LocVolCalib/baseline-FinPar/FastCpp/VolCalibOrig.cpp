@@ -10,7 +10,7 @@ typedef double REAL;
 
 using namespace std;
 
-#define BREAK 2
+#define BREAK 1
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -216,8 +216,16 @@ rollback(   const unsigned numX,
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
-#if BREAK == 0
-            /* Original */
+#if BREAK == 1
+            U(j,i) = dtInv * ResultE(i,j);
+
+            if (0 < i) 
+            U(j,i) += 0.25 * ResultE(i-1,j) * VarX(j,i)*Dxx(i,0);
+
+            U(j,i) += 0.25 * ResultE(i,  j) * VarX(j,i)*Dxx(i,1);
+            if (i < numX-1) 
+            U(j,i) += 0.25 * ResultE(i+1,j) * VarX(j,i)*Dxx(i,2);
+#else
             U(j,i) = dtInv * ResultE(i,j);
 
             if (0 < i) 
@@ -226,31 +234,6 @@ rollback(   const unsigned numX,
             U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-#elif BREAK == 1
-            /* Pull ResultE(i, j) into the sum.
-             * Mathematically equivalent, but some values in U are off by
-             * a factor 10. */
-            U(j,i) = 0.0;
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * (2.0 * dtInv + MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
-
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-#elif BREAK == 2
-            /* Change order */
-            U(j,i) = dtInv * ResultE(i,j);
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
 #endif
         }
     }
@@ -274,9 +257,15 @@ rollback(   const unsigned numX,
     for(j=0; j<numY; j++) {
 
         for(i=0; i<numX; i++) {
+#if BREAK == 1
+            a[i] =       - 0.25 * VarX(j, i) * Dxx(i, 0);
+            b[i] = dtInv - 0.25 * VarX(j, i) * Dxx(i, 1);
+            c[i] =       - 0.25 * VarX(j, i) * Dxx(i, 2);
+#else
             a[i] =	     - 0.5*( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
             b[i] = dtInv - 0.5*( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
             c[i] =	     - 0.5*( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
+#endif
         }
 
         REAL* uu = U+j*numX;
@@ -328,7 +317,12 @@ REAL value(   const REAL s0,
 
     setPayoff(numX, numY, strike, X, ResultE);
 
+#if BREAK == 1
+    int i = numT - 2;
+#else
     for( int i = numT-2; i>=0; --i ) {
+#endif
+
         updateParams( numX, numY, i, alpha, beta, nu, 
                       X, Y, Time, MuX, VarX, MuY, VarY );
 
@@ -338,7 +332,10 @@ REAL value(   const REAL s0,
                   Dy, Dyy, MuY, VarY,
                   ResultE
                 );
+#if BREAK == 1
+#else
     }
+#endif
 
     REAL res = ResultE(indX,indY);
 

@@ -10,7 +10,6 @@ typedef double REAL;
 
 using namespace std;
 
-#define BREAK 2
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -208,7 +207,8 @@ rollback(   const unsigned numX,
             REAL* Dx, REAL* Dxx, REAL* MuX,  REAL* VarX,
             REAL* Dy, REAL* Dyy, REAL* MuY,  REAL* VarY,
 
-            REAL* ResultE  // output
+            REAL* ResultE,  // output,
+            unsigned numT
 ) {
     const REAL dtInv = 1.0 / (Time[g+1]-Time[g]);
     int        i, j;
@@ -216,42 +216,16 @@ rollback(   const unsigned numX,
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
-#if BREAK == 0
-            /* Original */
+
             U(j,i) = dtInv * ResultE(i,j);
 
             if (0 < i) 
             U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
 
             U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-#elif BREAK == 1
-            /* Pull ResultE(i, j) into the sum.
-             * Mathematically equivalent, but some values in U are off by
-             * a factor 10. */
-            U(j,i) = 0.0;
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * (2.0 * dtInv + MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
 
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-#elif BREAK == 2
-            /* Change order */
-            U(j,i) = dtInv * ResultE(i,j);
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
-#endif
         }
     }
 
@@ -280,7 +254,28 @@ rollback(   const unsigned numX,
         }
 
         REAL* uu = U+j*numX;
+        if (g == numT - 2 && j == 0) {
+            FILE *b_ptr  = fopen("b.bin","wb");
+            fwrite(uu   , sizeof(double), numX    , b_ptr);
+            fclose(b_ptr);
+        }
+
         tridag(numX, a, b, c, uu);
+
+        if (g == numT - 2 && j == 0) {
+            FILE *low_ptr  = fopen("low.bin","wb");
+            FILE *diag_ptr = fopen("diag.bin","wb");
+            FILE *up_ptr   = fopen("high.bin","wb");
+            FILE *res_ptr   = fopen("res.bin","wb");
+            fwrite(a + 1, sizeof(double), numX - 1, low_ptr);
+            fwrite(b    , sizeof(double), numX    , diag_ptr);
+            fwrite(c + 1, sizeof(double), numX - 1, up_ptr);
+            fwrite(uu   , sizeof(double), numX    , res_ptr);
+            fclose(low_ptr);
+            fclose(diag_ptr);
+            fclose(up_ptr);
+            fclose(res_ptr);
+        }
     }
 
     //	implicit y
@@ -336,7 +331,7 @@ REAL value(   const REAL s0,
                   a, b, c, Time, U, V,
                   Dx, Dxx, MuX, VarX,
                   Dy, Dyy, MuY, VarY,
-                  ResultE
+                  ResultE, numT
                 );
     }
 

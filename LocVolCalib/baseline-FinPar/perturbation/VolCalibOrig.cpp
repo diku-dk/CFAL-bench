@@ -1,16 +1,39 @@
+/**
+ * Computes only the first time step for the first value, and prints explicit x.
+ * If PERTURB is 0, it does the same as VolCalibOrig.cpp, if PERTURB is 1, it
+ * perturbs the VarX componentwise by multiplying by (1 + delta_i) for some
+ * random |delta_i| < 2 * eps, where eps is the machine precision.
+ *
+ * For about 1/3rd of the values, the perturbed and unperturbed values of
+ * explicit x agree on not a single digit. This proves that this particular
+ * computation of explicit x is ill-conditioned, which tracks with the 3-point
+ * stencil containing a sum where the magnitude of the absolute values of the
+ * summands is much greater than the magnitude of the sum.
+ *
+ * However, this does NOT prove that the entire algorithm is ill-conditioned.
+ * Working hypothesis is that the SaC version does not validate because there
+ * is a programming error after explicit x. This cannot be tracked down
+ * by printing values as it is hidden in the ill-conditionedness of the 
+ * explicit x.
+ **/
+
 #include <cmath>
+#include <stdint.h>
+#include <stdbool.h>
 
 #define WITH_FLOATS     0
 #define WORKGROUP_SIZE  512 
 
+#define PERTURB 1
+
 typedef double REAL;
+
+bool first_iter = true;
 
 #include "Util.h"
 #include "../includeC/ParseInput.h"
 
 using namespace std;
-
-#define BREAK 2
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -25,6 +48,25 @@ using namespace std;
 
 #define U(i,j)        U[(i)*numX + j]
 #define V(i,j)        V[(i)*numY + j]
+
+uint64_t next(void);
+void Perturb(double *x, unsigned n, double delta)
+{
+    for (unsigned i = 0; i < n; i++) {
+        double uni01 = (next() >> 11) * 0x1.0p-53;
+        x[i] = (1.0 + delta * uni01) * x[i];
+    }
+}
+
+void Print(double *x, unsigned m, unsigned n)
+{
+    for (unsigned i = 0; i < m; i++) {
+        for (unsigned j = 0; j < n; j++) {
+            printf("%.17e ", x[i * n + j]);
+        }
+        printf("\n");
+    }
+}
 
 /***********************************/
 
@@ -216,7 +258,6 @@ rollback(   const unsigned numX,
     //	explicit x
     for(j=0; j<numY; j++) {
         for(i=0; i<numX; i++) {
-#if BREAK == 0
             /* Original */
             U(j,i) = dtInv * ResultE(i,j);
 
@@ -226,33 +267,13 @@ rollback(   const unsigned numX,
             U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
             if (i < numX-1) 
             U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-#elif BREAK == 1
-            /* Pull ResultE(i, j) into the sum.
-             * Mathematically equivalent, but some values in U are off by
-             * a factor 10. */
-            U(j,i) = 0.0;
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * (2.0 * dtInv + MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
-
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-#elif BREAK == 2
-            /* Change order */
-            U(j,i) = dtInv * ResultE(i,j);
-
-            if (0 < i) 
-            U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
-
-            if (i < numX-1) 
-            U(j,i) += 0.5 * ResultE(i+1,j) * ( MuX(j,i)*Dx(i,2) + 0.5*VarX(j,i)*Dxx(i,2) );
-
-            U(j,i) += 0.5 * ResultE(i,  j) * ( MuX(j,i)*Dx(i,1) + 0.5*VarX(j,i)*Dxx(i,1) );
-#endif
         }
+    }
+
+    if (first_iter) {
+        printf("Explicit x:\n");
+        Print(U, numY, numX);
+        first_iter = false;
     }
 
 	//	explicit y
@@ -328,9 +349,14 @@ REAL value(   const REAL s0,
 
     setPayoff(numX, numY, strike, X, ResultE);
 
-    for( int i = numT-2; i>=0; --i ) {
+    for (int i = numT - 2; i >= 0; --i) {
         updateParams( numX, numY, i, alpha, beta, nu, 
                       X, Y, Time, MuX, VarX, MuY, VarY );
+#if PERTURB == 1
+        if (first_iter) {
+            Perturb(VarX, numY * numX, 0x1.0p-52);
+        }
+#endif
 
         rollback( numX, numY, i,  
                   a, b, c, Time, U, V,
@@ -338,6 +364,9 @@ REAL value(   const REAL s0,
                   Dy, Dyy, MuY, VarY,
                   ResultE
                 );
+
+        printf("Iter %d, value[0] = %.17e\n", 
+                numT - 2 - i, ResultE(indX, indY));
     }
 
     REAL res = ResultE(indX,indY);
@@ -390,7 +419,8 @@ int main() {
             gettimeofday(&t_start, NULL);
 
             REAL strike;
-            for( unsigned i = 0; i < OUTER_LOOP_COUNT; ++ i ) {
+            unsigned i = 0;
+//            for( unsigned i = 0; i < OUTER_LOOP_COUNT; ++ i ) {
                 strike = 0.001*i;
                 result[i] = value(  s0, strike, t, 
                                     alpha, nu, beta,
@@ -400,7 +430,7 @@ int main() {
                                     Y, Dy, Dyy, MuY, VarY,
                                     ResultE
                                  );
-            }
+//            }
 
             gettimeofday(&t_end, NULL);
             timeval_subtract(&t_diff, &t_end, &t_start);
@@ -429,3 +459,116 @@ int main() {
     return 0;
 }
 
+
+/*  Written in 2018 by David Blackman and Sebastiano Vigna (vigna@acm.org)
+
+To the extent possible under law, the author has dedicated all copyright
+and related and neighboring rights to this software to the public domain
+worldwide.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+
+/* This is xoshiro256** 1.0, one of our all-purpose, rock-solid
+   generators. It has excellent (sub-ns) speed, a state (256 bits) that is
+   large enough for any parallel application, and it passes all tests we
+   are aware of.
+
+   For generating just floating-point numbers, xoshiro256+ is even faster.
+
+   The state must be seeded so that it is not everywhere zero. If you have
+   a 64-bit seed, we suggest to seed a splitmix64 generator and use its
+   output to fill s. */
+
+static inline uint64_t rotl(const uint64_t x, int k) {
+	return (x << k) | (x >> (64 - k));
+}
+
+
+static uint64_t s[4] = {9476316207100049689uL, 5019606721329632465uL, 
+                        4720002081463458774uL, 8567049997362009432uL};
+
+uint64_t next(void) {
+	const uint64_t result = rotl(s[1] * 5, 7) * 9;
+
+	const uint64_t t = s[1] << 17;
+
+	s[2] ^= s[0];
+	s[3] ^= s[1];
+	s[1] ^= s[2];
+	s[0] ^= s[3];
+
+	s[2] ^= t;
+
+	s[3] = rotl(s[3], 45);
+
+	return result;
+}
+
+
+/* This is the jump function for the generator. It is equivalent
+   to 2^128 calls to next(); it can be used to generate 2^128
+   non-overlapping subsequences for parallel computations. */
+
+void jump(void) {
+	static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba, 0xd5a61266f0c9392c, 0xa9582618e03fc9aa, 0x39abdc4529b1661c };
+
+	uint64_t s0 = 0;
+	uint64_t s1 = 0;
+	uint64_t s2 = 0;
+	uint64_t s3 = 0;
+	for(int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
+		for(int b = 0; b < 64; b++) {
+			if (JUMP[i] & UINT64_C(1) << b) {
+				s0 ^= s[0];
+				s1 ^= s[1];
+				s2 ^= s[2];
+				s3 ^= s[3];
+			}
+			next();	
+		}
+		
+	s[0] = s0;
+	s[1] = s1;
+	s[2] = s2;
+	s[3] = s3;
+}
+
+
+
+/* This is the long-jump function for the generator. It is equivalent to
+   2^192 calls to next(); it can be used to generate 2^64 starting points,
+   from each of which jump() will generate 2^64 non-overlapping
+   subsequences for parallel distributed computations. */
+
+void long_jump(void) {
+	static const uint64_t LONG_JUMP[] = { 0x76e15d3efefdcbbf, 0xc5004e441c522fb3, 0x77710069854ee241, 0x39109bb02acbe635 };
+
+	uint64_t s0 = 0;
+	uint64_t s1 = 0;
+	uint64_t s2 = 0;
+	uint64_t s3 = 0;
+	for(int i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
+		for(int b = 0; b < 64; b++) {
+			if (LONG_JUMP[i] & UINT64_C(1) << b) {
+				s0 ^= s[0];
+				s1 ^= s[1];
+				s2 ^= s[2];
+				s3 ^= s[3];
+			}
+			next();	
+		}
+		
+	s[0] = s0;
+	s[1] = s1;
+	s[2] = s2;
+	s[3] = s3;
+}

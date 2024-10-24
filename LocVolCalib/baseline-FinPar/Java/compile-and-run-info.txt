@@ -1,0 +1,8 @@
+Compile with:
+  $ javac LocVolCalib.java 
+
+Run the small, medium and large datasets with:
+
+ $ java LocVolCalib 16 32 256 256 0.03 5.0 0.2 0.6 0.5
+ $ java LocVolCalib 128 256 32 64 0.03 5.0 0.2 0.6 0.5
+ $ java LocVolCalib 256 256 256 64 0.03 5.0 0.2 0.6 0.5

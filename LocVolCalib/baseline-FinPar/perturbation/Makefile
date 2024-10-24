@@ -22,20 +22,14 @@ cpu: $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(EXECUTABLE) $(OBJECTS)
 
-print_implicitx: PrintImplicitX.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
-
-print: print_implicitx
-	cat ../Data/Small/input.data ../Data/Small/output.data | ./print_implicitx
-
 run_small: $(EXECUTABLE)
-	cat ../Data/Small/input.data ../Data/Small/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../Data/Small/input.data ../Data/Small/output.data | ./$(EXECUTABLE) 2> Orig.txt
 
 run_medium: $(EXECUTABLE)
-	cat ../Data/Medium/input.data ../Data/Medium/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../Data/Medium/input.data ../Data/Medium/output.data | ./$(EXECUTABLE) 2> Orig.txt
 
 run_large: $(EXECUTABLE)
-	cat ../Data/Large/input.data ../Data/Large/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../Data/Large/input.data ../Data/Large/output.data | ./$(EXECUTABLE) 2> Orig.txt
 
 clean:
-	rm -f Debug.txt $(EXECUTABLE) $(OBJECTS)
+	rm -f Orig.txt $(EXECUTABLE) $(OBJECTS)

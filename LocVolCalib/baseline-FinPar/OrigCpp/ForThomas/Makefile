@@ -1,13 +1,14 @@
-include ../setup.mk
+include ../../setup.mk
 
 ifndef ($(HAVE_GPU))
-include ../platform.mk
+include ../../platform.mk
 endif
 
-INCLUDES    += -I../includeC
+INCLUDES    += -I../../includeC
+INCLUDES    += -I../../include
 
 SOURCES_CPP =VolCalibOrig.cpp
-HELPERS     =../includeC/ParseInput.h
+HELPERS     =../../includeC/ParseInput.h
 OBJECTS     =VolCalibOrig.o  
 EXECUTABLE  =VolCalib
 
@@ -26,16 +27,16 @@ print_implicitx: PrintImplicitX.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 print: print_implicitx
-	cat ../Data/Small/input.data ../Data/Small/output.data | ./print_implicitx
+	cat ../../Data/Small/input.data ../../Data/Small/output.data | ./print_implicitx
 
 run_small: $(EXECUTABLE)
-	cat ../Data/Small/input.data ../Data/Small/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../../Data/Small/input.data ../../Data/Small/output.data | ./$(EXECUTABLE) 2> Debug.txt
 
 run_medium: $(EXECUTABLE)
-	cat ../Data/Medium/input.data ../Data/Medium/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../../Data/Medium/input.data ../../Data/Medium/output.data | ./$(EXECUTABLE) 2> Debug.txt
 
 run_large: $(EXECUTABLE)
-	cat ../Data/Large/input.data ../Data/Large/output.data | ./$(EXECUTABLE) 2> Debug.txt
+	cat ../../Data/Large/input.data ../../Data/Large/output.data | ./$(EXECUTABLE) 2> Debug.txt
 
 clean:
 	rm -f Debug.txt $(EXECUTABLE) $(OBJECTS)

@@ -1,51 +1,41 @@
+:Require file://../flash_attention_k.apln
 :Namespace flash_attention
 
 ⎕IO ⎕CT←0
 
-⍝ Requires 12G workspace for naive attention
-N d←(20×2*10) 64
+cases←(16384 64)(32768 64)(8192 128)(16384 128)
 
 L2←{(0.5*⍨+⌿×⍨,⍵)-0.5*⍨×⌿⍺}
 
-attn←{Q K V←⍵ ⋄ (fx÷[0]+/fx←*S-[0]⌈/S←Q+.×⍉K)+.×V}
+kernel←#.flash_attention_k
 
-flash_attn←{Q K V←⍵ ⋄ ⍺←⊢ ⋄ M←⍺⊣2*19
-	N d←⍴Q ⋄ Br←d⌊Bc←⌈M÷4×d ⋄ Tr←⌈N÷Br ⋄ Tc←⌈N÷Bc
-	Q←Tr Br d⍴Q ⋄ K←Tc Bc d⍴K ⋄ V←Tc Bc d⍴V
-	O←Tr Br d⍴0 ⋄ l←Tr Br⍴0 ⋄ m←Tr Br⍴⌈⌿⍬
-	N d⍴O⊣{j←⍵ ⋄ Kj←K[j;;] ⋄ Vj←V[j;;]
-		0⊣{i←⍵ ⋄ Oi←O[i;;] ⋄ Qi←Q[i;;] ⋄ mi←m[i;] ⋄ li←l[i;]
-			lij←+/Pij←*Sij-[0]mij←⌈/Sij←Qi+.×⍉Kj
-			li∆←(eli←li×*mi-mi∆)+lij×eij←*mij-mi∆←mi⌈mij
-			O[i;;]←li∆÷[0]⍨(eli×[0]Oi)+eij×[0]Pij+.×Vj
-			l[i;]←li∆ ⋄ m[i;]←mi∆	
-		0}¨⍳Tr
-	}¨⍳Tc
-}
-
-Run←{
-	⎕←'Initializing data...'
+Run←{N d←⍵⊃cases ⋄ ⍺←⊢ ⋄ M←⍺⊣2*23
 	data←N d∘⍴¨1 1 1
+	_←kernel.init data
+	Gflops←((N*2)×(4×d)+5)÷2*30
 	
-	⎕←''
-	⎕←'Running naive version...'
-	start←24 60 60 1000⊥¯4↑⎕TS
-	res←attn data
-	end←24 60 60 1000⊥¯4↑⎕TS
-	⎕←'Naive L2: ',⍕N d L2 res
-	⎕←'Naive Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
+	⍝ ⎕←''
+	⍝ ⎕←'Running naive version...'
+	⍝ ⎕←'Warming up...'
+	⍝ _←kernel.attn ⍬
+	⍝ 
+	⍝ ⎕←'Starting...'
+	⍝ start←24 60 60 1000⊥¯4↑⎕TS
+	⍝ _←kernel.attn ⍬
+	⍝ end←24 60 60 1000⊥¯4↑⎕TS
+	⍝ res←kernel.result⍬
+	⍝ ⎕←'Naive L2: ',⍕N d L2 res
+	⍝ ⎕←'Naive Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
 		
-	⎕←''
-	⎕←'Warming up...'
-	_←flash_attn data
-	
-	⎕←''
-	⎕←'Running Flash Attention...'
+	_←M kernel.flash_attn ⍬
 	start←24 60 60 1000⊥¯4↑⎕TS
-	res←flash_attn data
+	_←M kernel.flash_attn ⍬
 	end←24 60 60 1000⊥¯4↑⎕TS
-	⎕←'Flash Attention L2: ',⍕N d L2 res
-	⎕←'Flash Attention time elapsed: ',(⍕(end-start)÷1000),'secs'
+	res←kernel.result⍬
+	time←(end-start)÷1000
+	⍝ ⎕←'Flash Attention L2: ',⍕N d L2 res
+	⍝ ⎕←'Flash Attention time elapsed: ',(⍕time),'secs'
+	⎕←(⍕d N),' Flash Attention throughput: ',(⍕Gflops÷time),' Gflops/sec'
 	
 	1:shy←res
 }

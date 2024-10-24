@@ -10,7 +10,7 @@ typedef double REAL;
 
 using namespace std;
 
-#define BREAK 2
+#define BREAK 0
 
 // Macros for 2-dim array indexing
 #define Dx(i,j)       Dx[(i)*3 + j]
@@ -46,8 +46,9 @@ void updateParams(  const unsigned numX,
 
     for(unsigned j=0; j<numY; ++j) 
         for(unsigned i=0; i<numX; ++i) {
-           	//MuX(j,i)  = 0.0;
-            MuX(j,i)  = ((double)0.0000001) / ((numX + i) * (numY + j));    // (***Fix***)
+           	//MuX(j,i) = 0.0; 
+           	MuX(j,i)  = ((j+i)%29 != 0) ? 0.0 : 0.00001;
+            //MuX(j,i)  = ((double)0.0000001) / ((numX + i) * (numY + j));    // (***Fix***)
             VarX(j,i) = exp(2*(beta*log(X[i]) + Y[j] - 0.5*nu*nu*Time[g]));
         }
 
@@ -79,7 +80,7 @@ void initGrid(  const unsigned numX,
  ) {
 
     for(unsigned i=0; i<numT; ++i)
-        Time[i] = t*i/(numT-1);
+        Time[i] = t*i*i/(numT-1);
 
     const REAL stdX = 20*alpha*s0*sqrt(t);
     const REAL dx = stdX/numX;
@@ -132,11 +133,15 @@ void initOperator(  const int   n,
     for(int i=1; i<n-1; i++) {
         dxl      = xx[i]   - xx[i-1];
         dxu      = xx[i+1] - xx[i];
-
+#if 1
         D[i*3 + 0]  = -dxu/dxl/(dxl+dxu);
         D[i*3 + 1]  = (dxu/dxl - dxl/dxu)/(dxl+dxu);
-        D[i*3 + 2]  =  dxl/dxu/(dxl+dxu);
-
+        D[i*3 + 2]  = dxl/dxu/(dxl+dxu);
+#else
+        D[i*3 + 0]  = 0;
+        D[i*3 + 1]  = 0;
+        D[i*3 + 2]  = 0;
+#endif
         DD[i*3 + 0] =  2.0/dxl/(dxl+dxu);
         DD[i*3 + 1] = -2.0*(1.0/dxl + 1.0/dxu)/(dxl+dxu);
         DD[i*3 + 2] =  2.0/dxu/(dxl+dxu); 
@@ -231,8 +236,8 @@ rollback(   const unsigned numX,
             /* Pull ResultE(i, j) into the sum.
              * Mathematically equivalent, but some values in U are off by
              * a factor 10. */
-            U(j,i) = 0.0;
-
+            U(j,i) = 0;
+            
             if (0 < i) 
             U(j,i) += 0.5 * ResultE(i-1,j) * ( MuX(j,i)*Dx(i,0) + 0.5*VarX(j,i)*Dxx(i,0) );
 
@@ -315,24 +320,35 @@ REAL value(   const REAL s0,
 
               REAL* ResultE  // output
 
-) {	
+) {
 
     unsigned indX, indY;
 
-    initGrid    ( numX, numY, numT, 
-                  s0, alpha, nu, t, 
+    initGrid    ( numX, numY, numT,
+                  s0, alpha, nu, t,
                   indX, indY, X, Y, Time );
 
     initOperator( numX, X, Dx, Dxx );
     initOperator( numY, Y, Dy, Dyy );
+    
+    //for(int i=0; i<3*numX; i++) Dx[i] = 0.0;
 
     setPayoff(numX, numY, strike, X, ResultE);
 
     for( int i = numT-2; i>=0; --i ) {
-        updateParams( numX, numY, i, alpha, beta, nu, 
+    //for( int i = numT-2; i >= 89; --i ) {
+    //for( int i = numT-2; i >= 33; --i ) {
+        updateParams( numX, numY, i, alpha, beta, nu,
                       X, Y, Time, MuX, VarX, MuY, VarY );
 
-        rollback( numX, numY, i,  
+#if 0
+        for (unsigned i = 0; i < numX*numY; i++) {
+            double eps = ((double)rand()/(double)(RAND_MAX)) * 0.000000001;
+            //printf("EPS: %f\n", eps);
+            VarX[i] = VarX[i] + eps;
+        }
+#endif
+        rollback( numX, numY, i,
                   a, b, c, Time, U, V,
                   Dx, Dxx, MuX, VarX,
                   Dy, Dyy, MuY, VarY,
