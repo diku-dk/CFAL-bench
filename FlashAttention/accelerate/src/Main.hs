@@ -36,7 +36,7 @@ main = do
       = do
         print name
         mapM_ (testcase p)
-          $ --concatMap (\(d,n) -> [(n,d,m) | m <- [16384]]) 
+          $ map (\(a,b)->(b,a)) --concatMap (\(d,n) -> [(n,d,m) | m <- [16384]]) 
             [(64,16384),(128,32768),(128,8192),(128,16384)]
       -- $ (,,) <$> [512] --, 1024, 2048, 4096, 8192, 16384]
       --        <*> [64] --, 128]
@@ -46,5 +46,5 @@ main = do
       (measured, endtime) <- measure (nf p ( A.fromList A.Z [n]
                                , A.fromList A.Z [d]
                                --, A.fromList A.Z [m])
-                               ) 3
+                               )) 3
       print  (secs $ measTime measured)
