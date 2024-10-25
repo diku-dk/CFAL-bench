@@ -46,5 +46,5 @@ main = do
       (measured, endtime) <- measure (nf p ( A.fromList A.Z [n]
                                , A.fromList A.Z [d]
                                --, A.fromList A.Z [m])
-                               )) 3
+                               ) 3
       print  (secs $ measTime measured)

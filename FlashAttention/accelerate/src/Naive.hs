@@ -5,7 +5,7 @@ module Naive where
 
 import Data.Array.Accelerate
 import Prelude hiding (replicate, zipWith, map, sum)
-import Data.Array.Accelerate.Numeric.LinearAlgebra
+
 -- (attempt at) direct port of 'naive.sac' to Accelerate. Untested.
 
 flashAttention :: Acc (Matrix Float) -> Acc (Matrix Float) -> Acc (Matrix Float) -> Acc (Matrix Float)
@@ -24,14 +24,14 @@ softmax x =
   in  zipWith (/) ex ss
 
 matmul :: Acc (Matrix Float) -> Acc (Matrix Float) -> Acc (Matrix Float)
-matmul x y = x <> y
-  -- case (shape x, shape y) of
-  --   (Z_ ::. rows ::. _cols, Z_ ::. _rows ::. cols) ->
-  --     fold1 (+) $ 
-  --       transpose' $
-  --         zipWith (*)
-  --           (replicate (Z_ ::. All_ ::. All_ ::. cols) x)
-  --           (replicate (Z_ ::. rows ::. All_ ::. All_) y)
+matmul x y =
+  case (shape x, shape y) of
+    (Z_ ::. rows ::. _cols, Z_ ::. _rows ::. cols) ->
+      fold1 (+) $ 
+        transpose' $
+          zipWith (*)
+            (replicate (Z_ ::. All_ ::. All_ ::. cols) x)
+            (replicate (Z_ ::. rows ::. All_ ::. All_) y)
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int:.Int) a) -> Acc (Array (sh :. Int:.Int) a)
 transpose' x =
