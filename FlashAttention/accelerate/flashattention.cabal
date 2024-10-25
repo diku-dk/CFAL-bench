@@ -22,7 +22,8 @@ executable flashattention
                     -- cuda,
                     -- nvvm,
                     criterion,
-                    criterion-measurement
+                    criterion-measurement,
+                    accelerate-blas
   hs-source-dirs:   src
   default-language: Haskell2010
   ghc-options: -threaded -Wall
