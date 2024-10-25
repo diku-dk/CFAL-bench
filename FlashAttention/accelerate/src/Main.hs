@@ -27,8 +27,8 @@ main = do
   -- print $ CPU.runN check (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [131072])
 
 
-  let !cpu = CPU.runN totalProgram
-  print $ A.arraySize $ cpu (A.fromList A.Z [512], A.fromList A.Z [64], A.fromList A.Z [16384])
+  let !cpu = CPU.runN totalProgramNaive
+  print $ A.arraySize $ cpu (A.fromList A.Z [512], A.fromList A.Z [64]) --, A.fromList A.Z [16384])
   backend "CPU" cpu
 
   where
@@ -36,13 +36,15 @@ main = do
       = do
         print name
         mapM_ (testcase p)
-          $ concatMap (\(d,n) -> [(n,d,m) | m <- [16384]]) [(64,16384),(64,32768),(128,8192),(128,16384)]
+          $ --concatMap (\(d,n) -> [(n,d,m) | m <- [16384]]) 
+            [(64,16384),(128,32768),(128,8192),(128,16384)]
       -- $ (,,) <$> [512] --, 1024, 2048, 4096, 8192, 16384]
       --        <*> [64] --, 128]
       --        <*> [8] --, 64, 512, 2048, 8192, 16384]
-    testcase p (n,d,m) = do
-      print ("n" ++ show n ++ ", d" ++ show d ++ ", m" ++ show m)
+    testcase p (n,d{-,m-}) = do
+      print ("n" ++ show n ++ ", d" ++ show d) -- ++ ", m" ++ show m)
       (measured, endtime) <- measure (nf p ( A.fromList A.Z [n]
                                , A.fromList A.Z [d]
-                               , A.fromList A.Z [m])) 10
+                               --, A.fromList A.Z [m])
+                               ) 3
       print  (secs $ measTime measured)

@@ -7,6 +7,10 @@ module Flash_alg1 where
 import Data.Array.Accelerate hiding (encodeFloat,(^))
 import Prelude hiding (replicate, zipWith, zipWith3, map, sum, min, Ord(..), maximum)
 
+import qualified Naive as N
+
+totalProgramNaive :: Acc (Scalar Int, Scalar Int) -> Acc (Matrix Float)
+totalProgramNaive (T2 n d) = let T3 q k v = mkInput (the n) (the d) in N.flashAttention q k v
 
 totalProgram :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Matrix Float)
 totalProgram (T3 n d m) = let T3 q k v = mkInput (the n) (the d) in flashAttention q k v (the m)
