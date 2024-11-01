@@ -50,8 +50,8 @@ step :: State -> Acc (Array DIM3 Float) -> Acc (Array DIM3 Float) -> Acc (Array 
 step (T3 o m l) qb kb vb j =
   let Z_ ::. nbc ::. bc ::. d = shape kb
       Z_ ::. nbr ::. br ::. _d = shape o
-      kbj = replicate (Z_ ::. nbc ::. All_ ::. All_) $ slice kb $ Z_ ::. the j ::. All_ ::. All_
-      vbj = replicate (Z_ ::. nbr ::. All_ ::. All_) $ slice kb $ Z_ ::. the j ::. All_ ::. All_
+      kbj = replicate (Z_ ::. nbr ::. All_ ::. All_) $ slice kb $ Z_ ::. the j ::. All_ ::. All_
+      vbj = replicate (Z_ ::. nbr ::. All_ ::. All_) $ slice vb $ Z_ ::. the j ::. All_ ::. All_
       T3 pj1 mj lj = exp_e $ matmulT qb kbj
       mnew = zipWith max m mj
       lnew = zipWith5 (\m_ mnew_ l_ mj_ lj_ -> exp (m_-mnew_) * l_ + exp (mj_ - mnew_) * lj_)
@@ -62,8 +62,8 @@ step (T3 o m l) qb kb vb j =
             (replicate (Any_ ::. d) mnew)
             o
       pj2 = zipWith3 (\mj' mnew' pj1' -> exp (mj' - mnew')*pj1')
-              (replicate (Any_ ::. d) mj) 
-              (replicate (Any_ ::. d) mnew) 
+              (replicate (Any_ ::. bc) mj) 
+              (replicate (Any_ ::. bc) mnew) 
               pj1
       o'' = zipWith (+) o' $ matmul pj2 vbj
       o''' = zipWith (/) o'' (replicate (Any_ ::. d) lnew)
@@ -79,17 +79,18 @@ exp_e x =
       fx = zipWith (\t x' -> exp(x' - t)) (replicate (Any_ ::. sz) thismax) x
   in  T3 fx thismax (sum fx)
 
-matmulT a b = matmul a $ transpose' b
+matmul = matmul' True
+matmulT = matmul' False
 
-matmul :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
-matmul x y =
+matmul' :: Shape sh => Bool -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
+matmul' f x y = 
   case (shape x, shape y) of
     (shx ::. rows ::. _cols, shy ::. _rows ::. cols) ->
       fold1 (+) $ 
           zipWith (*)
             (replicate (Any_ ::. All_ ::. cols ::. All_) x)
-            (transpose'
-              (replicate (Any_ ::. rows ::. All_ ::. All_) y))
+            (replicate (Any_ ::. rows ::. All_ ::. All_)
+              ((if f then (compute . transpose') else id) y))
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int:.Int) a) -> Acc (Array (sh :. Int:.Int) a)
 transpose' x =

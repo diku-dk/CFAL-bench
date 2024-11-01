@@ -17,10 +17,10 @@ executable flashattention
                     accelerate >= 1.3.0.0,
                     accelerate-llvm,
                     accelerate-llvm-native,
-                    -- accelerate-llvm-ptx,
+                    accelerate-llvm-ptx,
                     llvm-hs,
-                    -- cuda,
-                    -- nvvm,
+                    cuda,
+                    nvvm,
                     criterion,
                     criterion-measurement
   hs-source-dirs:   src
