@@ -24,22 +24,20 @@ extra_env_vars=()
 
 # ---------- data ----------
 
-packages=( accelerate accelerate-llvm c2hs cuda language-c llvm-hs )
+packages=( accelerate accelerate-llvm cuda language-c llvm-hs )
 
 declare -A package_repo
 package_repo[accelerate]=https://github.com/AccelerateHS/accelerate
 package_repo[accelerate-llvm]=https://github.com/ivogabe/accelerate-llvm
-package_repo[c2hs]=https://github.com/tomsmeding/c2hs
-package_repo[cuda]=https://github.com/tomsmeding/cuda
-package_repo[language-c]=https://github.com/noahmartinwilliams/language-c
+package_repo[cuda]=https://github.com/noahmartinwilliams/cuda
+package_repo[language-c]=https://github.com/visq/language-c
 package_repo[llvm-hs]=https://github.com/llvm-hs/llvm-hs
 
 declare -A package_commit
 package_commit[accelerate]=master
 package_commit[accelerate-llvm]=23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de  # ivogabe
-package_commit[c2hs]=cfal-patches
-package_commit[cuda]=cfal-patches
-package_commit[language-c]=98cca579839cd6b6e41baf9d28c1dd53a403f8be
+package_commit[cuda]=9036603012818805984e01b774dd0f5758f65bf0
+package_commit[language-c]=a81109622aeb15abfe40fb219b8d211415f6ba2a
 package_commit[llvm-hs]=5bca2c1a2a3aa98ecfb19181e7a5ebbf3e212b76
 
 cfal_machine_path_prefix="/vol/itt/data/cfal/haskell/.ghcup/bin:/vol/itt/data/cfal/llvm/prefix/bin:"
@@ -216,13 +214,17 @@ packages:
   $workdir/deps/llvm-hs/llvm-hs-pure
   $workdir/deps/llvm-hs/llvm-hs
   $workdir/deps/cuda
-  $workdir/deps/c2hs
   $workdir/deps/language-c
 
 with-compiler: ghc-9.4.8
 
 allow-newer:
-  lens-accelerate:lens
+  lens-accelerate:lens,
+  c2hs:language-c
+
+constraints:
+  -- ensure that also build-tool dependencies use the new language-c
+  any.language-c ==0.10.0
 
 -- These are still necessary for the linker to find Cuda
 package $projectname
