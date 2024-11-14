@@ -28,7 +28,7 @@ bench()
         while [ $i -le "$iter" ]
         do
             # For cn132
-            numactl --interleave all ./bin/nbody_mt -mt 32 "$n" "$niter"
+            numactl --interleave all ./bin/nbody_cuda "$n" "$niter"
             i=$(( i + 1 ))
         done
     } | awk '{
@@ -43,7 +43,7 @@ bench()
                    printf ",%f,%f", a[i], sqrt(q[i] / NR);
                }
                print "";
-             }' > "${outdir}/nbody_mt_${n}_${niter}.csv"
+             }' > "${outdir}/nbody_cuda_${n}_${niter}.csv"
 }
 
 bench 1000 100000

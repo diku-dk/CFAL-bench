@@ -1,7 +1,5 @@
 use Structures: all except {zero, sel, +, -, *, sum};
 import Structures: {zero, sel, +, -, *, sum};
-use Vect3D: all except {zero,sel,+,-,*,sum,l2norm};
-import Vect3D: {zero,sel,+,-,*,sum,l2norm};
 
 use Math: all;
 use StdIO: all;
@@ -11,10 +9,16 @@ use CommandLine: all;
 #define EPSILON2 0x1p-53
 
 struct Body {
-   struct Vect3D  pos;
-   struct Vect3D  vel;
+   double[3]  pos;
+   double[3]  vel;
    double mass;
 };
+
+inline
+double l2norm (double[n] v)
+{
+    return sqrt (sum (v*v));
+}
 
 inline
 double pow3(double x)
@@ -27,7 +31,7 @@ double pow3(double x)
 
 
 inline
-struct Vect3D acc (struct Body b, struct Body b2)
+double[3] acc (struct Body b, struct Body b2)
 {
    dir = b2.pos - b.pos;
    return dir * ( b2.mass /  pow3 (EPSILON2 + l2norm (dir)) );
@@ -36,10 +40,10 @@ struct Vect3D acc (struct Body b, struct Body b2)
 inline
 struct Body[n] timeStep (struct Body[n] bs, double dt)
 {
-
+   // 0.1 GF for 1000 10
    acc = { [i] -> with {
                    ([0] <= [j] < [n]) : acc (bs[i], bs[j]);
-                  } : fold (+, Vect3D { })
+                  } : fold (+, [0d,0d,0d])
          | [i] < [n] };
 
    bs.vel += acc * dt;
@@ -52,13 +56,14 @@ int main()
 {
     off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
     N = toi(argv(off + 1));
+    N = 10000;
     ITER = toi(argv(off + 2));
     itime = getInterval("time", 1);
     start(itime);
 
     bodies = with {
-               (. <= [i] <= .) : Body {.pos = Vect3D {tod(i), tod(2 * i), tod(3 * i)},
-                                       .vel = Vect3D {0d,0d,0d},
+               (. <= [i] <= .) : Body {.pos = [tod(i), tod(2 * i), tod(3 * i)],
+                                       .vel = [0d,0d,0d],
                                        .mass = 1d};
              } : genarray ([N], Body {});
 
@@ -68,11 +73,11 @@ int main()
 
     end(itime);
 
-    fprintf(stderr, "First coordinate of first body is %lf\n", bodies[0].pos.x);
+    fprintf(stderr, "First coordinate of first body is %lf\n", bodies[0].pos[0]);
 
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
-    printf("%f\n",
+    printf("This equates to %f GFlop/s\n",
         (19.0 * tod(N) * tod(N) + 12.0 * tod(N)) * tod(ITER) / 1e9 / time);
 
     return 0;
