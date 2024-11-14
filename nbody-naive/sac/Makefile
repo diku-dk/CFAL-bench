@@ -1,5 +1,5 @@
 SAC = /vol/itt/data/cfal/.local/bin/sac2c_p
-SAC_FLAGS = -maxwlur 2 -mt_bind simple
+SAC_FLAGS = -maxwlur 2
 
 SEQ_LPATH  := host/seq
 MT_LPATH   := host/mt-pth
@@ -17,7 +17,7 @@ bin/nbody_seq: src/nbody.sac $(SEQ_LPATH)/libVect3DMod.so
 	$(SAC) $(SAC_FLAGS) $< -o $@
 
 bin/nbody_mt: src/nbody.sac $(MT_LPATH)/libVect3DMod.so
-	$(SAC) -t mt_pth $(SAC_FLAGS) $< -o $@
+	$(SAC) -t mt_pth  -mt_bind simple $(SAC_FLAGS) $< -o $@
 
 bin/nbody_cuda: src/nbody.sac $(CUDA_LPATH)/libVect3DMod.so
 	$(SAC) -t cuda $(SAC_FLAGS) $< -o $@
