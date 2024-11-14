@@ -6,7 +6,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from timeit import repeat
-from flash_attention_dace_cpu import flash_attention_dace_4
+# from flash_attention_dace_cpu import flash_attention_dace_4
+from flash_attention_dace_cpu import get_flash_attention_dace_cpu
 from dace.transformation.auto.auto_optimize import auto_optimize
 
 
@@ -16,11 +17,12 @@ tilesizes = [(64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024), (2048, 
 
 if __name__ == "__main__":
 
-    # Flash Attention
-    fa_sdfg = flash_attention_dace_4.to_sdfg(simplify=False)
-    fa_sdfg.simplify()
-    auto_optimize(fa_sdfg, dace.DeviceType.CPU)
-    fa_func = fa_sdfg.compile()
+    # # Flash Attention
+    # fa_sdfg = flash_attention_dace_4.to_sdfg(simplify=False)
+    # fa_sdfg.simplify()
+    # auto_optimize(fa_sdfg, dace.DeviceType.CPU)
+    # fa_func = fa_sdfg.compile()
+    fa_func = get_flash_attention_dace_cpu()
 
     rng = np.random.default_rng(42)
 

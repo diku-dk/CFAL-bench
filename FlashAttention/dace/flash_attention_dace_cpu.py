@@ -1,34 +1,42 @@
 import dace
 import numpy as np
 
+from dace.transformation.auto import auto_optimize
 
-N, d, Ti, Tj = (dace.symbol(s) for s in ('N', 'd', 'Ti', 'Tj'))
 
+def get_flash_attention_dace_cpu():
 
-@dace.program
-def flash_attention_dace_4(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d], O: dace.float32[N, d]):
+    N, d, Ti, Tj = (dace.symbol(s) for s in ('N', 'd', 'Ti', 'Tj'))
 
-    for ti in dace.map[0:N:Ti]:
+    @dace.program
+    def flash_attention_dace_4(Q: dace.float32[N, d], K: dace.float32[N, d], V: dace.float32[N, d], O: dace.float32[N, d]):
 
-        m = np.full([Ti], -np.inf, Q.dtype)
-        l = np.zeros([Ti], Q.dtype)
-        S = np.empty([Ti, Tj], Q.dtype)
-        Oi = np.zeros([Ti, d], Q.dtype)
+        for ti in dace.map[0:N:Ti]:
 
-        Qi = Q[ti:ti+Ti, :]
+            m = np.full([Ti], -np.inf, Q.dtype)
+            l = np.zeros([Ti], Q.dtype)
+            S = np.empty([Ti, Tj], Q.dtype)
+            Oi = np.zeros([Ti, d], Q.dtype)
 
-        for tj in range(0, N, Tj):
+            Qi = Q[ti:ti+Ti, :]
 
-            S[:] = Qi @ np.transpose(K[tj:tj+Tj, :])
+            for tj in range(0, N, Tj):
 
-            max_row = np.max(S, axis=1)
-            m_new = np.maximum(m, max_row)
-            p_tilde = np.exp(S - m_new[:, np.newaxis])
-            sum_row = np.sum(p_tilde, axis=1)
-            l_tmp = l * np.exp(m - m_new)
-            l_new = l_tmp + sum_row
-            Oi[:] = (Oi * l_tmp[:, np.newaxis] + p_tilde @ V[tj:tj+Tj, :]) / l_new[:, np.newaxis]
-            m[:] = m_new
-            l[:] = l_new
-        
-        O[ti:ti+Ti, :] = Oi
+                S[:] = Qi @ np.transpose(K[tj:tj+Tj, :])
+
+                max_row = np.max(S, axis=1)
+                m_new = np.maximum(m, max_row)
+                p_tilde = np.exp(S - m_new[:, np.newaxis])
+                sum_row = np.sum(p_tilde, axis=1)
+                l_tmp = l * np.exp(m - m_new)
+                l_new = l_tmp + sum_row
+                Oi[:] = (Oi * l_tmp[:, np.newaxis] + p_tilde @ V[tj:tj+Tj, :]) / l_new[:, np.newaxis]
+                m[:] = m_new
+                l[:] = l_new
+            
+            O[ti:ti+Ti, :] = Oi
+    
+    fa_sdfg = flash_attention_dace_4.to_sdfg(simplify=False)
+    fa_sdfg.simplify()
+    auto_optimize.auto_optimize(fa_sdfg, dace.DeviceType.CPU)
+    return fa_sdfg.compile()

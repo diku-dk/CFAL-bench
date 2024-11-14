@@ -7,7 +7,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from timeit import repeat
-from flash_attention_dace_gpu import custom_attention_dace
+# from flash_attention_dace_gpu import custom_attention_dace
+from flash_attention_dace_gpu import get_flash_attention_dace_gpu
 from dace.transformation.auto.auto_optimize import auto_optimize, apply_gpu_storage
 
 
@@ -17,19 +18,20 @@ tilesizes = [64, 128, 256, 512, 1024, 2048, 4096, 8192]
 
 if __name__ == "__main__":
 
-    # Flash Attention
-    sdfg = custom_attention_dace.to_sdfg(simplify=False)
-    apply_gpu_storage(sdfg)
-    for sd in sdfg.all_sdfgs_recursive():
-        if sd.parent_sdfg is not None and sd.parent_sdfg is sdfg:
-            sd.simplify()
-            auto_optimize(sd, dace.DeviceType.GPU, use_gpu_storage=True)
-    for state in sdfg.states():
-        for node in state.nodes():
-            if isinstance(node, dace.nodes.MapEntry):
-                node.schedule = dace.ScheduleType.Sequential
-    sdfg.simplify()
-    fa_func = sdfg.compile()
+    # # Flash Attention
+    # sdfg = custom_attention_dace.to_sdfg(simplify=False)
+    # apply_gpu_storage(sdfg)
+    # for sd in sdfg.all_sdfgs_recursive():
+    #     if sd.parent_sdfg is not None and sd.parent_sdfg is sdfg:
+    #         sd.simplify()
+    #         auto_optimize(sd, dace.DeviceType.GPU, use_gpu_storage=True)
+    # for state in sdfg.states():
+    #     for node in state.nodes():
+    #         if isinstance(node, dace.nodes.MapEntry):
+    #             node.schedule = dace.ScheduleType.Sequential
+    # sdfg.simplify()
+    # fa_func = sdfg.compile()
+    fa_func = get_flash_attention_dace_gpu()
 
     rng = np.random.default_rng(42)
 
