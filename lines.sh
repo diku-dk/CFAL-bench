@@ -36,12 +36,12 @@ printf "%15s %4d %4d %4d %4d %4d %4d\n" \
        $(sloc_futhark nbody-naive/futhark/nbody.fut) \
        $(sloc_sac nbody-naive/sac/src/nbody.sac)
 
-printf "%15s %4d %4d %4d %4d %4d %4d\n" \
+printf "%15s %4d %4d %4d %4s %4d %4d\n" \
        LocVolCalib \
        $(sloc_accelerate LocVolCalib/accelerate/src/*.hs) \
        $(sloc_apl LocVolCalib/APL/finpar.apln) \
-       $(sloc_dace LocVolCalib/dace/LocVolCalib.py) \
-       $(sloc_dace LocVolCalib/dace/LocVolCalib.py) \
+       $(sloc_dace LocVolCalib/dace/locvolcalib_dace.py) \
+       "same" \
        $(sloc_futhark LocVolCalib/futhark/LocVolCalib.fut) \
        $(sloc_sac LocVolCalib/sac/src/VolCalibGPU.sac)
 
