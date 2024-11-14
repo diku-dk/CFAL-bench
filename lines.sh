@@ -31,8 +31,8 @@ printf "%15s %4d %4d %4d %4d %4d %4d\n" \
        nbody \
        $(sloc_accelerate nbody-naive/accelerate/nbody-naive/src/*.hs) \
        $(sloc_apl nbody-naive/APL/nbody_naive.apln) \
-       $(sloc_dace nbody-naive/dace/nbody_dace.py) \
-       $(sloc_dace nbody-naive/dace/nbody_dace.py) \
+       $(sloc_dace nbody-naive/dace/nbody_dace_cpu_impl.py) \
+       $(sloc_dace nbody-naive/dace/nbody_dace_gpu_impl.py) \
        $(sloc_futhark nbody-naive/futhark/nbody.fut) \
        $(sloc_sac nbody-naive/sac/src/nbody.sac)
 

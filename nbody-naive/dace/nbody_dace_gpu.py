@@ -6,6 +6,7 @@ import numpy.typing as npt
 
 from dace.transformation.dataflow import MapExpansion, MapFusion, TaskletFusion
 from timeit import repeat
+from nbody_dace_gpu_impl import get_nbody_dace_gpu
 
 
 eps = np.finfo(np.float64).eps
@@ -84,13 +85,14 @@ if __name__ == '__main__':
 
     print(f"N = {args['N']}, iterations = {args['iterations']}", flush=True)
 
-    sdfg = nbody_dace_gpu.to_sdfg(simplify=True)
-    sdfg.apply_transformations_repeated([MapFusion, TaskletFusion])
-    sdfg.simplify()
-    for state in sdfg.states():
-        for node in state.nodes():
-            if isinstance(node, dace.nodes.MapEntry) and len(node.map.params) > 1:
-                MapExpansion.apply_to(sdfg, map_entry=node)
+    # sdfg = nbody_dace_gpu.to_sdfg(simplify=True)
+    # sdfg.apply_transformations_repeated([MapFusion, TaskletFusion])
+    # sdfg.simplify()
+    # for state in sdfg.states():
+    #     for node in state.nodes():
+    #         if isinstance(node, dace.nodes.MapEntry) and len(node.map.params) > 1:
+    #             MapExpansion.apply_to(sdfg, map_entry=node)
+    sdfg = get_nbody_dace_gpu()
     
     rng = np.random.default_rng(0)
 

@@ -4,6 +4,8 @@ import numpy as np
 import numpy.typing as npt
 from timeit import repeat
 
+from nbody_dace_cpu_impl import get_nbody_dace_cpu
+
 
 from dace.sdfg import utils as sdutil
 from dace.transformation.auto.auto_optimize import auto_optimize, greedy_fuse
@@ -74,67 +76,69 @@ if __name__ == "__main__":
 
     nbody_cpython(pos_mass, vel, dt, num_iterations)
 
-    sdfg = nbody_dace_cpu.to_sdfg(simplify=True)
-    sdfg.expand_library_nodes()
+    # sdfg = nbody_dace_cpu.to_sdfg(simplify=True)
+    # sdfg.expand_library_nodes()
 
-    # Permute map dimensions
-    map_entries = []
-    for node, parent in sdfg.all_nodes_recursive():
-        if isinstance(node, dace.nodes.MapEntry):
-            if len(node.map.params) == 3:
-                map_entries.append((node, parent, parent.parent))
-                permutation = []
-                for i, srng in enumerate(node.map.range.ranges):
-                    if srng == (0, 2, 1):
-                        permutation = [j for j in range(3) if j != i]
-                        permutation.append(i)
-                        break
-                assert len(permutation) == 3
-                node.map.params = [node.map.params[i] for i in permutation]
-                node.map.range.ranges = [node.map.range.ranges[i] for i in permutation]
-            elif len(node.map.params) == 2 and node.map.range.ranges[0] == (0, 2, 1):
-                map_entries.append((node, parent, parent.parent))
-                node.map.params = [node.map.params[i] for i in [1, 0]]
-                node.map.range.ranges = [node.map.range.ranges[i] for i in [1, 0]]
+    # # Permute map dimensions
+    # map_entries = []
+    # for node, parent in sdfg.all_nodes_recursive():
+    #     if isinstance(node, dace.nodes.MapEntry):
+    #         if len(node.map.params) == 3:
+    #             map_entries.append((node, parent, parent.parent))
+    #             permutation = []
+    #             for i, srng in enumerate(node.map.range.ranges):
+    #                 if srng == (0, 2, 1):
+    #                     permutation = [j for j in range(3) if j != i]
+    #                     permutation.append(i)
+    #                     break
+    #             assert len(permutation) == 3
+    #             node.map.params = [node.map.params[i] for i in permutation]
+    #             node.map.range.ranges = [node.map.range.ranges[i] for i in permutation]
+    #         elif len(node.map.params) == 2 and node.map.range.ranges[0] == (0, 2, 1):
+    #             map_entries.append((node, parent, parent.parent))
+    #             node.map.params = [node.map.params[i] for i in [1, 0]]
+    #             node.map.range.ranges = [node.map.range.ranges[i] for i in [1, 0]]
     
-    # Expand maps
-    exclude = set()
-    for node, parent in sdfg.all_nodes_recursive():
-        if isinstance(node, dace.nodes.MapEntry) and node not in exclude:
-            entries = MapExpansion.apply_to(parent.parent, map_entry=node)
-            exclude.update(entries)
+    # # Expand maps
+    # exclude = set()
+    # for node, parent in sdfg.all_nodes_recursive():
+    #     if isinstance(node, dace.nodes.MapEntry) and node not in exclude:
+    #         entries = MapExpansion.apply_to(parent.parent, map_entry=node)
+    #         exclude.update(entries)
 
-    # Find reduce-related nested SDFGs
-    nested_sdfgs = {}
-    for sd in sdfg.all_sdfgs_recursive():
-        if sd is sdfg:
-            continue
-        nsdfg_node = sd.parent_nsdfg_node
-        state = sd.parent
-        for edge in state.out_edges(nsdfg_node):
-            nested_sdfgs[edge.data.data] = nsdfg_node
+    # # Find reduce-related nested SDFGs
+    # nested_sdfgs = {}
+    # for sd in sdfg.all_sdfgs_recursive():
+    #     if sd is sdfg:
+    #         continue
+    #     nsdfg_node = sd.parent_nsdfg_node
+    #     state = sd.parent
+    #     for edge in state.out_edges(nsdfg_node):
+    #         nested_sdfgs[edge.data.data] = nsdfg_node
 
-    # Hoist reduce initialization states in the top-level SDFG
-    HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['accel'], permissive=True)
-    HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['dist_sq'], permissive=True)
+    # # Hoist reduce initialization states in the top-level SDFG
+    # HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['accel'], permissive=True)
+    # HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['dist_sq'], permissive=True)
     
-    # Fuse maps
-    sdfg.simplify()
-    sdfg.apply_transformations_repeated([MapFusion])
-    greedy_fuse(sdfg, False)
-    sdfg.simplify()
-    greedy_fuse(sdfg, False)
-    auto_optimize(sdfg, dace.DeviceType.CPU)
+    # # Fuse maps
+    # sdfg.simplify()
+    # sdfg.apply_transformations_repeated([MapFusion])
+    # greedy_fuse(sdfg, False)
+    # sdfg.simplify()
+    # greedy_fuse(sdfg, False)
+    # auto_optimize(sdfg, dace.DeviceType.CPU)
 
-    # Set zero initialization for WCR
-    for edge, parent in sdfg.all_edges_recursive():
-        if hasattr(edge.data, 'wcr') and edge.data.wcr is not None:
-            dst = sdutil.get_global_memlet_path_dst(parent.parent, parent, edge)
-            if isinstance(dst, dace.nodes.AccessNode):
-                dst.setzero = True
+    # # Set zero initialization for WCR
+    # for edge, parent in sdfg.all_edges_recursive():
+    #     if hasattr(edge.data, 'wcr') and edge.data.wcr is not None:
+    #         dst = sdutil.get_global_memlet_path_dst(parent.parent, parent, edge)
+    #         if isinstance(dst, dace.nodes.AccessNode):
+    #             dst.setzero = True
 
-    # Tasklet clean-up
-    sdfg.apply_transformations_repeated([TaskletFusion])
+    # # Tasklet clean-up
+    # sdfg.apply_transformations_repeated([TaskletFusion])
+
+    sdfg = get_nbody_dace_cpu()
 
     print("\nValidating correctness ...", flush=True)
 
