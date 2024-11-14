@@ -49,6 +49,8 @@ import dace
 from dace.transformation.auto.auto_optimize import auto_optimize, greedy_fuse, tile_wcrs
 from dace.transformation.dataflow import MapReduceFusion, TaskletFusion, Vectorization
 
+from mg_dace import get_mg_dace, mg_dace_full
+
 n0i, n0j, n0k = (dace.symbol(s, dtype=dace.int32) for s in ('n0i', 'n0j', 'n0k'))
 n1i, n1j, n1k = (dace.symbol(s, dtype=dace.int64) for s in ('n1i', 'n1j', 'n1k'))
 
@@ -1369,37 +1371,39 @@ def main(framework: str):
 
     runtime = -time.perf_counter()
 
-    if framework == 'dace_cpu':
-        print("Compiling DaCe versions")
-        resid_func = compile_program_cpu(resid_dace)
-        rprj3_func = compile_program_cpu(rprj3_dace)
-        psinv_func = compile_program_cpu(psinv_dace)
-        interp_func = compile_program_cpu(interp_dace, use_stencil_tiling=False)
-        combo_func = compile_program_cpu(combo_dace, use_stencil_tiling=False)
-        # sdfg = interp_dace.to_sdfg(simplify=True)  # Issue with persistent z1, z2, z3
-        # interp_func = sdfg.compile()
-        # sdfg = norm2u3_dace.to_sdfg(simplify=True)
-        # auto_optimize(sdfg, dace.DeviceType.CPU)
-        # sdfg.simplify()
-        # auto_optimize(sdfg, dace.DeviceType.CPU)
-        # norm2u3_func = compile_program_cpu(norm2u3_dace)
-        sdfg = norm2u3_dace.to_sdfg(simplify=True)
-        sdfg.apply_transformations_repeated([MapReduceFusion])
-        tile_wcrs(sdfg, validate_all=True)
-        greedy_fuse(sdfg, validate_all=True)
-        norm2u3_func = sdfg.compile()  # Custom workflow to work around inability to tile two WCRs in a single Map
-    elif framework == 'dace_gpu':
-        print("Compiling DaCe versions")
-        resid_func = compile_program_gpu(resid_dace)
-        rprj3_func = compile_program_gpu(rprj3_dace)
-        psinv_func = compile_program_gpu(psinv_dace)
-        combo_func = compile_program_gpu(combo_dace, use_stencil_tiling=False)
-        interp_func = compile_program_gpu(interp_dace, use_stencil_tiling=False)
-        # sdfg = interp_dace.to_sdfg(simplify=True)
-        # gpu_storage(sdfg)
-        # sdfg.apply_gpu_transformations()
-        # interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
-        norm2u3_func = compile_program_gpu(norm2u3_dace, use_wcr_tiling=False)
+    # if framework == 'dace_cpu':
+    #     print("Compiling DaCe versions")
+    #     resid_func = compile_program_cpu(resid_dace)
+    #     rprj3_func = compile_program_cpu(rprj3_dace)
+    #     psinv_func = compile_program_cpu(psinv_dace)
+    #     interp_func = compile_program_cpu(interp_dace, use_stencil_tiling=False)
+    #     combo_func = compile_program_cpu(combo_dace, use_stencil_tiling=False)
+    #     # sdfg = interp_dace.to_sdfg(simplify=True)  # Issue with persistent z1, z2, z3
+    #     # interp_func = sdfg.compile()
+    #     # sdfg = norm2u3_dace.to_sdfg(simplify=True)
+    #     # auto_optimize(sdfg, dace.DeviceType.CPU)
+    #     # sdfg.simplify()
+    #     # auto_optimize(sdfg, dace.DeviceType.CPU)
+    #     # norm2u3_func = compile_program_cpu(norm2u3_dace)
+    #     sdfg = norm2u3_dace.to_sdfg(simplify=True)
+    #     sdfg.apply_transformations_repeated([MapReduceFusion])
+    #     tile_wcrs(sdfg, validate_all=True)
+    #     greedy_fuse(sdfg, validate_all=True)
+    #     norm2u3_func = sdfg.compile()  # Custom workflow to work around inability to tile two WCRs in a single Map
+    # elif framework == 'dace_gpu':
+    #     print("Compiling DaCe versions")
+    #     resid_func = compile_program_gpu(resid_dace)
+    #     rprj3_func = compile_program_gpu(rprj3_dace)
+    #     psinv_func = compile_program_gpu(psinv_dace)
+    #     combo_func = compile_program_gpu(combo_dace, use_stencil_tiling=False)
+    #     interp_func = compile_program_gpu(interp_dace, use_stencil_tiling=False)
+    #     # sdfg = interp_dace.to_sdfg(simplify=True)
+    #     # gpu_storage(sdfg)
+    #     # sdfg.apply_gpu_transformations()
+    #     # interp_func = sdfg.compile() # Issue with persistent z1, z2, z3
+    #     norm2u3_func = compile_program_gpu(norm2u3_dace, use_wcr_tiling=False)
+
+    resid_func, rprj3_func, psinv_func, interp_func, combo_func, norm2u3_func = get_mg_dace(framework)
     
     runtime += time.perf_counter()
     print(" Compilation time: %f seconds" % runtime)
@@ -1572,35 +1576,37 @@ def main(framework: str):
             c_timers.timer_clear(i)
         c_timers.timer_start(T_BENCH)
 
-        if timeron:
-            c_timers.timer_start(T_RESID2)
-        resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-        # cupy.cuda.runtime.deviceSynchronize()
+        # if timeron:
+        #     c_timers.timer_start(T_RESID2)
+        # resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        # # cupy.cuda.runtime.deviceSynchronize()
 
-        if timeron:
-            c_timers.timer_stop(T_RESID2)
-        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
-        # cupy.cuda.runtime.deviceSynchronize()
+        # if timeron:
+        #     c_timers.timer_stop(T_RESID2)
+        # rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # # cupy.cuda.runtime.deviceSynchronize()
 
-        for it in range(1, nit+1):
-            if it == 1 or it == nit or (it%5) == 0:
-                print("  iter %3d" % (it))
-            if timeron:
-                c_timers.timer_start(T_MG3P)
-            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
-            # cupy.cuda.runtime.deviceSynchronize()
-            if timeron:
-                c_timers.timer_stop(T_MG3P)
-            if timeron:
-                c_timers.timer_start(T_RESID2)
-            resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-            # cupy.cuda.runtime.deviceSynchronize()
+        # for it in range(1, nit+1):
+        #     if it == 1 or it == nit or (it%5) == 0:
+        #         print("  iter %3d" % (it))
+        #     if timeron:
+        #         c_timers.timer_start(T_MG3P)
+        #     mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+        #     # cupy.cuda.runtime.deviceSynchronize()
+        #     if timeron:
+        #         c_timers.timer_stop(T_MG3P)
+        #     if timeron:
+        #         c_timers.timer_start(T_RESID2)
+        #     resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        #     # cupy.cuda.runtime.deviceSynchronize()
 
-            if timeron:
-                c_timers.timer_stop(T_RESID2)
+        #     if timeron:
+        #         c_timers.timer_stop(T_RESID2)
 
-        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
-        # cupy.cuda.runtime.deviceSynchronize()
+        # rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # # cupy.cuda.runtime.deviceSynchronize()
+
+        mg_dace_full(lt, lb, m1, m2, m3, ir, dn, nit, du, dv, dr, a, c, n1, n2, n3, resid_func, norm2u3_func, rprj3_func, psinv_func, interp_func, combo_func=combo_func)
 
         c_timers.timer_stop(T_BENCH)
         t = c_timers.timer_read(T_BENCH)
