@@ -5,7 +5,8 @@
 #SBATCH --mem=0
 #SBATCH --cpus-per-task=32
 #SBATCH --time=1:00:00
-#SBATCH --output=bench_mt.out
+#SBATCH --output=bench_cuda.out
+#SBATCH --gres=gpu:nvidia_a30:1
 
 if [ "$#" -ne 2 ]; then
     printf 'Usage: %s ITER OUTDIR\n' "$0" >&2
@@ -14,6 +15,7 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
+./bin/nbody_cuda 10000 10
 iter="$1"
 outdir="$2"
 
@@ -28,7 +30,7 @@ bench()
         while [ $i -le "$iter" ]
         do
             # For cn132
-            numactl --interleave all ./bin/nbody_cuda "$n" "$niter"
+            ./bin/nbody_cuda "$n" "$niter"
             i=$(( i + 1 ))
         done
     } | awk '{
