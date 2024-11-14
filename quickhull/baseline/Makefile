@@ -5,6 +5,6 @@ hull: hull.cpp
 
 run: hull
 	rm -f quickhull.csv
-	./hull ../input/100M_circle.dat circle >> quickhull.csv
-	./hull ../input/100M_rectangle.dat rectangle >> quickhull.csv
-	./hull ../input/100M_quadratic.dat quadratic >> quickhull.csv
+	numactl --interleave all ./hull ../input/100M_circle.dat circle >> quickhull.csv
+	numactl --interleave all ./hull ../input/100M_rectangle.dat rectangle >> quickhull.csv
+	numactl --interleave all ./hull ../input/100M_quadratic.dat quadratic >> quickhull.csv
