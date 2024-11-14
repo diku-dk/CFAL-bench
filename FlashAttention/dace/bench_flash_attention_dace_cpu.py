@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from timeit import repeat
-from flash_attention_dace import standard_attention_dace, flash_attention_dace_4
+from flash_attention_dace_cpu import flash_attention_dace_4
 from dace.transformation.auto.auto_optimize import auto_optimize
 
 

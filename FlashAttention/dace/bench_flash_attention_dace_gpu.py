@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from timeit import repeat
-from flash_attention_dace import custom_attention_dace
+from flash_attention_dace_gpu import custom_attention_dace
 from dace.transformation.auto.auto_optimize import auto_optimize, apply_gpu_storage
 
 
