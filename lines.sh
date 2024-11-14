@@ -45,12 +45,12 @@ printf "%15s %4d %4d %4d %4s %4d %4d\n" \
        $(sloc_futhark LocVolCalib/futhark/LocVolCalib.fut) \
        $(sloc_sac LocVolCalib/sac/src/VolCalibGPU.sac)
 
-printf "%15s %4d %4d %4d %4d %4d %4d\n" \
+printf "%15s %4d %4d %4d %4s %4d %4d\n" \
        MG \
        $(sloc_accelerate MG/accelerate/src/*.hs) \
        $(sloc_apl MG/APL/MG.apln) \
-       $(sloc_dace MG/dace/mg.py) \
-       $(sloc_dace MG/dace/mg.py) \
+       $(sloc_dace MG/dace/mg_dace.py) \
+       "same" \
        $(sloc_futhark MG/futhark/mg.fut) \
        $(sloc_sac MG/sac/src/*.sac)
 
