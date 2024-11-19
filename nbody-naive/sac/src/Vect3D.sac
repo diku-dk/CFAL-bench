@@ -1,0 +1,47 @@
+module Vect3D;
+
+export all;
+
+struct Vect3D {
+   double x;
+   double y;
+   double z;
+};
+
+inline
+double l2norm(struct Vect3D b)
+{
+    return Math::sqrt(b.x Array::* b.x Array::+ b.y Array::* b.y Array::+ b.z Array::* b.z);
+}
+
+inline
+struct Vect3D[n:shp] + (struct Vect3D[n:shp] a, struct Vect3D[n:shp] b)
+{
+    return {iv -> Vect3D{ a[iv].x Array::+ b[iv].x, a[iv].y Array::+ b[iv].y, a[iv].z Array::+ b[iv].z}};
+}
+
+inline
+struct Vect3D + (struct Vect3D a, struct Vect3D b)
+{
+    return Vect3D{ a.x Array::+ b.x, a.y Array::+ b.y, a.z Array::+ b.z};
+}
+
+inline
+struct Vect3D - (struct Vect3D a, struct Vect3D b)
+{
+    return Vect3D{ a.x Array::- b.x, a.y Array::- b.y, a.z Array::- b.z};
+}
+
+inline
+struct Vect3D[n:shp] * (struct Vect3D[n:shp] a, double b)
+{
+    return {iv -> Vect3D{ a[iv].x Array::* b, a[iv].y Array::* b, a[iv].z Array::* b} };
+}
+
+inline
+struct Vect3D sum (struct Vect3D[n:shp] a)
+{
+    return with {
+              (0 Array::* shp <= iv < shp) : a[shp];
+           } : fold (+, Vect3D{});
+}

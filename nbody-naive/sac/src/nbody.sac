@@ -36,11 +36,15 @@ struct Vect3D acc (struct Body b, struct Body b2)
 inline
 struct Body[n] timeStep (struct Body[n] bs, double dt)
 {
-
-   acc = { [i] -> with {
+   /* Insert pragma because the default number of threads per block is 1024,
+    * which is too much for small n. */
+   acc = with {
+           ([0] <= [i] < [n])
+           #pragma gpukernel GridBlock(1, SplitLast(64, CompressGrid([1], ShiftLB(Gen))))
+           : with {
                    ([0] <= [j] < [n]) : acc (bs[i], bs[j]);
-                  } : fold (+, Vect3D { })
-         | [i] < [n] };
+                  } : fold (+, Vect3D { });
+         }: genarray([n], Vect3D {});
 
    bs.vel += acc * dt;
    bs.pos += bs.vel * dt;
