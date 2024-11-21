@@ -37,7 +37,7 @@
 use Input: all;
 use StdIO: all;
 use Math: all;
-use Array: all except {rotate};
+use Array: all;
 use Benchmarking: all;
 
 #if defined(CLASS_S) || defined(CLASS_W) || defined(CLASS_A)
@@ -47,23 +47,22 @@ use Benchmarking: all;
 #endif
 
 inline
-double[*] rotate(int[.] off, double[*] a)
-{
-  return {iv -> a[mod(iv-off, shape(a))] | iv < shape(a) };
-}
-
-inline
 double[.,.,.] gen_weights(double[4] cs)
 {
   return {iv -> cs[sum(abs(iv - [1, 1, 1]))] | iv < [3, 3, 3]};
 }
 
 inline
-double[.,.,.] relax(double[.,.,.] x, double[4] cs)
+double[d:shp] relax(double[d:shp] x, double[d:wshp] w)
 {
-  weights = gen_weights(cs);
-  return {iv -> sum({jv -> weights[jv] * rotate(1 - jv, x)[iv]})
-             | iv < shape(x)};
+  return {iv -> sum({jv -> w[jv] * x[mod(iv + jv - wshp / 2, shp)]})
+             | iv < shp};
+}
+
+inline
+double[.,.,.] relax_mg(double[.,.,.] x, double[4] cs)
+{
+  return relax(x, gen_weights(cs));
 }
 
 inline
@@ -89,7 +88,7 @@ double[*] fine2coarse(double[*] r)
 inline
 double[.,.,.] A(double[.,.,.] a)
 {
-  return relax(a, [-8d/3d, 0d, 1d/6d, 1d/12d]);
+  return relax_mg(a, [-8d/3d, 0d, 1d/6d, 1d/12d]);
 }
 
 specialize double[256,256,256] P(double[512,512,512] r);
@@ -103,7 +102,7 @@ specialize double[2,2,2]       P(double[4,4,4] r);
 noinline
 double[.,.,.] P(double[.,.,.] a)
 {
-  return fine2coarse(relax(a, [1d/2d, 1d/4d, 1d/8d, 1d/16d]));
+  return fine2coarse(relax_mg(a, [1d/2d, 1d/4d, 1d/8d, 1d/16d]));
 }
 
 specialize double[512,512,512] Q(double[256,256,256] r);
@@ -117,7 +116,7 @@ specialize double[4,4,4]       Q(double[2,2,2] r);
 noinline
 double[.,.,.] Q(double[.,.,.] a)
 {
-  return relax(coarse2fine (a), [1d, 1d/2d, 1d/4d, 1d/8d]);
+  return relax_mg(coarse2fine (a), [1d, 1d/2d, 1d/4d, 1d/8d]);
 }
 
 specialize double[512,512,512] Sa(double[512,512,512] r);
@@ -131,7 +130,7 @@ specialize double[4,4,4]       Sa(double[4,4,4] r);
 noinline
 double[.,.,.] Sa(double[.,.,.] a)
 {
-  return relax(a, [-3d/8d, 1d/32d, -1d/64d, 0d]);
+  return relax_mg(a, [-3d/8d, 1d/32d, -1d/64d, 0d]);
 }
 
 specialize double[512,512,512] Sb(double[512,512,512] r);
@@ -145,7 +144,7 @@ specialize double[4,4,4]       Sb(double[4,4,4] r);
 noinline
 double[.,.,.] Sb(double[.,.,.] a)
 {
-  return relax(a, [-3d/17d, 1d/33d, -1d/61d, 0d]);
+  return relax_mg(a, [-3d/17d, 1d/33d, -1d/61d, 0d]);
 }
 
 specialize double[512,512,512] M(double[512,512,512] r);
