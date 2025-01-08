@@ -61,7 +61,7 @@ printf "%15s %4d %4d %4d %4s %4d %4d %4s %5d\n" \
        $(sloc_dace MG/dace/mg_dace.py) \
        "same" \
        $(sloc_futhark MG/futhark/mg.fut) \
-       $(sloc_sac MG/sac/src/*.sac) \
+       $(sloc_sac MG/sac/src/MG.sac) \
        "---" \
        $(sloc_cpp MG/baseline-NPB-GPU/MG)
 
@@ -84,6 +84,6 @@ printf "%15s %4d %4d %4d %4d %4d %4d %4d %5d\n" \
        $(sloc_dace FlashAttention/dace/flash_attention_dace_cpu.py) \
        $(sloc_dace FlashAttention/dace/flash_attention_dace_gpu.py) \
        $(sloc_futhark FlashAttention/futhark/custom-alg1-opt.fut) \
-       $(sloc_sac FlashAttention/sac/src/*.sac) \
+       $(sloc_sac FlashAttention/sac/src/flash.sac) \
        $(sloc_cpp FlashAttention/baseline-cpu) \
        $(sloc_cpp FlashAttention/baseline-gpu)
