@@ -14,9 +14,7 @@ executable mg
                     accelerate-llvm,
                     accelerate-llvm-native,
                     accelerate-llvm-ptx,
-                    llvm-hs,
                     cuda,
-                    nvvm,
                     criterion,
                     criterion-measurement
   hs-source-dirs:   src
