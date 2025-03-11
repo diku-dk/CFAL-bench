@@ -4,27 +4,30 @@ import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion
 import Criterion.Main
-import qualified Prelude
-import Criterion.Measurement
+import qualified Criterion.Measurement as Cr
+import qualified Criterion.Measurement.Types as CrT
 
-main :: Prelude.IO ()
+import qualified Prelude
+import Prelude (IO, print, putStrLn, mapM_)
+
+main :: IO ()
 main = do
-  once "CPU" CPU.run
-  once "GPU" GPU.run
+  once "CPU" CPU.runN
+  once "GPU" GPU.runN
   defaultMain [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
   where
     once nm rn = do
-      print nm
-      mapM_ once' rn [(4, 256, input256), (20, 256, input256), (20, 512, input512)]
-    once' rn (i,n,input) = do
-      print (i,n)
-      (measured, endtime) <- measure (nf (rn (\a ->
+      putStrLn nm
+      mapM_ (once' rn) [(4, 256, input256), (20, 256, input256), (20, 512, input512)]
+    once' rn (iter,n,input) = do
+      print (iter,n)
+      (measured, _endtime) <- Cr.measure (nf (rn (\inp ->
               mg n
                 (if iter Prelude.== 4 then weightsA else weightsB) (use $ fromList Z [iter])
-                a
+                inp
                 (generate (Z_ ::. constant n ::. constant n ::. constant n) $ const 0)
         )) input) 2
-      print (secs $ measTime measured)
+      putStrLn (Cr.secs $ CrT.measTime measured)
 
     makeInput' = CPU.runN makeInput
     input256 = makeInput' $ fromList Z [256]
@@ -37,10 +40,10 @@ main = do
 
     testcase runN (iter, n, input) =
       env (Prelude.return $
-          runN $ \a ->
+          runN $ \inp ->
               mg n
                 (if iter Prelude.== 4 then weightsA else weightsB) (use $ fromList Z [iter])
-                a
+                inp
                 (generate (Z_ ::. constant n ::. constant n ::. constant n) $ const 0)
         )
         $ \f -> bench ("n=" Prelude.++ Prelude.show n Prelude.++ ", iter=" Prelude.++ Prelude.show iter) $ nf f input
