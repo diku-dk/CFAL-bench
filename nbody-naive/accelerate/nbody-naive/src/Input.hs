@@ -9,7 +9,7 @@ gen_input n' = let n = the n' in generate
   (I1 n) 
   (\(I1 i) -> let f = fromIntegral i in 
     Body 
-      (Three (sin f) (cos f) (tan f)) -- position
+      (Vec (sin f) (cos f) (tan f)) -- position
       (sin (f+1.1)) -- mass
-      (Three 0 0 0)) -- velocity
+      (Vec 0 0 0)) -- velocity
 
