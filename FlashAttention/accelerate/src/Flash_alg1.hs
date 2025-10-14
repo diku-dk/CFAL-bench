@@ -34,22 +34,20 @@ flashAttention q k v m' =
       l = fill (Z_ ::. n `div` br ::. br)       0
 
       max_j = n `div` bc
-      x@(T3 result _ _) = afst $ awhile (map (< max_j) . asnd)
+      T3 result _ _ = afst $ awhile (map (< max_j) . asnd)
              (\(T2 state j) -> T2 (step state qb kb vb j) (map (+1) j))
              (T2 (T3 o m l) $ unit 0)
   in reshape (Z_ ::. n ::. d) result
 
--- awhile' :: (p2 -> p3) -> (p2 -> p2) -> p2 -> p2
--- awhile' _ s x = let y = s . s . s $ x in y
-
+real_max :: Exp Float
 real_max = constant $ encodeFloat (2^(24 :: Int) - 1) (127-23)--3.40282346638528859811704183484516925e+38, largest non-infinity float
 
 type State = Acc (Array DIM3 Float,Matrix Float,Matrix Float)
 
 step :: State -> Acc (Array DIM3 Float) -> Acc (Array DIM3 Float) -> Acc (Array DIM3 Float) -> Acc (Scalar Int) -> State
 step (T3 o m l) qb kb vb j =
-  let Z_ ::. nbc ::. bc ::. d = shape kb
-      Z_ ::. nbr ::. br ::. _d = shape o
+  let Z_ ::. _ ::. bc ::. d = shape kb
+      Z_ ::. nbr ::. _br ::. _d = shape o
       kbj = replicate (Z_ ::. nbr ::. All_ ::. All_) $ slice kb $ Z_ ::. the j ::. All_ ::. All_
       vbj = replicate (Z_ ::. nbr ::. All_ ::. All_) $ slice vb $ Z_ ::. the j ::. All_ ::. All_
       T3 pj1 mj lj = exp_e $ matmulT qb kbj
@@ -79,23 +77,26 @@ exp_e x =
       fx = zipWith (\t x' -> exp(x' - t)) (replicate (Any_ ::. sz) thismax) x
   in  T3 fx thismax (sum fx)
 
-matmul = matmul' True
-matmulT = matmul' False
+-- Given arrays of size (sh, m, k) and (sh, n, k),
+-- Returns an array of size (sh, m, n)
+matmulT :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
+matmulT a b = fold (+) 0 $ zipWith (*)
+    -- Replicate a and b to arrays of size (sh, m, n, k)
+    (replicate (Any_ ::. All_ ::. n ::. All_) a)
+    (replicate (Any_ ::. m ::. All_ ::. All_) b)
+  where
+    (_ ::. m ::. _) = shape a
+    (_ ::. n ::. _) = shape b
 
-matmul' :: Shape sh => Bool -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
-matmul' f x y = 
-  case (shape x, shape y) of
-    (shx ::. rows ::. _cols, shy ::. _rows ::. cols) ->
-      fold1 (+) $ 
-          zipWith (*)
-            (replicate (Any_ ::. All_ ::. cols ::. All_) x)
-            (replicate (Any_ ::. rows ::. All_ ::. All_)
-              ((if f then (compute . transpose') else id) y))
+-- Given arrays of size (sh, m, k) and (sh, k, n),
+-- Returns an array of size (sh, m, n)
+matmul :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
+matmul a b = matmulT (compute a) (compute $ transpose' b)
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int:.Int) a) -> Acc (Array (sh :. Int:.Int) a)
 transpose' x =
-  let sh ::. a ::. b = shape x
-  in backpermute (sh ::. b ::. a) (\(sh ::. b ::. a) -> sh ::. a ::. b) x
+  let sh ::. m ::. n = shape x
+  in backpermute (sh ::. n ::. m) (\(idx ::. i ::. j) -> idx ::. j ::. i) x
 
 mkInput :: Exp Int -> Exp Int -> Acc (Matrix Float, Matrix Float, Matrix Float)
 mkInput n d = T3 
