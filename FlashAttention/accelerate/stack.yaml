@@ -8,12 +8,19 @@ extra-deps:
   subdirs:
   - accelerate-llvm
   - accelerate-llvm-native
-  # - accelerate-llvm-ptx
-# - github: dpvanbalen/cuda
-#   commit: a140e84a905753fd63fc4a4a707d7e60cb1888f3
-# - nvvm-0.10.0.1
+  - accelerate-llvm-ptx
+- cuda-0.12.8.0
+- nvvm-0.10.0.1
+- language-c-0.10.0
 - github: llvm-hs/llvm-hs
   commit: e4b3cfa47e72f094ab109884f18acfc666b0fb7d  # llvm-15
   subdirs:
     - llvm-hs
     - llvm-hs-pure
+
+# The c2hs in this stackage resolver does not yet allow language-c-0.10.0, but
+# it supports it nevertheless and it's needed to be able to compile against
+# CUDA 12. Note that the allow-newer-deps key _restricts_ allow-newer.
+allow-newer: True
+allow-newer-deps:
+- c2hs

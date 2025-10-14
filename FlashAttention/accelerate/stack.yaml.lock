@@ -42,6 +42,40 @@ packages:
     subdir: accelerate-llvm-native
     url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
 - completed:
+    name: accelerate-llvm-ptx
+    pantry-tree:
+      sha256: 370f69ca1719ee33bf053f76494051aa15235e7938c870b62cbb832174e44efc
+      size: 4967
+    sha256: 0f7b8d09b248d9e5d3dc5c28cf42e69e0834d98cd43a17fe71f0890c8beefe99
+    size: 282618
+    subdir: accelerate-llvm-ptx
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
+    version: 1.3.0.0
+  original:
+    subdir: accelerate-llvm-ptx
+    url: https://github.com/ivogabe/accelerate-llvm/archive/23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de.tar.gz
+- completed:
+    hackage: cuda-0.12.8.0@sha256:c1845313c197c3d40ef0f3976001d5bc1bb9b6238e8abfe2e0eafba230885e4f,5287
+    pantry-tree:
+      sha256: b1807028e80c7542b80bf494605bf5c2387ada89b60f6b5abcd36ff9be31e066
+      size: 3704
+  original:
+    hackage: cuda-0.12.8.0
+- completed:
+    hackage: nvvm-0.10.0.1@sha256:13b54669b580e27455bbab8d0e3d09711646d2655dd9dd80ec48f16aa8841689,2456
+    pantry-tree:
+      sha256: 1941b8f5e5aa7fa433d73a2c6bc607343d041fc53ce109a86ecc1d47194b541f
+      size: 684
+  original:
+    hackage: nvvm-0.10.0.1
+- completed:
+    hackage: language-c-0.10.0@sha256:a66b5876fdec5a1defa9df5527c8bec52fc911335d36ee9c4b45fa11b5badbb9,3781
+    pantry-tree:
+      sha256: 45a24710ff38673ecfaafa69d27e7195288b9d29162c47954999f12a60655d10
+      size: 3296
+  original:
+    hackage: language-c-0.10.0
+- completed:
     name: llvm-hs
     pantry-tree:
       sha256: 21f74a6f51fae6c0a0fcf3e6620a59f341289ac743998b41ed3276fd1b7d8862
