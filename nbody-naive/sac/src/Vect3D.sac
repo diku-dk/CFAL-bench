@@ -45,3 +45,15 @@ struct Vect3D sum (struct Vect3D[n:shp] a)
               (0 Array::* shp <= iv < shp) : a[shp];
            } : fold (+, Vect3D{});
 }
+
+inline
+struct Vect3D sel(int[d] iv, struct Vect3D[d:shp] a)
+{
+    return _sel_VxA_(iv, a);
+}
+
+inline
+struct Vect3D sel(int i, struct Vect3D[d:shp] a)
+{
+    return _sel_VxA_([i], a);
+}

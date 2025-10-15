@@ -1,12 +1,13 @@
-use Structures: all except {zero, sel, +, -, *, sum};
-import Structures: {zero, sel, +, -, *, sum};
-use Vect3D: all except {zero,sel,+,-,*,sum,l2norm};
-import Vect3D: {zero,sel,+,-,*,sum,l2norm};
+use Array: all except {sel, +, -, *, sum};
+import Array: {sel, +, -, *, sum};
+use Vect3D: all except {sel,+,-,*,sum,l2norm};
+import Vect3D: {sel,+,-,*,sum,l2norm};
 
 use Math: all;
 use StdIO: all;
 use Benchmarking: all;
 use CommandLine: all;
+use String: {strcmp};
 
 #define EPSILON2 0x1p-53
 
@@ -42,7 +43,8 @@ struct Body[n] timeStep (struct Body[n] bs, double dt)
            ([0] <= [i] < [n])
            #pragma gpukernel GridBlock(1, SplitLast(64, CompressGrid([1], ShiftLB(Gen))))
            : with {
-                   ([0] <= [j] < [n]) : acc (bs[i], bs[j]);
+                   ([0] <= [j] < [n]) : acc (_sel_VxA_([i], bs), 
+                                             _sel_VxA_([j], bs)); 
                   } : fold (+, Vect3D { });
          }: genarray([n], Vect3D {});
 
@@ -55,8 +57,8 @@ struct Body[n] timeStep (struct Body[n] bs, double dt)
 int main()
 {
     off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
-    N = toi(argv(off + 1));
-    ITER = toi(argv(off + 2));
+    N = String::toi(argv(off + 1));
+    ITER = String::toi(argv(off + 2));
     itime = getInterval("time", 1);
     start(itime);
 
@@ -72,7 +74,7 @@ int main()
 
     end(itime);
 
-    fprintf(stderr, "First coordinate of first body is %lf\n", bodies[0].pos.x);
+    fprintf(stderr, "First coordinate of first body is %lf\n", _sel_VxA_([0], bodies).pos.x);
 
     time, unit = returnResultUnit(itime);
     fprintf(stderr, "This took %f%s.\n", time, unit);
