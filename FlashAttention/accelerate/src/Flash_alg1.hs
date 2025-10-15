@@ -1,26 +1,15 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 module Flash_alg1 where
 
 import Data.Array.Accelerate hiding (encodeFloat,(^))
 import Prelude hiding (replicate, zipWith, zipWith3, map, sum, min, Ord(..), maximum)
 
-import qualified Naive as N
 
-totalProgramNaive :: Acc (Scalar Int, Scalar Int) -> Acc (Matrix Float)
-totalProgramNaive (T2 n d) = let T3 q k v = mkInput (the n) (the d) in N.flashAttention q k v
-
-totalProgram :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Matrix Float)
-totalProgram (T3 n d m) = let T3 q k v = mkInput (the n) (the d) in flashAttention q k v (the m)
-
-check :: Acc (Scalar Int, Scalar Int, Scalar Int) -> Acc (Scalar Float, Scalar Float)
-check = checkCorrectness . totalProgram
-
-
-flashAttention :: Acc (Matrix Float) -> Acc (Matrix Float) -> Acc (Matrix Float) -> Exp Int -> Acc (Matrix Float)
-flashAttention q k v m' =
+flashAttention :: Acc (Matrix Float, Matrix Float, Matrix Float) -> Acc (Scalar Int) -> Acc (Matrix Float)
+flashAttention (T3 q k v) (the -> m') =
   let Z_ ::. n ::. d = shape q
       bc = ceildiv m' (4*d)
       br = min bc d
@@ -93,20 +82,7 @@ matmulT a b = fold (+) 0 $ zipWith (*)
 matmul :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
 matmul a b = matmulT (compute a) (compute $ transpose' b)
 
-transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int:.Int) a) -> Acc (Array (sh :. Int:.Int) a)
+transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int :. Int) a) -> Acc (Array (sh :. Int :. Int) a)
 transpose' x =
   let sh ::. m ::. n = shape x
   in backpermute (sh ::. n ::. m) (\(idx ::. i ::. j) -> idx ::. j ::. i) x
-
-mkInput :: Exp Int -> Exp Int -> Acc (Matrix Float, Matrix Float, Matrix Float)
-mkInput n d = T3 
-  (generate (Z_ ::. n ::. d) (const 1.0)) 
-  (generate (Z_ ::. n ::. d) (const 1.0)) 
-  (generate (Z_ ::. n ::. d) (const 1.0))
-
-checkCorrectness :: Acc (Matrix Float) -> Acc (Scalar Float, Scalar Float)
-checkCorrectness o = let Z_ ::. n ::. d = shape o
-                         target = sqrt (toFloating n * toFloating d)
-                         result = map sqrt $ sum $ sum $ map (\x -> x*x) o
-                     in T2 (unit target) result
-

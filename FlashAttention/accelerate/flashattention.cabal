@@ -12,15 +12,15 @@ executable flashattention
   other-modules:
     Naive
     Flash_alg1
+    Flash_custom
+    Input
 
   build-depends:    base >= 4.10,
                     accelerate >= 1.3.0.0,
                     accelerate-llvm,
                     accelerate-llvm-native,
                     accelerate-llvm-ptx,
-                    llvm-hs,
-                    cuda,
-                    nvvm,
+                    containers,
                     criterion,
                     criterion-measurement
   hs-source-dirs:   src

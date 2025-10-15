@@ -1,32 +1,31 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 {-# LANGUAGE TypeOperators #-}
+module Flash_custom where
 
-module Naive where
-
-import Data.Array.Accelerate
-import Prelude hiding (replicate, zipWith, map, sum)
---import Data.Array.Accelerate.Numeric.LinearAlgebra
-
--- (attempt at) direct port of 'naive.sac' to Accelerate. Untested.
+import Data.Array.Accelerate hiding (encodeFloat,(^))
+import Prelude hiding (replicate, zipWith, zipWith3, map, sum, min, Ord(..), maximum)
 
 
+-- N = m*d
+-- Q,K,V: N * d
+-- capitalized variable names are written doubled, e.g. N is rendered nN, S is rendered sS.
 flashAttention :: Acc (Matrix Float, Matrix Float, Matrix Float) -> Acc (Matrix Float)
 flashAttention (T3 q k v) =
-  let s = matmulT q k
-      p = softmax s
-  in matmul p v
-
-softmax :: Acc (Matrix Float) -> Acc (Matrix Float)
-softmax x = 
-  let I2 _cols rows = shape x
-      ex = map exp x
-      s  = sum ex
-      ss = replicate (I2 All_ rows) s
-  in  zipWith (/) ex ss
+  let Z_ ::. nN ::. d = shape q
+      m = nN `quot` d
+      sS = matmulT (reshape (I3 m d d) q) (replicate (I3 m All_ All_) k)  -- m * d * N
+      stabilized = zipWith (-) sS (replicate (I3 All_ All_ nN) (maximum sS))  -- m * d * N
+      exped = map exp stabilized  -- m * d * N
+      scaled = zipWith (*) exped (replicate (I3 All_ All_ nN) (map recip (sum exped)))  -- m * d * N
+      result = matmul scaled (replicate (I3 m All_ All_) v)  -- m * (d*N @ N*d = d*d): m * d * d
+  in reshape (Z_ ::. nN ::. d) result  -- N * d
 
 -- Given arrays of size (sh, m, k) and (sh, n, k),
 -- Returns an array of size (sh, m, n)
 matmulT :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
-matmulT a b = fold (+) 0 $ zipWith (*)
+matmulT a b =
+  fold (+) 0 $ zipWith (*)
     -- Replicate a and b to arrays of size (sh, m, n, k)
     (replicate (Any_ ::. All_ ::. n ::. All_) a)
     (replicate (Any_ ::. m ::. All_ ::. All_) b)
@@ -36,8 +35,9 @@ matmulT a b = fold (+) 0 $ zipWith (*)
 
 -- Given arrays of size (sh, m, k) and (sh, k, n),
 -- Returns an array of size (sh, m, n)
+-- TODO: is the first compute necessary?
 matmul :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
-matmul a b = matmulT a (transpose' (compute b))
+matmul a b = matmulT (compute a) (compute $ transpose' b)
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int :. Int) a) -> Acc (Array (sh :. Int :. Int) a)
 transpose' x =
