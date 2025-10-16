@@ -18,7 +18,7 @@ flashAttention (T3 q k v) =
       stabilized = zipWith (-) sS (replicate (I3 All_ All_ nN) (maximum sS))  -- m * d * N
       exped = map exp stabilized  -- m * d * N
       scaled = zipWith (*) exped (replicate (I3 All_ All_ nN) (map recip (sum exped)))  -- m * d * N
-      result = matmul scaled (replicate (I3 m All_ All_) v)  -- m * (d*N @ N*d = d*d): m * d * d
+      result = matmulT scaled (replicate (I3 m All_ All_) $ compute $ transpose v)  -- m * (d*N @ N*d = d*d): m * d * d
   in reshape (Z_ ::. nN ::. d) result  -- N * d
 
 -- Given arrays of size (sh, m, k) and (sh, n, k),
@@ -32,12 +32,6 @@ matmulT a b =
   where
     (_ ::. m ::. _) = shape a
     (_ ::. n ::. _) = shape b
-
--- Given arrays of size (sh, m, k) and (sh, k, n),
--- Returns an array of size (sh, m, n)
--- TODO: is the first compute necessary?
-matmul :: Shape sh => Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float) -> Acc (Array (sh :. Int :. Int) Float)
-matmul a b = matmulT (compute a) (compute $ transpose' b)
 
 transpose' :: (Shape sh, Elt a) => Acc (Array (sh :. Int :. Int) a) -> Acc (Array (sh :. Int :. Int) a)
 transpose' x =
