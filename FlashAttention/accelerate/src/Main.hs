@@ -67,7 +67,7 @@ mainBench programE programName = do
     benchSingle 20 ("CPU " ++ programName) cpu cpuMkInput inp
 
   _ <- evaluate $ A.arraySize $ gpu (gpuMkInput (ascalar (512, 64))) (ascalar 8)  -- warmup
-  tab2 <- forM [] $ \inp ->
+  tab2 <- forM benchmarkCases $ \inp ->
     benchSingle 10 ("GPU " ++ programName) gpu gpuMkInput inp
 
   putStr $ printTable (tab1 <> tab2)
