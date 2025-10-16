@@ -125,9 +125,9 @@ printTable items =
       impls = nub [impl | (impl, _, _) <- items']
       inputs = nub [inp | (_, inp, _) <- items']
       implLen = maximum (map length impls)
-      colLen = [length inp `max` maximum [length val | (_, inp', val) <- items', inp == inp']
-               | inp <- inputs]
-      valLen = maximum [length val | (_, _, val) <- items']
+      colValLen = [maximum [length val | (_, inp', val) <- items', inp == inp']
+                  | inp <- inputs]
+      colLen = zipWith max (map length inputs) colValLen
       mp = Map.fromList [((impl, inp), val) | (impl, inp, val) <- items']
       alignL w s = s ++ replicate (w - length s) ' '
       alignC w s = let n = w - length s
@@ -135,8 +135,8 @@ printTable items =
       alignR w s = replicate (w - length s) ' ' ++ s
   in unlines (intercalate " " (alignC implLen "(N,d)" : zipWith alignC colLen inputs)
               : [intercalate " "
-                   (alignL implLen impl : [alignC w (alignR valLen (fromMaybe "" (Map.lookup (impl, inp) mp)))
-                                          | (w, inp) <- zip colLen inputs])
+                   (alignL implLen impl : [alignC w (alignR valW (fromMaybe "" (Map.lookup (impl, inp) mp)))
+                                          | (w, valW, inp) <- zip3 colLen colValLen inputs])
                 | impl <- impls])
 
 formatSecs :: Double -> String
