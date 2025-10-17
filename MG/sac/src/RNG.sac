@@ -3,7 +3,7 @@ export {LCG, LCG_direct, LCG_skip};
 
 use Array: all;
 use StdIO: all;
-use RandLC: all;
+//use RandLC: all;
 
 ulong pow(ulong a, int b)
 {
