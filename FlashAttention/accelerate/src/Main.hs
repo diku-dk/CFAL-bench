@@ -6,6 +6,7 @@ import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 
+import Control.Concurrent (getNumCapabilities)
 import Control.Exception (evaluate)
 import Control.Monad (forM, forM_, when, replicateM)
 import Criterion
@@ -61,10 +62,11 @@ mainBench programE programName = do
       !gpu = GPU.runN program
   let !cpuMkInput = CPU.runN mkInput
       !gpuMkInput = GPU.runN mkInput
+  ncpu <- getNumCapabilities
 
   _ <- evaluate $ A.arraySize $ cpu (cpuMkInput (ascalar (512, 64))) (ascalar 8)  -- warmup
   tab1 <- forM benchmarkCases $ \inp ->
-    benchSingle 20 ("CPU " ++ programName) cpu cpuMkInput inp
+    benchSingle 20 ("CPU[" ++ show ncpu ++ "] " ++ programName) cpu cpuMkInput inp
 
   _ <- evaluate $ A.arraySize $ gpu (gpuMkInput (ascalar (512, 64))) (ascalar 8)  -- warmup
   tab2 <- forM benchmarkCases $ \inp ->
