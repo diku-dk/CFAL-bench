@@ -6,7 +6,7 @@ import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 
-import Control.Concurrent (getNumCapabilities)
+import Control.Concurrent (getNumCapabilities, threadDelay)
 import Control.Exception (evaluate)
 import Control.Monad (forM, forM_, when, replicateM)
 import Criterion
@@ -18,6 +18,7 @@ import Data.Maybe (fromMaybe)
 import Numeric (showFFloat)
 import System.Environment (getArgs)
 import System.IO (hFlush, stdout)
+import System.Mem (performGC)
 
 import Prelude hiding ((^))
 import qualified Prelude ((^))
@@ -63,12 +64,15 @@ mainBench programE programName = do
   let !cpuMkInput = CPU.runN mkInput
       !gpuMkInput = GPU.runN mkInput
   ncpu <- getNumCapabilities
+  let nrunsCPU | ncpu == 32 = 50
+               | ncpu == 1  = 15  -- 1 core times are quite stable
+               | otherwise  = error $ "Unexpected core count " ++ show ncpu ++ ", don't know nruns"
 
-  _ <- evaluate $ A.arraySize $ cpu (cpuMkInput (ascalar (512, 64))) (ascalar 8)  -- warmup
+  _ <- evaluate $ A.arraySize $ cpu (cpuMkInput (ascalar (32768, 64))) (ascalar (2^23))  -- warmup
   tab1 <- forM benchmarkCases $ \inp ->
-    benchSingle 20 ("CPU[" ++ show ncpu ++ "] " ++ programName) cpu cpuMkInput inp
+    benchSingle nrunsCPU ("CPU[" ++ show ncpu ++ "] " ++ programName) cpu cpuMkInput inp
 
-  _ <- evaluate $ A.arraySize $ gpu (gpuMkInput (ascalar (512, 64))) (ascalar 8)  -- warmup
+  _ <- evaluate $ A.arraySize $ gpu (gpuMkInput (ascalar (512, 64))) (ascalar (512*4*64))  -- warmup
   tab2 <- forM benchmarkCases $ \inp ->
     benchSingle 10 ("GPU " ++ programName) gpu gpuMkInput inp
 
@@ -85,7 +89,12 @@ mainBench programE programName = do
       putStr $ descr ++ " N=" ++ show nN ++ " d=" ++ show d ++ (if printM then " M=" ++ show mM else "") ++ ": "
       hFlush stdout
       let !input = mkInputFun (ascalar (nN, d))
-      times <- replicateM nruns $ measTime . fst <$> measure (nf (uncurry fun) (input, ascalar mM)) 1
+      performGC
+      times <- replicateM nruns $ do
+        res <- measTime . fst <$> measure (nf (uncurry fun) (input, ascalar mM)) 1
+        performGC
+        threadDelay 250000
+        return res
 
       let mean = sum times / fromIntegral nruns
           -- standard error, i.e. standard deviation of the mean estimate
