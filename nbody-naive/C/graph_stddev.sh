@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
-#SBATCH --output=omp.out
+#SBATCH --output=stddev.out
 
 # No idea why this is necessary, something
 # with slurm and the FPGA
@@ -24,7 +24,7 @@ fi
 n="$1"
 iter="$2"
 runs="$3"
-outfile="$4/nbody_${n}_${iter}_stddev"
+outfile="$4/nbody_${n}_${iter}_stddev.cpu"
 mkdir -p "$4"
 
 make clean
@@ -32,7 +32,6 @@ make -j
 
 printf 'n,stddev\n' > "${outfile}"
 
-printf '%d,' >> "${outfile}"
 {
     i=1
     while [ $i -le "$runs" ]
@@ -44,5 +43,6 @@ printf '%d,' >> "${outfile}"
            b = a + ($1 - a) / NR;
            q += ($1 - a) * ($1 - b);
            a = b;
-           printf "%d,%f\n", NR, sqrt(q / NR);
+           if ( NR != 1 )
+               printf "%d,%f\n", NR, sqrt(q / (NR - 1));
          }' >> "${outfile}"
