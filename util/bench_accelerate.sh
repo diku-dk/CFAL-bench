@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --partition=csmpi_fpga_short
+#SBATCH --partition=csmpi_fpga_long
 #SBATCH --job-name=cfal-accelerate
 #SBATCH --time=10:00
 #SBATCH --cpus-per-task=32
@@ -24,23 +24,21 @@ extra_env_vars=()
 
 # ---------- data ----------
 
-packages=( accelerate accelerate-llvm cuda language-c llvm-hs )
+packages=( accelerate accelerate-llvm cuda language-c )
 
 declare -A package_repo
 package_repo[accelerate]=https://github.com/AccelerateHS/accelerate
 package_repo[accelerate-llvm]=https://github.com/ivogabe/accelerate-llvm
-package_repo[cuda]=https://github.com/noahmartinwilliams/cuda
+package_repo[cuda]=https://github.com/tomsmeding/cuda
 package_repo[language-c]=https://github.com/visq/language-c
-package_repo[llvm-hs]=https://github.com/llvm-hs/llvm-hs
 
 declare -A package_commit
-package_commit[accelerate]=master
-package_commit[accelerate-llvm]=23ac1c82ff9189ce3f6bc9e475c3ef0afe6bd7de  # ivogabe
-package_commit[cuda]=9036603012818805984e01b774dd0f5758f65bf0
+package_commit[accelerate]=c22387ed2e00b00a6c79dcec5d22b53874da91fc  # master 2026-02-17
+package_commit[accelerate-llvm]=0e3323d5130fbc5d5d471df97b1a42fcb07a2572  # master 2026-02-17
+package_commit[cuda]=61f83ed436eb932de5cbd8a4fb1496ad514f20b7  # tomsmeding/cuda on runtime-split, 2026-02-17
 package_commit[language-c]=a81109622aeb15abfe40fb219b8d211415f6ba2a
-package_commit[llvm-hs]=5bca2c1a2a3aa98ecfb19181e7a5ebbf3e212b76
 
-cfal_machine_path_prefix="/vol/itt/data/cfal/haskell/.ghcup/bin:/vol/itt/data/cfal/llvm/prefix/bin:"
+cfal_machine_path_prefix="/vol/itt/data/cfal/haskell/.ghcup/bin:/vol/itt/data/cfal/llvm/LLVM-21.1.8-Linux-X64/bin:"
 
 
 # The layout of the working directory is as follows:
@@ -170,6 +168,7 @@ function init_dep_repos() {
         set -x
         git -C "$workdir/deps" clone --no-checkout "$repourl" "$name"
         git -C "$workdir/deps/$name" checkout "$gitref"
+        git -C "$workdir/deps/$name" submodule update --init --recursive
       )
     else
       # First ensure the right ref is checked out
@@ -181,12 +180,15 @@ function init_dep_repos() {
           git -C "$workdir/deps/$name" remote set-url origin "$repourl"
           git -C "$workdir/deps/$name" fetch
           git -C "$workdir/deps/$name" checkout "$gitref"
+          git -C "$workdir/deps/$name" submodule update --init --recursive
         )
       fi
 
       # If the given ref is a branch name (i.e. not a commit hash) -- this is a
       # very hacky proxy for a proper check
       if [[ ${#gitref} -ne 40 ]]; then
+        echo "bench_accelerate: assuming '$gitref' is a branch name! This is a hack."
+
         # Make sure local branch corresponds to remote branch
         if [[ "$(git -C "$workdir/deps/$name" rev-parse "$gitref")" != "$(git -C "$workdir/deps/$name" rev-parse "origin/$gitref")" ]]; then
           (
@@ -211,9 +213,7 @@ packages:
   $workdir/deps/accelerate-llvm/accelerate-llvm
   $workdir/deps/accelerate-llvm/accelerate-llvm-native
   $workdir/deps/accelerate-llvm/accelerate-llvm-ptx
-  $workdir/deps/llvm-hs/llvm-hs-pure
-  $workdir/deps/llvm-hs/llvm-hs
-  $workdir/deps/cuda
+  $workdir/deps/cuda/cuda
   $workdir/deps/language-c
 
 with-compiler: ghc-9.4.8
@@ -305,8 +305,10 @@ function main() {
   (
     set -x
     cd "$sourcedir"
-    env "${extra_env_vars[@]}" "$exepath"
+    env "${extra_env_vars[@]}" numactl --interleave all time -v "$exepath"
   )
+
+  exit  # prevent overwriting of this file from resulting in extra cruft being executed
 }
 
 main "$@"
