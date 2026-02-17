@@ -247,7 +247,8 @@ int main(int argc, char **argv)
   }
 
   for (int r = 0; r < runs; r++) {
-    printf("Baseline (GPU),n=%d,%f\n", n, (double)runtimes[r]);
+      double gflops = 1e-9 * (19 * n * n + 12 * n) * steps;
+    printf("Baseline (GPU),n=%d,%f\n", n, gflops / (double)runtimes[r]);
   }
 
   cudaFree(pos_dev);

@@ -152,7 +152,8 @@ int main(int argc, char **argv)
   }
 
   for (int r = 0; r < runs; r++) {
-    printf("Baseline (CPU),n=%d,%f\n", n, (double)runtimes[r]);
+      double gflops = 1e-9 * (19 * n * n + 12 * n) * steps;
+      printf("Baseline (CPU),n=%d,%f\n", n, gflops / (double)runtimes[r]);
   }
 
   free_points(positions);
