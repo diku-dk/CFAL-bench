@@ -28,7 +28,7 @@ main = do
                 (if iter Prelude.== 4 then weightsA else weightsB) (use $ fromList Z [iter])
                 inp
                 (generate (Z_ ::. constant n ::. constant n ::. constant n) $ const 0)
-        in Prelude.map (CrT.measTime . Prelude.fst) Prelude.<$> replicateM 5 (Cr.measure (nf (rn f) input) 1)
+        in Prelude.map (CrT.measTime . Prelude.fst) Prelude.<$> replicateM 10 (Cr.measure (nf (rn f) input) 1)
       print times
 
     makeInput' = CPU.runN makeInput
