@@ -201,7 +201,7 @@ entry mgSAC [n] (iter: i64) (v: [n][n][n]real) : real =
 --                   0.180056440132e-5    0.000001811585741f64
 --                   0.5706732285740e-6
 -- ==
--- entry: mgNAS mgSAC
+-- entry: mgNAS
 -- "Class A" script input { (4i64, mk_input 256i64) }
 -- output { 0.2433365309e-5 }
 -- "Class B" script input { (20i64, mk_input 256i64) }
