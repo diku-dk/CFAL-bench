@@ -15,16 +15,29 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
-./bin/nbody_cuda 10000 10
 iter="$1"
 outdir="$2"
 
 mkdir -p "$outdir"
 
+make cuda
+
 bench()
 {
     n="$1"
     niter="$2"
+    name=nbody_cuda_${n}_${niter}
+
+    # Warmup
+    {
+        i=1
+        while [ $i -le "$iter" ]
+        do
+            ./bin/nbody_cuda "$n" "$niter"
+            i=$(( i + 1 ))
+        done
+    }
+
     {
         i=1
         while [ $i -le "$iter" ]
@@ -33,19 +46,14 @@ bench()
             ./bin/nbody_cuda "$n" "$niter"
             i=$(( i + 1 ))
         done
-    } | awk '{
-               for (i = 1; i <= NF; i++) {
-                   b[i] = a[i] + ($i - a[i]) / NR;
-                   q[i] += ($i - a[i]) * ($i - b[i]);
-                   a[i] = b[i];
-               }
+    } | tee "${outdir}/${name}.raw" | \
+    awk '{
+               b = a + ($1 - a) / NR;
+               q += ($1 - a) * ($1 - b);
+               a = b;
              } END {
-               printf "%f,%f", a[1], sqrt(q[1] / NR);
-               for (i = 2; i <= NF; i++) {
-                   printf ",%f,%f", a[i], sqrt(q[i] / NR);
-               }
-               print "";
-             }' > "${outdir}/nbody_cuda_${n}_${niter}.csv"
+               printf "%f,%f", a[1], sqrt(q[1] / (NR - 1));
+             }' > "${outdir}/${name}.csv"
 }
 
 bench 1000 100000

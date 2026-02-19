@@ -28,7 +28,17 @@ bench()
     n="$1"
     iter="$2"
 
-    name=nbody_${n}_${iter}
+    name=nbody_seq_${n}_${iter}
+
+    # Warmup
+    {
+        i=1
+        while [ $i -le 3 ]
+        do
+            /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+            i=$(( i + 1 ))
+        done
+    }
 
     {
         {

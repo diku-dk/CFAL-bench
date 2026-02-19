@@ -30,6 +30,17 @@ bench()
 
     name=nbody_mt_${n}_${iter}
 
+    # Warmup
+    {
+        i=1
+        while [ $i -le 3 ]
+        do
+            SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all \
+                ./bin/nbody_mt "$n" "$iter"
+            i=$(( i + 1 ))
+        done
+    }
+
     {
         {
             i=1
