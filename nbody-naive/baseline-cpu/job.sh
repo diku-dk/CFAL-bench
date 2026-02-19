@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
-#SBATCH --time=0:10:00
+#SBATCH --time=1:00:00
 #SBATCH --output=nbody_baseline-cpu.out
 
 set -e
