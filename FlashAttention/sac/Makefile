@@ -7,7 +7,7 @@ all: seq mt cuda
 
 seq: bin/flash_seq
 mt: bin/flash_mt
-mt: SAC_FLAGS += -t mt_pth
+mt: SAC_FLAGS += -t mt_pth -mt_bind simple
 cuda: bin/flash_cuda
 cuda: SAC_FLAGS += -t cuda
 
