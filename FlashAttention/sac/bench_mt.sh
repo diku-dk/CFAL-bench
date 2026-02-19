@@ -30,6 +30,16 @@ bench()
 
     name=flash_mt_${d}_${n}
 
+    # Warmup
+    {
+        i=1
+        while [ $i -le 3 ]
+        do
+            SAC_PARALLEL=32 numactl --interleave all ./bin/flash_mt "$d" "$n"
+            i=$(( i + 1 ))
+        done
+    }
+
     {
         {
             i=1

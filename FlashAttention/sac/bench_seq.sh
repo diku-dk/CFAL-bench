@@ -30,6 +30,16 @@ bench()
 
     name=flash_seq_${d}_${n}
 
+    # Warmup
+    {
+        i=1
+        while [ $i -le 3 ]
+        do
+            numactl --interleave all ./bin/flash_seq "$d" "$n"
+            i=$(( i + 1 ))
+        done
+    }
+
     {
         {
             i=1
