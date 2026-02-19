@@ -8,6 +8,15 @@
 #SBATCH --time=0:10:00
 #SBATCH --output=nbody_baseline-cpu.out
 
+# Ensure that the necessary tools are in PATH.
+export PATH=/vol/itt/data/cfal/team-futhark/bin/:$PATH
+
+# Fix a CUDA version.
+CUDA=/usr/local/cuda
+export LIBRARY_PATH=$CUDA/lib64:$CUDA/lib64/stubs
+export LD_LIBRARY_PATH=$CUDA/lib64/
+export CPATH=$CUDA/include
+
 set -e
 
 rm -f *.runtimes
