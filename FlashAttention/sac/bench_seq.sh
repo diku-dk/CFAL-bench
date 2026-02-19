@@ -46,10 +46,11 @@ bench()
                  } END {
                    printf "%f,%f", a, sqrt(q / (NR - 1));
                  }' > "${outdir}/${name}.csv"
-    } 2>&1 | tee "${outdir}/${name}_mem.raw" |
+    } 2>&1 | \
       grep "Maximum resident" | \
       sed  's/^[^:]*:[ ]*//g' | \
       awk '{print $1 * 1000}' | \
+      tee "${outdir}/${name}_mem.raw" | \
       awk '{
                b = a + ($1 - a) / NR;
                q += ($1 - a) * ($1 - b);
