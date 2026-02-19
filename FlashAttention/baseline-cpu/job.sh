@@ -8,6 +8,8 @@
 #SBATCH --time=0:10:00
 #SBATCH --output=flash_attention_cpu.out
 
+set -e
+
 export OMP_PLACES="0:32:1"
 export OMP_PROC_BIND=true
 
@@ -18,13 +20,12 @@ do
     IFS=","
     set -- $sz
     printf "\nData sizes are d=$1 and N=$2\n"
-    for M in 64 128 256 512 1024 2048
-    do
+    for M in 64 128; do
         printf "\nM=$M\n"
-    for t in 1 32
-        do
+        for t in 1 32; do
             printf "OMP_NUM_THREADS=$t\n"
-            OMP_NUM_THREADS=$t bin/flash_attention_cpu $1 $2 $M
+            OMP_NUM_THREADS=$t bin/flash_attention_cpu $1 $2 $M \
+                               | tee FlashAttention_baseline_cpu${t}_d${1}-N${2}-M${M}.runtimes
         done
     done
 done

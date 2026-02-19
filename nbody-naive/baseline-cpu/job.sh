@@ -1,0 +1,25 @@
+#!/bin/sh
+
+#SBATCH --account=csmpi
+#SBATCH --partition=csmpi_fpga_short
+#SBATCH --cpus-per-task=32
+#SBATCH --gres=gpu:nvidia_a30:1
+#SBATCH --mem=64G
+#SBATCH --time=0:10:00
+#SBATCH --output=nbody_baseline-cpu.out
+
+set -e
+
+export OMP_PLACES="0:32:1"
+export OMP_PROC_BIND=true
+
+make clean && make
+
+RUNS=10
+
+./nbody 1000 100000 $RUNS | tee nbody_baseline_cpu32_n1000.runtimes
+./nbody 10000  1000 $RUNS | tee nbody_baseline_cpu32_n10000.runtimes
+./nbody 100000   10 $RUNS | tee nbody_baseline_cpu32_n100000.runtimes
+OMP_NUM_THREADS=1 ./nbody 1000 100000 $RUNS | tee nbody_baseline_cpu1_n1000.runtimes
+OMP_NUM_THREADS=1 ./nbody 10000  1000 $RUNS | tee nbody_baseline_cpu1_n10000.runtimes
+OMP_NUM_THREADS=1 ./nbody 100000   10 $RUNS | tee nbody_baseline_cpu1_n100000.runtimes

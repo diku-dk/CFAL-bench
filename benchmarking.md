@@ -4,7 +4,12 @@ This document is meant to contain instructions for how to run the
 various benchmarks on the shared system, including if necessary how to
 install necessary software.
 
-Eventually I would also like to automate this with a script.
+Some of the implementations contain a script `job.sh`. For those, you should
+just do `sbatch job.sh` (while in the directory containing `job.sh`), which will
+eventually produce a file with the form
+*BENCHMARK_LANGUAGE_PLATFORM_WORKLOAD.runtimes* (e.g.
+`nbody_baseline_cpu32_n1000.runtimes`), with one runtime measurement in seconds
+per line.
 
 ## Generally
 
