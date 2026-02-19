@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=0:10:00
-#SBATCH --output=nbody_baseline-cpu.out
+#SBATCH --output=nbody_futhark.out
 
 # Ensure that the necessary tools are in PATH.
 export PATH=/vol/itt/data/cfal/team-futhark/bin/:$PATH
