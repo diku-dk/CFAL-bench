@@ -1,4 +1,4 @@
-SAC = /vol/itt/data/cfal/.local/bin/sac2c_p
+SAC = sac2c
 SAC_FLAGS = -maxwlur 2
 
 SEQ_LPATH  := host/seq

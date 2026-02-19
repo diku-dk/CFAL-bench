@@ -12,34 +12,54 @@
 # with slurm and the FPGA
 export XILINX_XRT=/opt/xilinx/xrt
 
-if [ "$#" -ne 4 ]; then
-    printf 'Usage: run.sh N ITERATIONS RUNS OUT_DIR\n\n' >&2
-    printf '\tN: Number of bodies\n\n' >&2
-    printf '\tITERATIONS: Number of advancements in the benchmark\n\n' >&2
-    printf '\tRUNS: How often to run the benchmark\n\n' >&2
-    printf '\tOUT_DIR: Directory to store benchmark results.\n\n' >&2
+if [ "$#" -ne 2 ]; then
+    printf 'Usage: %s RUNS OUT_DIR\n\n' "$0" >&2
     exit 1
 fi
 
-n="$1"
-iter="$2"
-runs="$3"
-outfile="$4/nbody_${n}_${iter}_seq_sac"
-mkdir -p "$4"
+runs="$1"
+outdir="$2"
 
-make clean
-make N="$n" ITER="$iter" -j2
+make seq
+mkdir -p "$outdir"
 
+bench()
 {
-printf 'p,mean,stddev\n'
-printf '1,'
-} > "$outfile"
+    n="$1"
+    iter="$2"
 
-i=1
-{
-while [ $i -le "$runs" ]
-do
-    bin/nbody_seq "$n" "$iter"
-    i=$(( i + 1 ))
-done
-} | variance >> "$outfile"
+    name=nbody_${n}_${iter}
+
+    {
+        {
+            i=1
+            while [ $i -le "$runs" ]
+            do
+                /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+                i=$(( i + 1 ))
+            done
+        } | tee "${outdir}/${name}.raw" | \
+        awk '{
+                   b = a + ($1 - a) / NR;
+                   q += ($1 - a) * ($1 - b);
+                   a = b;
+                 } END {
+                   printf "%f,%f", a, sqrt(q / (NR - 1));
+                 }' > "${outdir}/${name}.csv"
+    } 2>&1 | \
+      grep "Maximum resident" | \
+      sed  's/^[^:]*:[ ]*//g' | \
+      awk '{print $1 * 1000}' | \
+      tee "${outdir}/${name}_mem.raw" | \
+      awk '{
+               b = a + ($1 - a) / NR;
+               q += ($1 - a) * ($1 - b);
+               a = b;
+             } END {
+               printf "%f,%f", a, sqrt(q / (NR - 1));
+             }' > "${outdir}/${name}_mem.csv"
+}
+
+bench 1000 100000
+bench 10000 1000
+bench 100000 10
