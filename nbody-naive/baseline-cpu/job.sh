@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --account=csmpi
-#SBATCH --partition=csmpi_fpga_short
+#SBATCH --partition=csmpi_fpga_long
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
