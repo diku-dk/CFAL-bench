@@ -28,11 +28,11 @@ REAL[d:shp] exp(REAL[d:shp] X)
 }
 
 inline
-REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
+REAL[m, n] matmul(REAL[m, k] A, REAL[k, n] B)
 {
-//  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
   return {[i, j] -> with {
-                      ([0] <= [p] < [k]): A[i, p] * B[j, p];
+                      ([0] <= [p] < [k]): A[i, p] * B[p, j];
                     }: fold(+, tor(0))
                   | [i, j] < [m, n]};
 }
@@ -49,8 +49,8 @@ REAL[m, n] scale(REAL[m, n] x)
 inline
 REAL[Nd, d, d] FlashAttention(REAL[Nd, d, d] Q, REAL[N, d] K, REAL[N, d] V) | (Nd == N / d)
 {
-  Vt = {[i, j] -> V[j, i]}; /* This is done for performance */
-  return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
+  Kt = {[i, j] -> K[j, i]};
+  return {[i] -> matmul(scale(exp(stabilise(matmul(Q[i], Kt)))), V)};
 }
 
 REAL L2(REAL[*] x)
@@ -62,13 +62,13 @@ noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
 
 int main()
 {
-  if (argc() != 7) {
-    printf("%s -mt <n> -mt_bind simple <d> <N>\n", argv(0));
+  if (argc() != 3) {
+    printf("%s <d> <N>\n", argv(0));
     N = 0;
     d = 0;
   } else {
-    d, unused = strtoi(argv(5), 10);
-    N, unused = strtoi(argv(6), 10);
+    d, unused = strtoi(argv(1), 10);
+    N, unused = strtoi(argv(2), 10);
     if (mod(N, d) != 0) {
       fprintf(stderr, "Please make sure d | N\n");
       d = 0;
