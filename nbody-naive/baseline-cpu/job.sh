@@ -7,6 +7,7 @@
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
 #SBATCH --output=nbody_baseline-cpu.out
+#SBATCH --job-name=nbody_baseline-cpu
 
 set -e
 

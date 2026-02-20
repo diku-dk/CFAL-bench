@@ -7,6 +7,7 @@
 #SBATCH --mem=64G
 #SBATCH --time=0:10:00
 #SBATCH --output=quickhull_baseline-cpu.out
+#SBATCH --job-name=quickhull_baseline
 
 set -e
 

@@ -7,6 +7,7 @@
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
 #SBATCH --output=nbody_futhark.out
+#SBATCH --job-name=nbody_futhark
 
 # Ensure that the necessary tools are in PATH.
 export PATH=/vol/itt/data/cfal/team-futhark/bin/:$PATH
