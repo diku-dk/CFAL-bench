@@ -1,10 +1,9 @@
 use Array: all;
 use Benchmarking: all;
-use FibreIO: all;
 use Math: all;
-use StdIO: {print, printf};
+use StdIO: all;
 
-#define N 1000000
+#define N 100000000
 #define BLOCK 64
 #define PI 3.1415926535897932384626433832795028841971693993751058209749445923078164062
 #define DBL_MAX 1.79769e+308
@@ -249,9 +248,9 @@ int main()
   hull = QuickHull(P);
   end(i_bench);
 
-  print(shape(hull));
+  fprintf(stderr, "Found %d elemens on the hull\n", shape(hull)[0]);
 
   time, unit = returnResultUnit(i_bench);
-  printf("This took %lf ms\n", time * 1e3);
+  printf("%lf\n", time);
   return 0;
 }
