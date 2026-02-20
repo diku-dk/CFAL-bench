@@ -15,7 +15,7 @@ double l2norm(struct Vect3D b)
 }
 
 inline
-struct Vect3D[n] + (struct Vect3D[n] a, struct Vect3D[n] b)
+struct Vect3D[n:shp] + (struct Vect3D[n:shp] a, struct Vect3D[n:shp] b)
 {
     return {iv -> Vect3D{ a[iv].x Array::+ b[iv].x, a[iv].y Array::+ b[iv].y, a[iv].z Array::+ b[iv].z}};
 }
@@ -33,33 +33,27 @@ struct Vect3D - (struct Vect3D a, struct Vect3D b)
 }
 
 inline
-struct Vect3D * (struct Vect3D a, double b)
-{
-    return Vect3D{ a.x Array::* b, a.y Array::* b, a.z Array::* b};
-}
-
-inline
-struct Vect3D[n] * (struct Vect3D[n] a, double b)
+struct Vect3D[n:shp] * (struct Vect3D[n:shp] a, double b)
 {
     return {iv -> Vect3D{ a[iv].x Array::* b, a[iv].y Array::* b, a[iv].z Array::* b} };
 }
 
 inline
-struct Vect3D sum (struct Vect3D[n] a)
+struct Vect3D sum (struct Vect3D[n:shp] a)
 {
     return with {
-              ([0] <= iv < [n]) : a[iv];
+              (0 Array::* shp <= iv < shp) : a[iv];
            } : fold (+, Vect3D{});
 }
 
 inline
-struct Vect3D sel(int[d] iv, struct Vect3D[n] a)
+struct Vect3D sel(int[d] iv, struct Vect3D[d:shp] a)
 {
     return _sel_VxA_(iv, a);
 }
 
 inline
-struct Vect3D sel(int i, struct Vect3D[n] a)
+struct Vect3D sel(int i, struct Vect3D[d:shp] a)
 {
     return _sel_VxA_([i], a);
 }
