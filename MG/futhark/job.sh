@@ -28,3 +28,19 @@ futhark bench --backend=multicore mg.fut --json mg_cpu32.json
                                     > mg_futhark_cpu32_n10000.runtimes
 ../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "class C" \
                                     > mg_futhark_cpu32_n100000.runtimes
+
+futhark bench --backend=multicore mg.fut --json mg_cpu1.json --pass-option=--num-threads=1
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class A" \
+                                    > mg_futhark_cpu1_n1000.runtimes
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class B" \
+                                    > mg_futhark_cpu1_n10000.runtimes
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class C" \
+                                    > mg_futhark_cpu1_n100000.runtimes
+
+futhark bench --backend=cuda mg.fut --json mg_cuda.json
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class A" \
+                                    > mg_futhark_cuda_n1000.runtimes
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class B" \
+                                    > mg_futhark_cuda_n10000.runtimes
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class C" \
+                                    > mg_futhark_cuda_n100000.runtimes
