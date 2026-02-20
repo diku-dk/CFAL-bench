@@ -22,25 +22,25 @@ set -e
 rm -f *.runtimes
 
 futhark bench --backend=multicore mg.fut --json mg_cpu32.json
-../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "class A" \
-                                    > mg_futhark_cpu32_n1000.runtimes
-../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "class B" \
-                                    > mg_futhark_cpu32_n10000.runtimes
-../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "class C" \
-                                    > mg_futhark_cpu32_n100000.runtimes
+../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "Class A" \
+                                    > mg_futhark_cpu32_A.runtimes
+../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "Class B" \
+                                    > mg_futhark_cpu32_B.runtimes
+../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "Class C" \
+                                    > mg_futhark_cpu32_C.runtimes
 
 futhark bench --backend=multicore mg.fut --json mg_cpu1.json --pass-option=--num-threads=1
-../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class A" \
-                                    > mg_futhark_cpu1_n1000.runtimes
-../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class B" \
-                                    > mg_futhark_cpu1_n10000.runtimes
-../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "class C" \
-                                    > mg_futhark_cpu1_n100000.runtimes
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "Class A" \
+                                    > mg_futhark_cpu1_A.runtimes
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "Class B" \
+                                    > mg_futhark_cpu1_B.runtimes
+../../util/futhark-json2runtimes.py mg_cpu1.json mg.fut:mgNAS "Class C" \
+                                    > mg_futhark_cpu1_C.runtimes
 
 futhark bench --backend=cuda mg.fut --json mg_cuda.json
-../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class A" \
-                                    > mg_futhark_cuda_n1000.runtimes
-../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class B" \
-                                    > mg_futhark_cuda_n10000.runtimes
-../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "class C" \
-                                    > mg_futhark_cuda_n100000.runtimes
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class A" \
+                                    > mg_futhark_cuda_A.runtimes
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class B" \
+                                    > mg_futhark_cuda_B.runtimes
+../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class C" \
+                                    > mg_futhark_cuda_C.runtimes
