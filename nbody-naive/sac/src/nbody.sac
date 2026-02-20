@@ -56,9 +56,8 @@ struct Body[n] timeStep (struct Body[n] bs, double dt)
 
 int main()
 {
-    off = ((argc() > 1) && (strcmp(argv(1), "-mt") == 0)) ? 2 : 0;
-    N = String::toi(argv(off + 1));
-    ITER = String::toi(argv(off + 2));
+    N = String::toi(argv(1));
+    ITER = String::toi(argv(2));
     itime = getInterval("time", 1);
     start(itime);
 

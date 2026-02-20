@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
-#SBATCH --output=seq.out
+#SBATCH --output=mt.out
 
 # No idea why this is necessary, something
 # with slurm and the FPGA
@@ -20,22 +20,22 @@ fi
 runs="$1"
 outdir="$2"
 
-make seq
+make mt
 mkdir -p "$outdir"
 
 bench()
 {
-    n="$1"
-    iter="$2"
+    d="$1"
+    n="$2"
 
-    name=nbody_seq_${n}_${iter}
+    name=flash_mt_${d}_${n}
 
     # Warmup
     {
         i=1
         while [ $i -le 3 ]
         do
-            /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+            SAC_PARALLEL=32 numactl --interleave all ./bin/flash_mt "$d" "$n"
             i=$(( i + 1 ))
         done
     }
@@ -45,7 +45,8 @@ bench()
             i=1
             while [ $i -le "$runs" ]
             do
-                /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+                SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all \
+                    ./bin/flash_mt "$d" "$n"
                 i=$(( i + 1 ))
             done
         } | tee "${outdir}/${name}.raw" | \
@@ -60,7 +61,7 @@ bench()
       grep "Maximum resident" | \
       sed  's/^[^:]*:[ ]*//g' | \
       awk '{print $1 * 1000}' | \
-      tee "${outdir}/${name}_mem.raw" | \
+      tee "${outdir}/${name}_mem.raw" |
       awk '{
                b = a + ($1 - a) / NR;
                q += ($1 - a) * ($1 - b);
@@ -70,6 +71,7 @@ bench()
              }' > "${outdir}/${name}_mem.csv"
 }
 
-bench 1000 100000
-bench 10000 1000
-bench 100000 10
+bench 64 16384
+bench 64 32768
+bench 128 8192
+bench 128 16384

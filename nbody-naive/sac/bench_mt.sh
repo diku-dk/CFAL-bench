@@ -2,48 +2,74 @@
 
 #SBATCH --account=csmpi
 #SBATCH --partition=csmpi_fpga_long
-#SBATCH --mem=0
 #SBATCH --cpus-per-task=32
-#SBATCH --time=1:00:00
-#SBATCH --output=bench_mt.out
+#SBATCH --gres=gpu:nvidia_a30:1
+#SBATCH --mem=64G
+#SBATCH --time=4:00:00
+#SBATCH --output=mt.out
+
+# No idea why this is necessary, something
+# with slurm and the FPGA
+export XILINX_XRT=/opt/xilinx/xrt
 
 if [ "$#" -ne 2 ]; then
-    printf 'Usage: %s ITER OUTDIR\n' "$0" >&2
-    printf '\tITER:   number of times to repeat the experiment\n' >&2
-    printf '\tOUTDIR: directory to store result\n' >&2
+    printf 'Usage: %s RUNS OUT_DIR\n\n' "$0" >&2
     exit 1
 fi
 
-iter="$1"
+runs="$1"
 outdir="$2"
 
+make mt
 mkdir -p "$outdir"
 
 bench()
 {
     n="$1"
-    niter="$2"
+    iter="$2"
+
+    name=nbody_mt_${n}_${iter}
+
+    # Warmup
     {
         i=1
-        while [ $i -le "$iter" ]
+        while [ $i -le 3 ]
         do
-            # For cn132
-            numactl --interleave all ./bin/nbody_mt -mt 32 "$n" "$niter"
+            SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all \
+                ./bin/nbody_mt "$n" "$iter"
             i=$(( i + 1 ))
         done
-    } | awk '{
-               for (i = 1; i <= NF; i++) {
-                   b[i] = a[i] + ($i - a[i]) / NR;
-                   q[i] += ($i - a[i]) * ($i - b[i]);
-                   a[i] = b[i];
-               }
+    }
+
+    {
+        {
+            i=1
+            while [ $i -le "$runs" ]
+            do
+                SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all \
+                    ./bin/nbody_mt "$n" "$iter"
+                i=$(( i + 1 ))
+            done
+        } | tee "${outdir}/${name}.raw" | \
+        awk '{
+                   b = a + ($1 - a) / NR;
+                   q += ($1 - a) * ($1 - b);
+                   a = b;
+                 } END {
+                   printf "%f,%f", a, sqrt(q / (NR - 1));
+                 }' > "${outdir}/${name}.csv"
+    } 2>&1 | \
+      grep "Maximum resident" | \
+      sed  's/^[^:]*:[ ]*//g' | \
+      awk '{print $1 * 1000}' | \
+      tee "${outdir}/${name}_mem.raw" | \
+      awk '{
+               b = a + ($1 - a) / NR;
+               q += ($1 - a) * ($1 - b);
+               a = b;
              } END {
-               printf "%f,%f", a[1], sqrt(q[1] / NR);
-               for (i = 2; i <= NF; i++) {
-                   printf ",%f,%f", a[i], sqrt(q[i] / NR);
-               }
-               print "";
-             }' > "${outdir}/nbody_mt_${n}_${niter}.csv"
+               printf "%f,%f", a, sqrt(q / (NR - 1));
+             }' > "${outdir}/${name}_mem.csv"
 }
 
 bench 1000 100000

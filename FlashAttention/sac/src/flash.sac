@@ -22,15 +22,25 @@ REAL[m, n] stabilise(REAL[m, n] x)
 }
 
 inline
-REAL[d:shp] exp(REAL[d:shp] X)
+REAL[m, n] exp(REAL[m, n] X)
 {
   return {iv -> Math::exp(X[iv])};
 }
 
 inline
+REAL[m, n] matmul(REAL[m, k] A, REAL[k, n] B)
+{
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
+  return {[i, j] -> with {
+                      ([0] <= [p] < [k]): A[i, p] * B[p, j];
+                    }: fold(+, tor(0))
+                  | [i, j] < [m, n]};
+}
+
+inline
 REAL[m, n] matmulT(REAL[m, k] A, REAL[n, k] B)
 {
-//  return {[i, j] -> sum({[p] -> A[i, p] * B[j, p]})};
+//  return {[i, j] -> sum({[p] -> A[i, p] * B[p, j]})};
   return {[i, j] -> with {
                       ([0] <= [p] < [k]): A[i, p] * B[j, p];
                     }: fold(+, tor(0))
@@ -46,10 +56,15 @@ REAL[m, n] scale(REAL[m, n] x)
                         }: fold(+, tor(0))};
 }
 
-inline
+specialize REAL[512, 64, 64] FlashAttention(REAL[512, 64, 64] Q, REAL[32768, 64] K, REAL[32768, 64] V);
+specialize REAL[256, 64, 64] FlashAttention(REAL[256, 64, 64] Q, REAL[16384, 64] K, REAL[16384, 64] V);
+specialize REAL[64, 128, 128] FlashAttention(REAL[64, 128, 128] Q, REAL[8192, 128] K, REAL[8192, 128] V);
+specialize REAL[128, 128, 128] FlashAttention(REAL[128, 128, 128] Q, REAL[16384, 128] K, REAL[16384, 128] V);
+noinline
 REAL[Nd, d, d] FlashAttention(REAL[Nd, d, d] Q, REAL[N, d] K, REAL[N, d] V) | (Nd == N / d)
 {
-  Vt = {[i, j] -> V[j, i]}; /* This is done for performance */
+//  Kt = {[i, j] -> K[j, i]};
+  Vt = {[i, j] -> V[j, i]};
   return {[i] -> matmulT(scale(exp(stabilise(matmulT(Q[i], K)))), Vt)};
 }
 
@@ -58,17 +73,15 @@ REAL L2(REAL[*] x)
   return Math::sqrt(sum(x * x));
 }
 
-noinline REAL[d:shp] id(REAL[d:shp] x) { return x; }
-
 int main()
 {
-  if (argc() != 7) {
-    printf("%s -mt <n> -mt_bind simple <d> <N>\n", argv(0));
+  if (argc() != 3) {
+    printf("%s <d> <N>\n", argv(0));
     N = 0;
     d = 0;
   } else {
-    d, unused = strtoi(argv(5), 10);
-    N, unused = strtoi(argv(6), 10);
+    d, unused = strtoi(argv(1), 10);
+    N, unused = strtoi(argv(2), 10);
     if (mod(N, d) != 0) {
       fprintf(stderr, "Please make sure d | N\n");
       d = 0;
@@ -81,10 +94,9 @@ int main()
   /* QK^t is all ds, so the softmax is e^{d} / (N e^d) = 1 / N.
      Multiplying that with V gives all 1s again.
      Taking the L2 norm of this is sqrt(d * N) */
-//  Q = {[i, j, k] -> tor(1) | [i, j, k] < [N / d, d, d]};
-  Q = id({[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]});
-  K = id({[i, j] -> tor(1) | [i, j] < [N, d]});
-  V = id({[i, j] -> tor(1) | [i, j] < [N, d]});
+  Q = _hideValue_SxA_(0, {[i, j, k] -> tor(1) / (tor(1) + tor(i)) | [i, j, k] < [N / d, d, d]});
+  K = _hideValue_SxA_(0, {[i, j] -> tor(1) | [i, j] < [N, d]});
+  V = _hideValue_SxA_(0, {[i, j] -> tor(1) | [i, j] < [N, d]});
 
   i_flash = getInterval("flash", 1);
   start(i_flash);

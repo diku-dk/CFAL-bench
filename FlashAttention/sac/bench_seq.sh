@@ -25,17 +25,17 @@ mkdir -p "$outdir"
 
 bench()
 {
-    n="$1"
-    iter="$2"
+    d="$1"
+    n="$2"
 
-    name=nbody_seq_${n}_${iter}
+    name=flash_seq_${d}_${n}
 
     # Warmup
     {
         i=1
         while [ $i -le 3 ]
         do
-            /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+            numactl --interleave all ./bin/flash_seq "$d" "$n"
             i=$(( i + 1 ))
         done
     }
@@ -45,7 +45,7 @@ bench()
             i=1
             while [ $i -le "$runs" ]
             do
-                /usr/bin/time -v numactl --interleave all ./bin/nbody_seq "$n" "$iter"
+                /usr/bin/time -v numactl --interleave all ./bin/flash_seq "$d" "$n"
                 i=$(( i + 1 ))
             done
         } | tee "${outdir}/${name}.raw" | \
@@ -70,6 +70,7 @@ bench()
              }' > "${outdir}/${name}_mem.csv"
 }
 
-bench 1000 100000
-bench 10000 1000
-bench 100000 10
+bench 64 16384
+bench 64 32768
+bench 128 8192
+bench 128 16384
