@@ -3,6 +3,10 @@
 # Convert runtime numbers passed on stdin (one per line) to GFLOP/s on stdout
 # (also one per line). Requires two command line parameters: the benchmark name
 # and workload.
+#
+# Example:
+#
+# $ python3 runtimes2gflops.py MG A < mg_baseline_gpu_A.runtimes
 
 import sys
 
