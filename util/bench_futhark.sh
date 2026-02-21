@@ -58,7 +58,7 @@ do_FlashAttention() {
 }
 
 do_MG() {
-#    make -C MG/futhark run_multicore
+    make -C MG/futhark run_multicore
     make -C MG/futhark run_cuda
 
     echo "MG CPU GFLOP/s (1 thread)"
