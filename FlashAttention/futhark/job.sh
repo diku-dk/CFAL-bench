@@ -51,5 +51,5 @@ futhark bench --backend=cuda custom-alg1-opt.fut -e validate --json FlashAttenti
                                     > FlashAttention_futhark_gpu_d64_N32768.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 8192-128 ' \
                                     > FlashAttention_futhark_gpu_d128_N8192.runtimes
-../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut
+../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 16384-128' \
                                     > FlashAttention_futhark_gpu_d128_N16384.runtimes
