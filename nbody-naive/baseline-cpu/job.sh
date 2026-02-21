@@ -18,8 +18,6 @@ rm -rf *.runtimes
 
 make clean && make
 
-export CFLAGS='-Ofast -march=native -mtune=native'
-
 RUNS=10
 
 ./nbody 1000 100000 $RUNS | tee nbody_baseline_cpu32_n1000.runtimes

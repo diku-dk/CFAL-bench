@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS=-O3 -Wall -fopenmp -lm -ffast-math
+CFLAGS=-Wall -fopenmp -lm -Ofast -march=native -mtune=native
 
 nbody: nbody.c
 	$(CC) -o nbody nbody.c $(CFLAGS)
