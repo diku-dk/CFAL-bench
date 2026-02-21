@@ -24,8 +24,8 @@ numactl --interleave all ./hull ../input/100M_rectangle.dat $RUNS | tee quickhul
 
 numactl --interleave all ./hull ../input/100M_quadratic.dat $RUNS | tee quickhull_baseline_cpu32_quadratic.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_circle.dat $RUNS | tee quickhull_baseline_cpu1_circle.runtimes
+PARLAY_NUM_THREADS=1 ./hull ../input/100M_circle.dat $RUNS | tee quickhull_baseline_cpu1_circle.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_rectangle.dat $RUNS | tee quickhull_baseline_cpu1_rectangle.runtimes
+PARLAY_NUM_THREADS=1 ./hull ../input/100M_rectangle.dat $RUNS | tee quickhull_baseline_cpu1_rectangle.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_quadratic.dat $RUNS | tee quickhull_baseline_cpu1_quadratic.runtimes
+PARLAY_NUM_THREADS=1 ./hull ../input/100M_quadratic.dat $RUNS | tee quickhull_baseline_cpu1_quadratic.runtimes
