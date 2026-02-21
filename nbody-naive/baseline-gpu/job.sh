@@ -16,6 +16,6 @@ rm -f *.runtimes
 
 RUNS=10
 
-./nbody 1000 100000 $RUNS | tee nbody_baseline_cuda_n1000.runtimes
-./nbody 10000  1000 $RUNS | tee nbody_baseline_cuda_n10000.runtimes
-./nbody 100000   10 $RUNS | tee nbody_baseline_cuda_n100000.runtimes
+./nbody 1000 100000 $RUNS | tee nbody_baseline_gpu_n1000.runtimes
+./nbody 10000  1000 $RUNS | tee nbody_baseline_gpu_n10000.runtimes
+./nbody 100000   10 $RUNS | tee nbody_baseline_gpu_n100000.runtimes
