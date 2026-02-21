@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 #SBATCH --output=nbody_baseline-cpu.out
 #SBATCH --job-name=nbody_baseline-cpu
 
@@ -13,6 +13,8 @@ set -e
 
 export OMP_PLACES="0:32:1"
 export OMP_PROC_BIND=true
+
+rm -rf *.runtimes
 
 make clean && make
 
