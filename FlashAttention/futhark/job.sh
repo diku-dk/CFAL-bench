@@ -28,28 +28,28 @@ futhark bench --backend=multicore custom-alg1-opt.fut -e validate --json FlashAt
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 16384-64 ' \
                                     > FlashAttention_futhark_cpu32_d64-N16384.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 32768-64 ' \
-                                    > FlashAttention_futhark_cpu32_d64_N32768.runtimes
+                                    > FlashAttention_futhark_cpu32_d64-N32768.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 8192-128 ' \
-                                    > FlashAttention_futhark_cpu32_d128_N8192.runtimes
+                                    > FlashAttention_futhark_cpu32_d128-N8192.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 16384-128' \
-                                    > FlashAttention_futhark_cpu32_d128_N16384.runtimes
+                                    > FlashAttention_futhark_cpu32_d128-N16384.runtimes
 
 futhark bench --backend=multicore custom-alg1-opt.fut -e validate --json FlashAttention_cpu1.json --no-tuning --pass-option=--num-threads=1
 ../../util/futhark-json2runtimes.py FlashAttention_cpu1.json custom-alg1-opt.fut:validate 'Class 16384-64 ' \
                                     > FlashAttention_futhark_cpu1_d64-N16384.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu1.json custom-alg1-opt.fut:validate 'Class 32768-64 ' \
-                                    > FlashAttention_futhark_cpu1_d64_N32768.runtimes
+                                    > FlashAttention_futhark_cpu1_d64-N32768.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu1.json custom-alg1-opt.fut:validate 'Class 8192-128 ' \
-                                    > FlashAttention_futhark_cpu1_d128_N8192.runtimes
+                                    > FlashAttention_futhark_cpu1_d128-N8192.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu1.json custom-alg1-opt.fut:validate 'Class 16384-128' \
-                                    > FlashAttention_futhark_cpu1_d128_N16384.runtimes
+                                    > FlashAttention_futhark_cpu1_d128-N16384.runtimes
 
 futhark bench --backend=cuda custom-alg1-opt.fut -e validate --json FlashAttention_cuda.json --no-tuning
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 16384-64 ' \
                                     > FlashAttention_futhark_gpu_d64-N16384.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 32768-64 ' \
-                                    > FlashAttention_futhark_gpu_d64_N32768.runtimes
+                                    > FlashAttention_futhark_gpu_d64-N32768.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 8192-128 ' \
-                                    > FlashAttention_futhark_gpu_d128_N8192.runtimes
+                                    > FlashAttention_futhark_gpu_d128-N8192.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 16384-128' \
-                                    > FlashAttention_futhark_gpu_d128_N16384.runtimes
+                                    > FlashAttention_futhark_gpu_d128-N16384.runtimes
