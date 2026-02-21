@@ -29,6 +29,10 @@ sloc_cpp() {
     scc -f csv -i c,cpp,h,cl,cu "$@"|tail -n +2|cut -d, -f2|awk '{sum+=$1}END{print sum}'
 }
 
+sloc_fortran() {
+    scc -f csv -i f90 "$@"|tail -n +2|cut -d, -f3|awk '{sum+=$1}END{print sum}'
+}
+
 printf "%15s                                baselines\n" ""
 printf "%15s  Acc  APL DaCe--C/G  Fut  SAC  CPU   GPU\n" ""
 
@@ -62,7 +66,7 @@ printf "%15s %4d %4d %4d %4s %4d %4d %4s %5d\n" \
        "same" \
        $(sloc_futhark MG/futhark/mg.fut) \
        $(sloc_sac MG/sac/src/MG.sac) \
-       "---" \
+       $(sloc_fortran MG/baseline-cpu/MG) \
        $(sloc_cpp MG/baseline-NPB-GPU/MG)
 
 
