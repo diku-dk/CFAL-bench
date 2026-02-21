@@ -44,7 +44,7 @@ futhark bench --backend=multicore custom-alg1-opt.fut -e validate --json FlashAt
 ../../util/futhark-json2runtimes.py FlashAttention_cpu1.json custom-alg1-opt.fut:validate 'Class 16384-128' \
                                     > FlashAttention_futhark_cpu1_d128-N16384.runtimes
 
-futhark bench --backend=cuda custom-alg1-opt.fut -e validate --json FlashAttention_cuda.json --no-tuning
+futhark bench --backend=cuda custom-alg1-opt.fut -e validate --json FlashAttention_cuda.json
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 16384-64 ' \
                                     > FlashAttention_futhark_gpu_d64-N16384.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cuda.json custom-alg1-opt.fut:validate 'Class 32768-64 ' \
