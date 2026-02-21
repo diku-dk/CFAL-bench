@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=0:10:00
-#SBATCH --output=FlashAttention_cpu.out
-#SBATCH --job-name=FlashAttention_baseline
+#SBATCH --output=FlashAttention-gpu.out
+#SBATCH --job-name=FlashAttention_baseline-gpu
 
 set -e
 
