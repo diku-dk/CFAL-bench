@@ -21,5 +21,5 @@ do
     set -- $sz
     printf "\nData sizes are d=$1 and N=$2\n"
     ./flash_attention_gpu $1 $2 \
-        | tee FlashAttention_baseline_cuda_d${1}-N${2}.runtimes
+        | tee FlashAttention_baseline_gpu_d${1}-N${2}.runtimes
 done

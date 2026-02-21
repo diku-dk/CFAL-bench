@@ -7,7 +7,7 @@
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
 #SBATCH --output=mg_baseline-gpu.out
-#SBATCH --job-name=mg_baseline-cuda
+#SBATCH --job-name=mg_baseline-gpu
 
 set -e
 
@@ -23,12 +23,12 @@ USE_RUNS=10
 
 for x in $(seq $RUNS); do
     bin/mg.A | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cuda_A.runtimes
+done | tail -n $USE_RUNS | tee mg_baseline_gpu_A.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.B | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cuda_B.runtimes
+done | tail -n $USE_RUNS | tee mg_baseline_gpu_B.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.C | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cuda_C.runtimes
+done | tail -n $USE_RUNS | tee mg_baseline_gpu_C.runtimes

@@ -40,8 +40,8 @@ futhark bench --backend=multicore nbody.fut --json nbody_cpu1.json --pass-option
 
 futhark bench --backend=cuda nbody.fut --json nbody_cuda.json
 ../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=1000 \
-                                    > nbody_futhark_cuda_n1000.runtimes
+                                    > nbody_futhark_gpu_n1000.runtimes
 ../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=10000 \
-                                    > nbody_futhark_cuda_n10000.runtimes
+                                    > nbody_futhark_gpu_n10000.runtimes
 ../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=100000 \
-                                    > nbody_futhark_cuda_n100000.runtimes
+                                    > nbody_futhark_gpu_n100000.runtimes

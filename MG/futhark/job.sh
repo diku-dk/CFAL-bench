@@ -40,8 +40,8 @@ futhark bench --backend=multicore mg.fut --json mg_cpu1.json --pass-option=--num
 
 futhark bench --backend=cuda mg.fut --json mg_cuda.json
 ../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class A" \
-                                    > mg_futhark_cuda_A.runtimes
+                                    > mg_futhark_gpu_A.runtimes
 ../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class B" \
-                                    > mg_futhark_cuda_B.runtimes
+                                    > mg_futhark_gpu_B.runtimes
 ../../util/futhark-json2runtimes.py mg_cuda.json mg.fut:mgNAS "Class C" \
-                                    > mg_futhark_cuda_C.runtimes
+                                    > mg_futhark_gpu_C.runtimes
