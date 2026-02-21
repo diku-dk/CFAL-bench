@@ -1576,37 +1576,37 @@ def main(framework: str):
             c_timers.timer_clear(i)
         c_timers.timer_start(T_BENCH)
 
-        # if timeron:
-        #     c_timers.timer_start(T_RESID2)
-        # resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-        # # cupy.cuda.runtime.deviceSynchronize()
+        if timeron:
+            c_timers.timer_start(T_RESID2)
+        resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
-        # if timeron:
-        #     c_timers.timer_stop(T_RESID2)
-        # rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
-        # # cupy.cuda.runtime.deviceSynchronize()
+        if timeron:
+            c_timers.timer_stop(T_RESID2)
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
-        # for it in range(1, nit+1):
-        #     if it == 1 or it == nit or (it%5) == 0:
-        #         print("  iter %3d" % (it))
-        #     if timeron:
-        #         c_timers.timer_start(T_MG3P)
-        #     mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
-        #     # cupy.cuda.runtime.deviceSynchronize()
-        #     if timeron:
-        #         c_timers.timer_stop(T_MG3P)
-        #     if timeron:
-        #         c_timers.timer_start(T_RESID2)
-        #     resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
-        #     # cupy.cuda.runtime.deviceSynchronize()
+        for it in range(1, nit+1):
+            if it == 1 or it == nit or (it%5) == 0:
+                print("  iter %3d" % (it))
+            if timeron:
+                c_timers.timer_start(T_MG3P)
+            mg3P_dace(du, dv, dr, a, c, n1, n2, n3, resid_func, rprj3_func, psinv_func, interp_func, combo_func)
+            # cupy.cuda.runtime.deviceSynchronize()
+            if timeron:
+                c_timers.timer_stop(T_MG3P)
+            if timeron:
+                c_timers.timer_start(T_RESID2)
+            resid_func(u=my_u, v=my_v, r=my_r, a=a, n0i=n3, n0j=n2, n0k=n1)
+            # cupy.cuda.runtime.deviceSynchronize()
 
-        #     if timeron:
-        #         c_timers.timer_stop(T_RESID2)
+            if timeron:
+                c_timers.timer_stop(T_RESID2)
 
-        # rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
-        # # cupy.cuda.runtime.deviceSynchronize()
+        rnm2, rnmu = norm2u3_func(r=my_r, dn=dn, n0i=n3, n0j=n2, n0k=n1)
+        # cupy.cuda.runtime.deviceSynchronize()
 
-        mg_dace_full(lt, lb, m1, m2, m3, ir, dn, nit, du, dv, dr, a, c, n1, n2, n3, resid_func, norm2u3_func, rprj3_func, psinv_func, interp_func, combo_func=combo_func)
+        # mg_dace_full(lt, lb, m1, m2, m3, ir, dn, nit, du, dv, dr, a, c, n1, n2, n3, resid_func, norm2u3_func, rprj3_func, psinv_func, interp_func, combo_func=combo_func)
 
         c_timers.timer_stop(T_BENCH)
         t = c_timers.timer_read(T_BENCH)
@@ -1689,7 +1689,7 @@ def main(framework: str):
     mean = numpy.mean(runtimes)
     std = numpy.std(runtimes)
     repeatitions = 10
-    while std > 0.01 * mean and len(runtimes) < 100:
+    while std > 0.01 * mean and len(runtimes) < 200:
         print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
         runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
         mean = numpy.mean(runtimes)
@@ -1697,6 +1697,13 @@ def main(framework: str):
         repeatitions += 10
     mflops = 58.0 * nit * nn * 1.0e-6 / mean
     print(f"DaCe {'CPU' if args.framework == 'dace_cpu' else 'GPU'} runtime: mean {mean} s ({mflops} mflop/s), std {std * 100 / mean:.2f}%", flush=True)
+
+    omp_num_threads = os.getenv("OMP_NUM_THREADS", "1")
+    fw = f"cpu_{omp_num_threads}" if args.framework == "dace_cpu" else "gpu"
+    filename = f"mg_dace_{fw}_{args.CLASS}.txt"
+    with open(filename, "w") as fp:
+        for t in runtimes:
+            fp.write(f"{t}\n")
 
 
 #END main()

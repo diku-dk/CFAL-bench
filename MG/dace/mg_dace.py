@@ -17,7 +17,7 @@ def compile_program_cpu(prog: dace.program, use_stencil_tiling: bool = True):
     return sdfg.compile()
 
 
-def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True, use_wcr_tiling: bool = True):  
+def compile_program_gpu(prog: dace.program, use_stencil_tiling: bool = True, use_wcr_tiling: bool = True):
     sdfg = prog.to_sdfg(simplify=False)
     sdfg.simplify()
     auto_optimize(sdfg, dace.DeviceType.GPU, use_stencil_tiling=use_stencil_tiling, use_wcr_tiling=use_wcr_tiling, use_gpu_storage=True)

@@ -38,6 +38,10 @@ if __name__ == "__main__":
     os.environ["MKL_NUM_THREADS"] = "1"
     os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
+    from dace import config
+    tb_sizes = config.Config.get("compiler", "cuda_default_block_size").split(",")
+    tb_sizes = [int(tb_sz) for tb_sz in tb_sizes]
+
     for datasize in datasizes:
 
         d, N = datasize
@@ -62,7 +66,7 @@ if __name__ == "__main__":
             mean = np.mean(runtimes)
             std = np.std(runtimes)
             repeatitions = 10
-            while std > 0.01 * mean and repeatitions < 100:
+            while std > 0.01 * mean and repeatitions < 200:
                 print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
                 runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
                 mean = np.mean(runtimes)
@@ -70,3 +74,7 @@ if __name__ == "__main__":
                 repeatitions += 10
             flops = (N * N * (4 * d + 5)) / (mean * 1e9)
             print(f"DaCe GPU runtime (Ti={Ti}): mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
+
+            with open(f"fa_dace_gpu_tb{tb_sizes[0]}_Ti{Ti}_{d}_{N}.txt", "w") as fp:
+                for t in runtimes:
+                    fp.write(f"{t}\n")

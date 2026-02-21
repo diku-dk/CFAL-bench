@@ -2,6 +2,8 @@ import argparse
 import dace
 import numpy as np
 import numpy.typing as npt
+import time
+import os
 from timeit import repeat
 
 from nbody_dace_cpu_impl import get_nbody_dace_cpu
@@ -61,7 +63,9 @@ if __name__ == "__main__":
     argparser.add_argument("-iterations", type=int, default=10)	
     args = vars(argparser.parse_args())
 
-    print(f"N = {args['N']}, iterations = {args['iterations']}", flush=True)
+    omp_num_threads = os.getenv("OMP_NUM_THREADS", "1")
+
+    print(f"N = {args['N']}, iterations = {args['iterations']}, OMP_NUM_THREADS = {omp_num_threads}", flush=True)
 
     num_particles = 1000
     num_iterations = 10
@@ -75,68 +79,6 @@ if __name__ == "__main__":
     vel_dace = np.asarray(vel)
 
     nbody_cpython(pos_mass, vel, dt, num_iterations)
-
-    # sdfg = nbody_dace_cpu.to_sdfg(simplify=True)
-    # sdfg.expand_library_nodes()
-
-    # # Permute map dimensions
-    # map_entries = []
-    # for node, parent in sdfg.all_nodes_recursive():
-    #     if isinstance(node, dace.nodes.MapEntry):
-    #         if len(node.map.params) == 3:
-    #             map_entries.append((node, parent, parent.parent))
-    #             permutation = []
-    #             for i, srng in enumerate(node.map.range.ranges):
-    #                 if srng == (0, 2, 1):
-    #                     permutation = [j for j in range(3) if j != i]
-    #                     permutation.append(i)
-    #                     break
-    #             assert len(permutation) == 3
-    #             node.map.params = [node.map.params[i] for i in permutation]
-    #             node.map.range.ranges = [node.map.range.ranges[i] for i in permutation]
-    #         elif len(node.map.params) == 2 and node.map.range.ranges[0] == (0, 2, 1):
-    #             map_entries.append((node, parent, parent.parent))
-    #             node.map.params = [node.map.params[i] for i in [1, 0]]
-    #             node.map.range.ranges = [node.map.range.ranges[i] for i in [1, 0]]
-    
-    # # Expand maps
-    # exclude = set()
-    # for node, parent in sdfg.all_nodes_recursive():
-    #     if isinstance(node, dace.nodes.MapEntry) and node not in exclude:
-    #         entries = MapExpansion.apply_to(parent.parent, map_entry=node)
-    #         exclude.update(entries)
-
-    # # Find reduce-related nested SDFGs
-    # nested_sdfgs = {}
-    # for sd in sdfg.all_sdfgs_recursive():
-    #     if sd is sdfg:
-    #         continue
-    #     nsdfg_node = sd.parent_nsdfg_node
-    #     state = sd.parent
-    #     for edge in state.out_edges(nsdfg_node):
-    #         nested_sdfgs[edge.data.data] = nsdfg_node
-
-    # # Hoist reduce initialization states in the top-level SDFG
-    # HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['accel'], permissive=True)
-    # HoistState.apply_to(sdfg, nsdfg=nested_sdfgs['dist_sq'], permissive=True)
-    
-    # # Fuse maps
-    # sdfg.simplify()
-    # sdfg.apply_transformations_repeated([MapFusion])
-    # greedy_fuse(sdfg, False)
-    # sdfg.simplify()
-    # greedy_fuse(sdfg, False)
-    # auto_optimize(sdfg, dace.DeviceType.CPU)
-
-    # # Set zero initialization for WCR
-    # for edge, parent in sdfg.all_edges_recursive():
-    #     if hasattr(edge.data, 'wcr') and edge.data.wcr is not None:
-    #         dst = sdutil.get_global_memlet_path_dst(parent.parent, parent, edge)
-    #         if isinstance(dst, dace.nodes.AccessNode):
-    #             dst.setzero = True
-
-    # # Tasklet clean-up
-    # sdfg.apply_transformations_repeated([TaskletFusion])
 
     sdfg = get_nbody_dace_cpu()
 
@@ -157,7 +99,13 @@ if __name__ == "__main__":
 
     num_warmup = 2
 
+    t0 = time.perf_counter()
+    _ = sdfg.generate_code()
+    t1 = time.perf_counter()
+    print(f"Generating code from SDFG took {t1 - t0:.6f} seconds", flush=True)
     func = sdfg.compile()
+    t2 = time.perf_counter()
+    print(f"Compiling SDFG code took {t2 -  t1:.6f} seconds", flush=True)
 
     def _func():
         func(pos_mass=pos_mass, vel=vel, dt=dt, N=num_particles, iterations=num_iterations)
@@ -168,7 +116,7 @@ if __name__ == "__main__":
     mean = np.mean(runtimes)
     std = np.std(runtimes)
     repeatitions = 10
-    while std > 0.01 * mean:
+    while std > 0.01 * mean and repeatitions < 200:
         print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
         runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
         mean = np.mean(runtimes)
@@ -176,3 +124,8 @@ if __name__ == "__main__":
         repeatitions += 10
     flops = (19.0 * num_particles * num_particles + 12.0 * num_particles) * num_iterations / (1e9 * mean)
     print(f"DaCe CPU runtime: mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
+
+    with open(f"nbody_dace_cpu_{omp_num_threads}_{num_particles}_{num_iterations}.txt", "w") as fp:
+        for t in runtimes:
+            fp.write(f"{t}\n")
+

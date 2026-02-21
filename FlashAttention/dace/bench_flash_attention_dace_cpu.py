@@ -29,6 +29,8 @@ if __name__ == "__main__":
     os.environ["MKL_NUM_THREADS"] = "1"
     os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
+    omp_num_threads = os.getenv("OMP_NUM_THREADS", "1")
+
     for datasize in datasizes:
 
         d, N = datasize
@@ -53,7 +55,7 @@ if __name__ == "__main__":
             mean = np.mean(runtimes)
             std = np.std(runtimes)
             repeatitions = 10
-            while std > 0.01 * mean and repeatitions < 100:
+            while std > 0.01 * mean and repeatitions < 200:
                 print(f"Standard deviation too high ({std * 100 / mean:.2f}% of the mean) after {repeatitions} repeatitions ...", flush=True)
                 runtimes.extend(repeat(lambda: _func(), number=1, repeat=10))
                 mean = np.mean(runtimes)
@@ -61,3 +63,8 @@ if __name__ == "__main__":
                 repeatitions += 10
             flops = (N * N * (4 * d + 5)) / (mean * 1e9)
             print(f"DaCe CPU runtime (Ti={Ti}, Tj={Tj}): mean {mean} s ({flops} Gflop/s), std {std * 100 / mean:.2f}%", flush=True)
+
+            omp_num_threads = os.getenv("OMP_NUM_THREADS", "1")
+            with open(f"fa_dace_cpu_{omp_num_threads}_Ti{Ti}_Tj{Tj}_{d}_{N}.txt", "w") as fp:
+                for t in runtimes:
+                    fp.write(f"{t}\n")
