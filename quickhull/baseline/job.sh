@@ -18,14 +18,14 @@ make clean && make
 
 RUNS=10
 
-numactl --interleave all ./hull ../input/100M_circle.dat $RUNS | tee baseline_cpu32_quickhull_circle.runtimes
+numactl --interleave all ./hull ../input/100M_circle.dat $RUNS | tee quickhull_baseline_cpu32_circle.runtimes
 
-numactl --interleave all ./hull ../input/100M_rectangle.dat $RUNS | tee baseline_cpu32_quickhull_rectangle.runtimes
+numactl --interleave all ./hull ../input/100M_rectangle.dat $RUNS | tee quickhull_baseline_cpu32_rectangle.runtimes
 
-numactl --interleave all ./hull ../input/100M_quadratic.dat $RUNS | tee baseline_cpu32.quickhull_quadratic.runtimes
+numactl --interleave all ./hull ../input/100M_quadratic.dat $RUNS | tee quickhull_baseline_cpu32_quadratic.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_circle.dat $RUNS | tee baseline_cpu1_quickhull_circle.runtimes
+OMP_NUM_THREADS=1 ./hull ../input/100M_circle.dat $RUNS | tee quickhull_baseline_cpu1_circle.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_rectangle.dat $RUNS | tee baseline_cpu1_quickhull_rectangle.runtimes
+OMP_NUM_THREADS=1 ./hull ../input/100M_rectangle.dat $RUNS | tee quickhull_baseline_cpu1_rectangle.runtimes
 
-OMP_NUM_THREADS=1 ./hull ../input/100M_quadratic.dat $RUNS | tee baseline_cpu1.quickhull_quadratic.runtimes
+OMP_NUM_THREADS=1 ./hull ../input/100M_quadratic.dat $RUNS | tee quickhull_baseline_cpu1_quadratic.runtimes
