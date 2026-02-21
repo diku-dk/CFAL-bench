@@ -18,6 +18,8 @@ export LIBRARY_PATH=$CUDA/lib64:$CUDA/lib64/stubs
 export LD_LIBRARY_PATH=$CUDA/lib64/
 export CPATH=$CUDA/include
 
+export CFLAGS='-Ofast -march=native -mtune=native'
+
 set -e
 
 rm -f *.runtimes
