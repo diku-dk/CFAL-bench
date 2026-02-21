@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
-#SBATCH --output=mg_baseline-gpu.out
-#SBATCH --job-name=mg_baseline-gpu
+#SBATCH --output=MG_baseline-gpu.out
+#SBATCH --job-name=MG_baseline-gpu
 
 set -e
 
@@ -23,12 +23,12 @@ USE_RUNS=10
 
 for x in $(seq $RUNS); do
     bin/mg.A | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_gpu_A.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_gpu_A.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.B | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_gpu_B.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_gpu_B.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.C | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_gpu_C.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_gpu_C.runtimes

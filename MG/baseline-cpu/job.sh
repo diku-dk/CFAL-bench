@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia_a30:1
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
-#SBATCH --output=mg_baseline-cpu.out
-#SBATCH --job-name=mg_baseline
+#SBATCH --output=MG_baseline-cpu.out
+#SBATCH --job-name=MG_baseline
 
 set -e
 
@@ -26,24 +26,24 @@ USE_RUNS=10
 
 for x in $(seq $RUNS); do
     bin/mg.A.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu32_A.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu32_A.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.B.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu32_B.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu32_B.runtimes
 
 for x in $(seq $RUNS); do
     bin/mg.C.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu32_C.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu32_C.runtimes
 
 for x in $(seq $RUNS); do
     OMP_NUM_THREADS=1 bin/mg.A.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu1_A.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu1_A.runtimes
 
 for x in $(seq $RUNS); do
     OMP_NUM_THREADS=1 bin/mg.B.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu1_B.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu1_B.runtimes
 
 for x in $(seq $RUNS); do
     OMP_NUM_THREADS=1 bin/mg.C.x | awk '/Time in seconds/ {print $5}'
-done | tail -n $USE_RUNS | tee mg_baseline_cpu1_C.runtimes
+done | tail -n $USE_RUNS | tee MG_baseline_cpu1_C.runtimes
