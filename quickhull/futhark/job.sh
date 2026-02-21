@@ -26,24 +26,24 @@ rm -f *.runtimes
 
 futhark bench --backend=multicore quickhull.fut --json quickhull_cpu32.json
 ../../util/futhark-json2runtimes.py quickhull_cpu32.json quickhull.fut circle \
-                                    > quickhull_futhark_cpu32_A.runtimes
+                                    > quickhull_futhark_cpu32_circle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_cpu32.json quickhull.fut rectangle \
-                                    > quickhull_futhark_cpu32_B.runtimes
+                                    > quickhull_futhark_cpu32_rectangle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_cpu32.json quickhull.fut quadratic \
-                                    > quickhull_futhark_cpu32_C.runtimes
+                                    > quickhull_futhark_cpu32_quadratic.runtimes
 
 futhark bench --backend=multicore quickhull.fut --json quickhull_cpu1.json --pass-option=--num-threads=1
 ../../util/futhark-json2runtimes.py quickhull_cpu1.json quickhull.fut circle \
-                                    > quickhull_futhark_cpu1_A.runtimes
+                                    > quickhull_futhark_cpu1_circle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_cpu1.json quickhull.fut rectangle \
-                                    > quickhull_futhark_cpu1_B.runtimes
+                                    > quickhull_futhark_cpu1_rectangle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_cpu1.json quickhull.fut quadratic \
-                                    > quickhull_futhark_cpu1_C.runtimes
+                                    > quickhull_futhark_cpu1_quadratic.runtimes
 
 futhark bench --backend=cuda quickhull.fut --json quickhull_gpu.json
 ../../util/futhark-json2runtimes.py quickhull_gpu.json quickhull.fut circle \
-                                    > quickhull_futhark_gpu_A.runtimes
+                                    > quickhull_futhark_gpu_circle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_gpu.json quickhull.fut rectangle \
-                                    > quickhull_futhark_gpu_B.runtimes
+                                    > quickhull_futhark_gpu_rectangle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_gpu.json quickhull.fut quadratic \
-                                    > quickhull_futhark_gpu_C.runtimes
+                                    > quickhull_futhark_gpu_quadratic.runtimes
