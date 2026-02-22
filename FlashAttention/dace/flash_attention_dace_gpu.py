@@ -30,4 +30,7 @@ def get_flash_attention_dace_gpu():
             if isinstance(node, dace.nodes.MapEntry):
                 node.schedule = dace.ScheduleType.Sequential
     sdfg.simplify()
+    for arr, desc in sdfg.arrays.items():
+        if desc.transient and desc.storage == dace.StorageType.GPU_Global:
+            desc.lifetime = dace.AllocationLifetime.State
     return sdfg.compile()

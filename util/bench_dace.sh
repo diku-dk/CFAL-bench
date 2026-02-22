@@ -30,7 +30,7 @@ bench="$1"                         # Program to benchmark
 if [[ "$bench" == "FlashAttention" ]]; then
     OMP_NUM_THREADS=1 numactl --interleave all env time -v python FlashAttention/dace/bench_flash_attention_dace_cpu.py
     OMP_NUM_THREADS=32 numactl --interleave all env time -v python FlashAttention/dace/bench_flash_attention_dace_cpu.py
-    nsys profile --cuda-memory-usage=true python FlashAttention/dace/bench_flash_attention_dace_gpu.py
+    python FlashAttention/dace/bench_flash_attention_dace_gpu.py
 elif [[ "$bench" == "LocVolCalib" ]]; then
     OMP_NUM_THREADS=1 numactl --interleave all env time -v python LocVolCalib/dace/LocVolCalib_2.py --target cpu --size S
     OMP_NUM_THREADS=32 numactl --interleave all env time -v python LocVolCalib/dace/LocVolCalib_2.py --target cpu --size S
