@@ -119,18 +119,16 @@ double[.,.,.] Q(double[.,.,.] a)
   return relax_mg(coarse2fine (a), [1d, 1d/2d, 1d/4d, 1d/8d]);
 }
 
-specialize double[512,512,512] Sa(double[512,512,512] r);
-specialize double[256,256,256] Sa(double[256,256,256] r);
-specialize double[128,128,128] Sa(double[128,128,128] r);
-specialize double[64,64,64]    Sa(double[64,64,64] r);
-specialize double[32,32,32]    Sa(double[32,32,32] r);
-specialize double[16,16,16]    Sa(double[16,16,16] r);
-specialize double[8,8,8]       Sa(double[8,8,8] r);
-specialize double[4,4,4]       Sa(double[4,4,4] r);
-noinline
+inline
 double[.,.,.] Sa(double[.,.,.] a)
 {
   return relax_mg(a, [-3d/8d, 1d/32d, -1d/64d, 0d]);
+}
+
+inline
+double[.,.,.] Sb(double[.,.,.] a)
+{
+  return relax_mg(a, [-3d/17d, 1d/33d, -1d/61d, 0d]);
 }
 
 specialize double[512,512,512] Sb(double[512,512,512] r);
@@ -142,9 +140,9 @@ specialize double[16,16,16]    Sb(double[16,16,16] r);
 specialize double[8,8,8]       Sb(double[8,8,8] r);
 specialize double[4,4,4]       Sb(double[4,4,4] r);
 noinline
-double[.,.,.] Sb(double[.,.,.] a)
+double[., ., .] Sadd(double[., ., .] z, double[., ., .] r)
 {
-  return relax_mg(a, [-3d/17d, 1d/33d, -1d/61d, 0d]);
+    return z + S(r);
 }
 
 specialize double[512,512,512] M(double[512,512,512] r);
@@ -162,7 +160,8 @@ double[.,.,.] M(double[.,.,.] r)
   zs = M(rs);
   z  = Q(zs);
   r  = r - A(z);
-  z  = z + S(r);
+  /* Just to make it compile faster */
+  z  = Sadd(z, r);
 
   return z;
 }
