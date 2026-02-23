@@ -4,7 +4,7 @@
 #SBATCH --partition=csmpi_fpga_long
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
-#SBATCH --mem=64G
+#SBATCH --mem=0
 #SBATCH --time=4:00:00
 #SBATCH --output=seq.out
 
@@ -12,31 +12,68 @@
 # with slurm and the FPGA
 export XILINX_XRT=/opt/xilinx/xrt
 
-if [ "$#" -ne 3 ]; then
-    printf 'Usage: run.sh CLASS RUNS OUT_DIR\n\n' >&2
-    printf '\tCLASS: Problem class (S, A, B, C, D)\n\n' >&2
-    printf '\tRUNS: How often to run the benchmark\n\n' >&2
-    printf '\tOUT_DIR: Directory to store benchmark results.\n\n' >&2
+if [ "$#" -ne 2 ]; then
+    printf 'Usage: %s RUNS OUT_DIR\n\n' "$0" >&2
     exit 1
 fi
 
-class="$1"
-runs="$2"
-outfile="$3/MG_${class}_seq_sac"
-mkdir -p "$3"
+runs="$1"
+outdir="$2"
 
-make CLASS="$class" seq
+ulimit -s unlimited
+CLASS=A make seq
+CLASS=B make seq
+CLASS=C make seq
 
+mkdir -p "$outdir"
+
+bench()
 {
-printf 'p,mean,stddev\n'
-printf '1,'
-} > "$outfile"
+    class="$1"
 
-i=1
-{
-while [ $i -le "$runs" ]
-do
-    bin/MG_"${class}"_seq
-    i=$(( i + 1 ))
-done
-} | variance >> "$outfile"
+    name=MG_seq_"${class}"
+    binary=./bin/MG_"${class}"_seq
+
+    # Warmup
+    {
+        i=1
+        while [ $i -le 3 ]
+        do
+            /usr/bin/time -v numactl --interleave all "$binary"
+            i=$(( i + 1 ))
+        done
+    }
+
+    {
+        {
+            i=1
+            while [ $i -le "$runs" ]
+            do
+                /usr/bin/time -v numactl --interleave all "$binary"
+                i=$(( i + 1 ))
+            done
+        } | tee "${outdir}/${name}.raw" | \
+        awk '{
+                   b = a + ($1 - a) / NR;
+                   q += ($1 - a) * ($1 - b);
+                   a = b;
+                 } END {
+                   printf "%f,%f", a, sqrt(q / (NR - 1));
+                 }' > "${outdir}/${name}.csv"
+    } 2>&1 | \
+      grep "Maximum resident" | \
+      sed  's/^[^:]*:[ ]*//g' | \
+      awk '{print $1 * 1000}' | \
+      tee "${outdir}/${name}_mem.raw" | \
+      awk '{
+               b = a + ($1 - a) / NR;
+               q += ($1 - a) * ($1 - b);
+               a = b;
+             } END {
+               printf "%f,%f", a, sqrt(q / (NR - 1));
+             }' > "${outdir}/${name}_mem.csv"
+}
+
+bench A
+bench B
+bench C

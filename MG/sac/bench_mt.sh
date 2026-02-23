@@ -4,7 +4,7 @@
 #SBATCH --partition=csmpi_fpga_long
 #SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:nvidia_a30:1
-#SBATCH --mem=64G
+#SBATCH --mem=0
 #SBATCH --time=4:00:00
 #SBATCH --output=mt.out
 
@@ -12,36 +12,66 @@
 # with slurm and the FPGA
 export XILINX_XRT=/opt/xilinx/xrt
 
-if [ "$#" -ne 4 ]; then
-    printf 'Usage: run.sh N CLASS RUNS OUT_DIR P\n\n' >&2
-    printf '\tCLASS: Problem class (S, W, A, B, C, D) \n\n' >&2
-    printf '\tRUNS: How often to run the benchmark\n\n' >&2
-    printf '\tOUT_DIR: Directory to store benchmark results\n\n' >&2
-    printf '\tP: Number of processors to use\n\n' >&2
+if [ "$#" -ne 2 ]; then
+    printf 'Usage: %s RUNS OUT_DIR\n\n' "$0" >&2
     exit 1
 fi
 
-class="$1"
-runs="$2"
-outfile="$3/MG_${class}_mt_sac"
-pmax="$4"
-mkdir -p "$3"
+runs="$1"
+outdir="$2"
 
-make CLASS="$class" mt -j
+ulimit -s unlimited
 
-printf 'p,mean,stddev\n' > "${outfile}"
+mkdir -p "$outdir"
 
-p=1
-while [ $p -le "$pmax" ]
-do
-    printf '%d,' "$p" >> "${outfile}"
+bench()
+{
+    class="$1"
+    CLASS="$class" make mt
+
+    name=MG_mt_"${class}"
+    binary=./bin/MG_"${class}"_mt
+
+    # Warmup
     {
         i=1
-        while [ $i -le "$runs" ]
+        while [ $i -le 3 ]
         do
-            "bin/MG_${class}_mt" -mt "$p"
+            SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all "$binary"
             i=$(( i + 1 ))
         done
-    } | variance >> "${outfile}"
-    p=$(( 2 * p ))
-done
+    }
+
+    {
+        {
+            i=1
+            while [ $i -le "$runs" ]
+            do
+                SAC_PARALLEL=32 /usr/bin/time -v numactl --interleave all "$binary"
+                i=$(( i + 1 ))
+            done
+        } | tee "${outdir}/${name}.raw" | \
+        awk '{
+                   b = a + ($1 - a) / NR;
+                   q += ($1 - a) * ($1 - b);
+                   a = b;
+                 } END {
+                   printf "%f,%f", a, sqrt(q / (NR - 1));
+                 }' > "${outdir}/${name}.csv"
+    } 2>&1 | \
+      grep "Maximum resident" | \
+      sed  's/^[^:]*:[ ]*//g' | \
+      awk '{print $1 * 1000}' | \
+      tee "${outdir}/${name}_mem.raw" | \
+      awk '{
+               b = a + ($1 - a) / NR;
+               q += ($1 - a) * ($1 - b);
+               a = b;
+             } END {
+               printf "%f,%f", a, sqrt(q / (NR - 1));
+             }' > "${outdir}/${name}_mem.csv"
+}
+
+bench A
+#bench B
+#bench C
