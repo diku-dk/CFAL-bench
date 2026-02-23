@@ -21,12 +21,10 @@ do
     IFS=","
     set -- $sz
     printf "\nData sizes are d=$1 and N=$2\n"
-    for M in 64 128; do
-        printf "\nM=$M\n"
-        for t in 1 32; do
-            printf "OMP_NUM_THREADS=$t\n"
-            OMP_NUM_THREADS=$t bin/flash_attention_cpu $1 $2 $M \
-                               | tee FlashAttention_baseline_cpu${t}_d${1}-N${2}-M${M}.runtimes
-        done
+    M=128
+    for t in 1 32; do
+        printf "OMP_NUM_THREADS=$t\n"
+        OMP_NUM_THREADS=$t bin/flash_attention_cpu $1 $2 $M \
+            | tee FlashAttention_baseline_cpu${t}_d${1}-N${2}.runtimes
     done
 done
