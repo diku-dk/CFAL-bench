@@ -31,6 +31,12 @@ numactl --interleave all futhark bench --backend=multicore nbody.fut --json nbod
                                     > nbody_futhark_cpu32_n10000.runtimes
 ../../util/futhark-json2runtimes.py nbody_cpu32.json nbody.fut n=100000 \
                                     > nbody_futhark_cpu32_n100000.runtimes
+../../util/futhark-json2mem.py nbody_cpu32.json nbody.fut n=1000 \
+                                    > nbody_futhark_cpu32_n1000.bytes
+../../util/futhark-json2mem.py nbody_cpu32.json nbody.fut n=10000 \
+                                    > nbody_futhark_cpu32_n10000.bytes
+../../util/futhark-json2mem.py nbody_cpu32.json nbody.fut n=100000 \
+                                    > nbody_futhark_cpu32_n100000.bytes
 
 futhark bench --backend=multicore nbody.fut --json nbody_cpu1.json --pass-option=--num-threads=1
 ../../util/futhark-json2runtimes.py nbody_cpu1.json nbody.fut n=1000 \
@@ -39,11 +45,23 @@ futhark bench --backend=multicore nbody.fut --json nbody_cpu1.json --pass-option
                                     > nbody_futhark_cpu1_n10000.runtimes
 ../../util/futhark-json2runtimes.py nbody_cpu1.json nbody.fut n=100000 \
                                     > nbody_futhark_cpu1_n100000.runtimes
+../../util/futhark-json2mem.py nbody_cpu1.json nbody.fut n=1000 \
+                                    > nbody_futhark_cpu1_n1000.bytes
+../../util/futhark-json2mem.py nbody_cpu1.json nbody.fut n=10000 \
+                                    > nbody_futhark_cpu1_n10000.bytes
+../../util/futhark-json2mem.py nbody_cpu1.json nbody.fut n=100000 \
+                                    > nbody_futhark_cpu1_n100000.bytes
 
-futhark bench --backend=cuda nbody.fut --json nbody_cuda.json
-../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=1000 \
+futhark bench --backend=cuda nbody.fut --json nbody_gpu.json
+../../util/futhark-json2runtimes.py nbody_gpu.json nbody.fut n=1000 \
                                     > nbody_futhark_gpu_n1000.runtimes
-../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=10000 \
+../../util/futhark-json2runtimes.py nbody_gpu.json nbody.fut n=10000 \
                                     > nbody_futhark_gpu_n10000.runtimes
-../../util/futhark-json2runtimes.py nbody_cuda.json nbody.fut n=100000 \
+../../util/futhark-json2runtimes.py nbody_gpu.json nbody.fut n=100000 \
                                     > nbody_futhark_gpu_n100000.runtimes
+../../util/futhark-json2mem.py nbody_gpu.json nbody.fut n=1000 \
+                                    > nbody_futhark_gpu_n1000.bytes
+../../util/futhark-json2mem.py nbody_gpu.json nbody.fut n=10000 \
+                                    > nbody_futhark_gpu_n10000.bytes
+../../util/futhark-json2mem.py nbody_gpu.json nbody.fut n=100000 \
+                                    > nbody_futhark_gpu_n100000.bytes
