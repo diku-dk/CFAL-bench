@@ -11,7 +11,7 @@
 
 set -e
 
-export OMP_PLACES="0:32:1"
+export OMP_PLACES=cores
 export OMP_PROC_BIND=true
 
 rm -f *.runtimes
@@ -25,15 +25,15 @@ RUNS=15
 USE_RUNS=10
 
 for x in $(seq $RUNS); do
-    bin/mg.A.x | awk '/Time in seconds/ {print $5}'
+    numactl --interleave all bin/mg.A.x | awk '/Time in seconds/ {print $5}'
 done | tail -n $USE_RUNS | tee MG_baseline_cpu32_A.runtimes
 
 for x in $(seq $RUNS); do
-    bin/mg.B.x | awk '/Time in seconds/ {print $5}'
+    numactl --interleave all bin/mg.B.x | awk '/Time in seconds/ {print $5}'
 done | tail -n $USE_RUNS | tee MG_baseline_cpu32_B.runtimes
 
 for x in $(seq $RUNS); do
-    bin/mg.C.x | awk '/Time in seconds/ {print $5}'
+    numactl --interleave all bin/mg.C.x | awk '/Time in seconds/ {print $5}'
 done | tail -n $USE_RUNS | tee MG_baseline_cpu32_C.runtimes
 
 for x in $(seq $RUNS); do

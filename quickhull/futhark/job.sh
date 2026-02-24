@@ -24,7 +24,7 @@ set -e
 
 rm -f *.runtimes
 
-futhark bench --backend=multicore quickhull.fut --json quickhull_cpu32.json
+numactl --interleave all futhark bench --backend=multicore quickhull.fut --json quickhull_cpu32.json
 ../../util/futhark-json2runtimes.py quickhull_cpu32.json quickhull.fut circle \
                                     > quickhull_futhark_cpu32_circle.runtimes
 ../../util/futhark-json2runtimes.py quickhull_cpu32.json quickhull.fut rectangle \

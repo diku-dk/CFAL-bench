@@ -24,7 +24,7 @@ set -e
 
 rm -f *.runtimes
 
-futhark bench --backend=multicore custom-alg1-opt.fut -e validate --json FlashAttention_cpu32.json --no-tuning
+numactl --interleave all futhark bench --backend=multicore custom-alg1-opt.fut -e validate --json FlashAttention_cpu32.json --no-tuning
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 16384-64 ' \
                                     > FlashAttention_futhark_cpu32_d64-N16384.runtimes
 ../../util/futhark-json2runtimes.py FlashAttention_cpu32.json custom-alg1-opt.fut:validate 'Class 32768-64 ' \

@@ -24,7 +24,7 @@ set -e
 
 rm -f *.runtimes
 
-futhark bench --backend=multicore nbody.fut --json nbody_cpu32.json
+numactl --interleave all futhark bench --backend=multicore nbody.fut --json nbody_cpu32.json
 ../../util/futhark-json2runtimes.py nbody_cpu32.json nbody.fut n=1000 \
                                     > nbody_futhark_cpu32_n1000.runtimes
 ../../util/futhark-json2runtimes.py nbody_cpu32.json nbody.fut n=10000 \

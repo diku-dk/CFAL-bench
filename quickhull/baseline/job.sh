@@ -11,9 +11,6 @@
 
 set -e
 
-export OMP_PLACES="0:32:1"
-export OMP_PROC_BIND=true
-
 make clean && make
 
 RUNS=10

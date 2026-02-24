@@ -24,7 +24,7 @@ set -e
 
 rm -f *.runtimes
 
-futhark bench --backend=multicore mg.fut --json mg_cpu32.json
+numactl --interleave all futhark bench --backend=multicore mg.fut --json mg_cpu32.json
 ../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "Class A" \
                                     > MG_futhark_cpu32_A.runtimes
 ../../util/futhark-json2runtimes.py mg_cpu32.json mg.fut:mgNAS "Class B" \
