@@ -435,6 +435,13 @@ int main(int argc, char **argv)
 
     fprintf(stderr, "done.\n");
 
+    fprintf(stderr, "To allocate: %d\n", (int)(cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               N*sizeof(float) +
+                                               N*sizeof(float)));
+
     {
         float *Q_d, *K_d, *V_d, *O_d, *m_d, *l_d;
 
