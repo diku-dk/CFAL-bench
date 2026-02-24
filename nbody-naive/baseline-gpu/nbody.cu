@@ -209,6 +209,11 @@ int main(int argc, char **argv)
           n, steps, runs);
   fprintf(stderr, "Block size %d\n", block_size);
 
+  fprintf(stderr, "Peak bytes to allocate: %d\n",
+          (int)(n * sizeof(double4) +
+                n * sizeof(double3) +
+                n * sizeof(double3)));
+
   cudaSetDevice(0);
 
   double4* positions = (double4*)malloc(n * sizeof(double4));  // includes masses
