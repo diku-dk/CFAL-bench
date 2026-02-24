@@ -136,8 +136,7 @@ int main(int argc, char **argv)
 
   init(positions, velocities, masses, n);
 
-  double* runtimes = (double*)calloc(runs,sizeof(double));
-
+  fprintf(stderr, "Printing runtimes in seconds to stdout\n");
   for (int r = 0; r < runs; r++) {
     fprintf(stderr, "Run %d\n", r);
     struct timeval tv1, tv2;
@@ -148,12 +147,7 @@ int main(int argc, char **argv)
     gettimeofday(&tv2, NULL);
     double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
       (double) (tv2.tv_sec - tv1.tv_sec);
-    runtimes[r] = duration;
-  }
-
-  for (int r = 0; r < runs; r++) {
-      double gflops = 1e-9 * (19 * n * n + 12 * n) * steps;
-      printf("Baseline (CPU),n=%d,%f\n", n, gflops / (double)runtimes[r]);
+    printf("%f\n", duration);
   }
 
   free_points(positions);

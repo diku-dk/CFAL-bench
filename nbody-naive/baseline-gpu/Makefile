@@ -9,3 +9,6 @@ run: nbody
 	./nbody 1000 100000 10 >> nbody-gpu.csv
 	./nbody 10000  1000 10 >> nbody-gpu.csv
 	./nbody 100000   10 10 >> nbody-gpu.csv
+
+clean:
+	rm -f nbody
