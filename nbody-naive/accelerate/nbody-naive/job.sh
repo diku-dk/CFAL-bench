@@ -1,30 +1,13 @@
-set -e
+#!/usr/bin/env bash
+#SBATCH --partition=csmpi_fpga_long
+#SBATCH --job-name=cfal-accelerate
+#SBATCH --time=10:00
+#SBATCH --cpus-per-task=32
+#SBATCH --gres=gpu:nvidia_a30:1
+#SBATCH --mem=64G
 
-rm -f *.runtimes
-rm -f *.compiletimes
+export PATH="/vol/itt/data/cfal/haskell/.ghcup/bin:/vol/itt/data/cfal/llvm/LLVM-21.1.8-Linux-X64/bin:$PATH"
+export LD_LIBRARY_PATH="/usr/local/cuda/lib64:/usr/local/cuda/nvvm/lib64"
+export CABAL_DIR="/vol/itt/data/cfal/accelerate-shared-build-workdir/gkeller/cabal-dir"
 
-cabal build nbody-naive
-
-# Measure compilation times
-cabal run nbody-naive -- compiletime cpu n1000 >> nbody_accelerate_cpu.compiletimes
-cabal run nbody-naive -- compiletime gpu n1000 >> nbody_accelerate_gpu.compiletimes
-
-# Measure memory usage
-# This only measures the memory usage on the CPU.
-# The numbers are not automatically extracted, but is reported after
-# "Maximum resident set size (kbytes)"
-time -v cabal run nbody-naive -- single cpu n1000
-time -v cabal run nbody-naive -- single cpu n10000
-time -v cabal run nbody-naive -- single cpu n100000
-
-ACCELERATE_LLVM_NATIVE_THREADS=1 cabal run nbody-naive -- bench cpu n1000 >> nbody_accelerate_cpu1_n1000.runtimes
-ACCELERATE_LLVM_NATIVE_THREADS=1 cabal run nbody-naive -- bench cpu n10000 >> nbody_accelerate_cpu1_n10000.runtimes
-ACCELERATE_LLVM_NATIVE_THREADS=1 cabal run nbody-naive -- bench cpu n100000 >> nbody_accelerate_cpu1_n100000.runtimes
-
-cabal run nbody-naive -- bench cpu n1000 >> nbody_accelerate_cpu32_n1000.runtimes
-cabal run nbody-naive -- bench cpu n10000 >> nbody_accelerate_cpu32_n10000.runtimes
-cabal run nbody-naive -- bench cpu n100000 >> nbody_accelerate_cpu32_n100000.runtimes
-
-cabal run nbody-naive -- bench gpu n1000 >> nbody_accelerate_gpu_n1000.runtimes
-cabal run nbody-naive -- bench gpu n10000 >> nbody_accelerate_gpu_n10000.runtimes
-cabal run nbody-naive -- bench gpu n100000 >> nbody_accelerate_gpu_n100000.runtimes
+sh run.sh

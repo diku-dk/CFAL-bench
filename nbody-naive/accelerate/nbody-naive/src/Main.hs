@@ -35,8 +35,8 @@ main = do
           mapM_ print $ tail times -- First run is warm-up run
         "compiletime" -> do
           hPutStrLn stderr $ "Compilation time on " ++ backend
-          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM 11 (measure (nf runN nbody) 1)
-          mapM_ print $ tail times -- First run is warm-up run
+          time <- measTime . Prelude.fst <$> measure (nf runN nbody) 1
+          print time
         "single" -> do
           hPutStrLn stderr $ "Single run " ++ backend ++ " " ++ show (n, t)
           let result = runN nbody (fromList Z [0.1]) (fromList Z [n]) (fromList Z [t])
@@ -47,3 +47,5 @@ main = do
       hPutStrLn stderr "mode: bench, compiletime or single"
       hPutStrLn stderr "backend: cpu or gpu"
       hPutStrLn stderr "input: n1000, n10000 or n100000"
+      hPutStrLn stderr ""
+      hPutStrLn stderr "Alternatively, run `sh run.sh` to run all measurements on all backends"
