@@ -4,34 +4,46 @@ import NBody
 import Data.Array.Accelerate (fromList, Z(..))
 import Data.Array.Accelerate.LLVM.Native as CPU
 import Data.Array.Accelerate.LLVM.PTX    as GPU
-import Criterion
-import Criterion.Main
 import Criterion.Measurement
-import Criterion.Measurement.Types (Measured(measTime))
+import Criterion.Measurement.Types (Measured(measTime), nf)
+import Control.Monad (replicateM)
+import System.Environment (getArgs)
+import System.IO (hPutStrLn, stderr)
 
 -- read input, run accelerate, benchmark
 main :: IO ()
 main = do
-  let !cpu = CPU.runN nbody
-  let !gpu = GPU.runN nbody
-  mapM_ (test cpu) 
-    [(1000, 100000)
-    ,(10000,  1000)
-    ,(100000,   10)]
-  mapM_ (test gpu) 
-    [(1000, 100000)
-    ,(10000,  1000)
-    ,(100000,   10)]
-  
-  -- defaultMainWith (defaultConfig { timeLimit = 30}) [backend "CPU" CPU.runN, backend "GPU" GPU.runN]
-  where
-    -- backend s r = bgroup s $ map (size r) [(1000, 1000)
-    --                                       ,(1000, 10000)
-    --                                       ,(1000, 100000)
-    --                                       ,(10000,  1000)
-    --                                       ,(100000,   10)]
-    -- size r (n,t) = env (return (r nbody, fromList Z [0.1], fromList Z [n], fromList Z [t])) $ \ ~(p,dt,n,k) -> bench (show (n,t)) $ nf (p dt n) k
-    test p (n,t) = do
-      print (n,t)
-      (measured, endtime) <- measure (nf (p (fromList Z [0.1]) (fromList Z [n])) (fromList Z [t])) 2
-      print (secs $ measTime measured)
+  args <- getArgs
+
+  case args of
+    [mode, backend, input] -> do
+      let runN = case backend of
+            "cpu" -> CPU.runN
+            "gpu" -> GPU.runN
+            _ -> error "Unsupported backend"
+      let n, t :: Int
+          (n, t) = case input of
+            "n1000"   -> (1000, 100000)
+            "n10000"  -> (10000,  1000)
+            "n100000" -> (100000,   10)
+            _ -> error "Unsupported input"
+
+      case mode of
+        "bench" -> do
+          hPutStrLn stderr $ "Benchmark " ++ backend ++ " " ++ show (n, t)
+          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM 11 (measure (nf (runN nbody (fromList Z [0.1]) (fromList Z [n])) (fromList Z [t])) 1)
+          mapM_ print $ tail times -- First run is warm-up run
+        "compiletime" -> do
+          hPutStrLn stderr $ "Compilation time on " ++ backend
+          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM 11 (measure (nf runN nbody) 1)
+          mapM_ print $ tail times -- First run is warm-up run
+        "single" -> do
+          hPutStrLn stderr $ "Single run " ++ backend ++ " " ++ show (n, t)
+          let result = runN nbody (fromList Z [0.1]) (fromList Z [n]) (fromList Z [t])
+          result `seq` return ()
+
+    _ -> do
+      hPutStrLn stderr "Usage: cabal run nbody-naive -- mode backend input"
+      hPutStrLn stderr "mode: bench, compiletime or single"
+      hPutStrLn stderr "backend: cpu or gpu"
+      hPutStrLn stderr "input: n1000, n10000 or n100000"
