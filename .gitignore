@@ -14,7 +14,7 @@ __pycache__/
 # Haskell / Accelerate
 nbody-naive/accelerate/nbody-naive/dist-newstyle/*
 MG/accelerate/dist-newstyle/*
-quickhull/accelerate/.stack-work/*
+quickhull/accelerate/dist-newstyle/*
 FlashAttention/accelerate/.stack-work/*
 LocVolCalib/accelerate/.stack-work/*
 

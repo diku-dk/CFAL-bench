@@ -4,48 +4,68 @@ module Main where
 import qualified Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.LLVM.Native as CPU
 import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
-import Criterion
-import Criterion.Main
+import Criterion.Measurement
+import Criterion.Measurement.Types (Measured(measTime), nf)
+import Control.Monad (replicateM)
+import System.Environment (getArgs)
+import System.IO (hPutStrLn, stderr)
 
 import Quickhull
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
-import GHC.IsList
 import Data.Int
 import Foreign.ForeignPtr (ForeignPtr, castForeignPtr)
 import qualified Data.Array.Accelerate.IO.Foreign.ForeignPtr as A
 
 main :: IO ()
 main = do
-  inputs <- mapM load ["1M_rectangle", "1M_circle", "1M_quadratic", "100M_rectangle", "100M_circle", "100M_quadratic"]
+  args <- getArgs
 
-  let quickhullCPU = CPU.runN quickhull
-  let quickhullGPU = GPU.runN quickhull
+  case args of
+    [mode, backend, inputName] -> do
+      let runN = case backend of
+            "cpu" -> CPU.runN
+            "gpu" -> GPU.runN
+            _ -> error "Unsupported backend"
+    
+      input <- load inputName
 
-  mapM_ (\input -> mapM_ (`testInput` input) [("CPU", quickhullCPU), ("GPU", quickhullGPU)]) inputs
+      case mode of
+        "bench" -> do
+          hPutStrLn stderr $ "Benchmark " ++ backend ++ " " ++ inputName
+          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM 11 (measure (nf (runN quickhull) input) 1)
+          mapM_ print $ tail times
+        "compiletime" -> do
+          hPutStrLn stderr $ "Compilation time on " ++ backend
+          time <- measTime . Prelude.fst <$> measure (nf runN quickhull) 1
+          print time
+        "single" -> do
+          hPutStrLn stderr $ "Single run " ++ backend ++ " " ++ inputName
+          let result = runN quickhull input
+          result `seq` return ()
+        _ -> error "Unsupported mode"
 
-  defaultMain [backend "CPU" quickhullCPU inputs, backend "GPU" quickhullGPU inputs]
-  where
-    backend name quickhull' inputs
-      = bgroup name
-      $ Prelude.map (testcase quickhull') inputs
+    _ -> do
+      hPutStrLn stderr "Usage: cabal run quickhull -- mode backend input"
+      hPutStrLn stderr "mode: bench, compiletime or single"
+      hPutStrLn stderr "backend: cpu or gpu"
+      hPutStrLn stderr "input: 100M_rectangle, 100M_circle or 100M_quadratic"
+      hPutStrLn stderr ""
+      hPutStrLn stderr "Alternatively, run `sh run.sh` to run all measurements on all backends"
 
-    testcase quickhull' (name, points) =
-      bench name $ nf quickhull' points
-
-type Input = (String, A.Vector Point)
+type Input = A.Vector Point
 
 load :: String -> IO Input
 load name = do
-  putStrLn $ "Loading " ++ name
+  hPutStrLn stderr $ "Loading " ++ name
   content <- B.readFile $ "../input/" ++ name ++ ".dat"
   let (fptrw8, nw8) = BI.toForeignPtr0 content
       arr = A.fromForeignPtrs (A.Z A.:. (nw8 `quot` 4)) (castForeignPtr fptrw8 :: ForeignPtr Int32) :: A.Array (A.Z A.:. Int) Int32
       res = A.fromFunction (A.Z A.:. (nw8 `quot` 8)) (\(A.Z A.:. ix) -> (fromIntegral $ A.indexArray arr (A.Z A.:. 2*ix), fromIntegral $ A.indexArray arr (A.Z A.:. 2*ix+1))) 
-  return (name, res)
+  return res
 
 
-testInput :: (String, A.Vector Point -> A.Vector Point) -> Input -> IO ()
+testInput :: (String, A.Vector Point -> A.Vector Point) -> (String, Input) -> IO ()
 testInput (backend, f) (inputName, inputData) = do
   putStrLn $ backend ++ "/" ++ inputName
   putStrLn $ take 80 $ show $ f inputData
