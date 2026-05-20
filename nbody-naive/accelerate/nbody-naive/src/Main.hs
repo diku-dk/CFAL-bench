@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 module Main where
 import NBody
 import Data.Array.Accelerate (fromList, Z(..))
@@ -41,6 +40,7 @@ main = do
           hPutStrLn stderr $ "Single run " ++ backend ++ " " ++ show (n, t)
           let result = runN nbody (fromList Z [0.1]) (fromList Z [n]) (fromList Z [t])
           result `seq` return ()
+        _ -> error "Unsupported mode"
 
     _ -> do
       hPutStrLn stderr "Usage: cabal run nbody-naive -- mode backend input"

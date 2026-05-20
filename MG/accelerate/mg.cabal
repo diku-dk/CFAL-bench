@@ -9,14 +9,15 @@ maintainer:         i.g.dewolff@uu.nl
 executable mg
   main-is:          Main.hs
 
+  other-modules:
+    MG
+
   build-depends:    base >= 4.10,
-                    accelerate >= 1.3.0.0,
-                    accelerate-llvm,
-                    accelerate-llvm-native,
-                    accelerate-llvm-ptx,
-                    cuda,
-                    criterion,
-                    criterion-measurement
+                    accelerate == 1.4.0.0,
+                    accelerate-llvm == 1.4.0.0,
+                    accelerate-llvm-native == 1.4.0.0,
+                    accelerate-llvm-ptx == 1.4.0.0,
+                    criterion-measurement == 0.2.4.0
   hs-source-dirs:   src
   default-language: Haskell2010
   ghc-options: -threaded -Wall
