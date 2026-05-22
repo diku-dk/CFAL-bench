@@ -9,15 +9,14 @@ import qualified Data.Array.Accelerate.LLVM.PTX    as GPU
 import Control.Concurrent (getNumCapabilities, threadDelay)
 import Control.Exception (evaluate)
 import Control.Monad (forM, forM_, when, replicateM)
-import Criterion
-import Criterion.Types (measTime)
-import Criterion.Measurement (measure)
+import Criterion.Measurement
+import Criterion.Measurement.Types (Measured(measTime), nf)
 import Data.List (intercalate, nub)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Numeric (showFFloat)
 import System.Environment (getArgs)
-import System.IO (hFlush, stdout)
+import System.IO (hFlush, stdout, hPutStrLn, stderr)
 import System.Mem (performGC)
 
 import Prelude hiding ((^))
@@ -45,65 +44,64 @@ testCases =
 main :: IO ()
 main = do
   args <- getArgs
+
+  -- We use the 'custom' attention.
+  -- Alternative implementations are naive (N.flashAttention) and
+  -- alg1 (F.flashAttention).
+  -- Note that custom attention is not actually 'flash' attention, but this
+  -- was used during the development of the implementations of attention in
+  -- CFAL, as we initially looked at the real flash attention.
+  let alg = C.flashAttention
+
   case args of
-    [] -> mainBench (Left C.flashAttention) "custom"
-    ["-bench", "naive"] -> mainBench (Left N.flashAttention) "naive"
-    ["-bench", "custom"] -> mainBench (Left C.flashAttention) "custom"
-    ["-bench", "alg1"] -> mainBench (Right F.flashAttention) "alg1"
-    ["-test"] -> mainTest
-    _ -> error "Arguments not understood, see 'main' src/Main.hs for options"
+    ["test"] -> mainTest
+
+    [mode, backend, inputName] -> do
+      let runN = case backend of
+            "cpu" -> CPU.runN
+            "gpu" -> GPU.runN
+            _ -> error "Unsupported backend"
+
+      let (d, n) = case inputName of
+            "d64-N16384" -> (64, 16384)
+            "d64-N32768" -> (64, 32768)
+            "d128-N8192" -> (128, 8192)
+            "d128-N16384" -> (128, 16384)
+            _ -> error "Unsupported input"
+
+      let input = CPU.runN mkInput $ ascalar (n, d)
+
+      case mode of
+        "bench" -> do
+          ncpu <- getNumCapabilities
+          -- Increase number of runs for configurations that have more variance
+          let runs
+                | backend == "gpu" = 10
+                | ncpu == 1 = 15
+                | otherwise = 50
+          hPutStrLn stderr $ "Benchmark " ++ backend ++ " " ++ inputName
+          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM (runs + 1) (measure (nf (runN alg) input) 1)
+          mapM_ print $ tail times
+        "compiletime" -> do
+          hPutStrLn stderr $ "Compilation time on " ++ backend
+          time <- measTime . Prelude.fst <$> measure (nf runN alg) 1
+          print time
+        "single" -> do
+          hPutStrLn stderr $ "Single run " ++ backend ++ " " ++ inputName
+          let result = runN alg input
+          result `seq` return ()
+        _ -> error "Unsupported mode"
+
+    _ -> do
+      hPutStrLn stderr "Usage: cabal run flashattention -- mode backend input"
+      hPutStrLn stderr "Or:    cabal run flashattention -- test"
+      hPutStrLn stderr "mode: bench, compiletime or single"
+      hPutStrLn stderr "backend: cpu or gpu"
+      hPutStrLn stderr "input: d64-N16384, d64-N32768, d128-N8192 or d128-N16384"
+      hPutStrLn stderr ""
+      hPutStrLn stderr "Alternatively, run `sh run.sh` to run all measurements on all backends"
 
 type Input = (A.Matrix Float, A.Matrix Float, A.Matrix Float)
-mainBench :: Either (A.Acc Input                         -> A.Acc (A.Matrix Float))  -- algorithms that take no M (naive and custom)
-                    (A.Acc Input -> A.Acc (A.Scalar Int) -> A.Acc (A.Matrix Float))  -- algorithms that take M (full flash attention)
-          -> String
-          -> IO ()
-mainBench programE programName = do
-  let !cpu = CPU.runN program
-      !gpu = GPU.runN program
-  let !cpuMkInput = CPU.runN mkInput
-      !gpuMkInput = GPU.runN mkInput
-  ncpu <- getNumCapabilities
-  let nrunsCPU | ncpu == 32 = 50
-               | ncpu == 1  = 15  -- 1 core times are quite stable
-               | otherwise  = error $ "Unexpected core count " ++ show ncpu ++ ", don't know nruns"
-
-  _ <- evaluate $ A.arraySize $ cpu (cpuMkInput (ascalar (32768, 64))) (ascalar (2^23))  -- warmup
-  tab1 <- forM benchmarkCases $ \inp ->
-    benchSingle nrunsCPU ("CPU[" ++ show ncpu ++ "] " ++ programName) cpu cpuMkInput inp
-
-  _ <- evaluate $ A.arraySize $ gpu (gpuMkInput (ascalar (512, 64))) (ascalar (512*4*64))  -- warmup
-  tab2 <- forM benchmarkCases $ \inp ->
-    benchSingle 10 ("GPU " ++ programName) gpu gpuMkInput inp
-
-  putStr $ printTable (tab1 <> tab2)
-  where
-    (program, printM) =
-      case programE of
-        Left f  -> (\input _  -> f input   , False)
-        Right f -> (\input mM -> f input mM, True )
-
-    benchSingle nruns descr fun mkInputFun (nN, d, mM) = do
-      when (not (validMparam nN d mM)) $ error $ "Illegal parameters " ++ show (nN, d, mM) ++ "; ensure Br, Bc | N"
-
-      putStr $ descr ++ " N=" ++ show nN ++ " d=" ++ show d ++ (if printM then " M=" ++ show mM else "") ++ ": "
-      hFlush stdout
-      let !input = mkInputFun (ascalar (nN, d))
-      performGC
-      times <- replicateM nruns $ do
-        res <- measTime . fst <$> measure (nf (uncurry fun) (input, ascalar mM)) 1
-        performGC
-        threadDelay 250000
-        return res
-
-      let mean = sum times / fromIntegral nruns
-          -- standard error, i.e. standard deviation of the mean estimate
-          mean_stderr = sqrt (1 / (fromIntegral nruns - 1) * sum [(t - mean) ^ 2 | t <- times]) / sqrt (fromIntegral nruns)
-      let flops = fromIntegral nN ^ 2 * (4.0 * fromIntegral d + 5.0)
-      let gflopsPerSec = flops/1e9 / mean
-      putStrLn (formatSecs mean ++ " ± " ++ formatSecs mean_stderr ++ " (" ++ showFFloat (Just 2) gflopsPerSec " Gflops/s) " ++ intercalate "," (map formatSecs times))
-
-      return (descr, (nN, d), gflopsPerSec)
 
 mainTest :: IO ()
 mainTest = do
@@ -129,29 +127,6 @@ mainTest = do
           putStrLn $ "    Not similar: naive and " ++ descr
           putStrLn $ "    " ++ take 120 (replace '\n' ' ' (show out_naive))
           putStrLn $ "    " ++ take 120 (replace '\n' ' ' (show out))
-
-printTable :: [(String, (Int, Int), Double)] -> String
-printTable items =
-  let items' = [(impl, show inp, showFFloat (Just 2) val "") | (impl, inp, val) <- items]
-      impls = nub [impl | (impl, _, _) <- items']
-      inputs = nub [inp | (_, inp, _) <- items']
-      implLen = maximum (map length impls)
-      colValLen = [maximum [length val | (_, inp', val) <- items', inp == inp']
-                  | inp <- inputs]
-      colLen = zipWith max (map length inputs) colValLen
-      mp = Map.fromList [((impl, inp), val) | (impl, inp, val) <- items']
-      alignL w s = s ++ replicate (w - length s) ' '
-      alignC w s = let n = w - length s
-                   in replicate (n `div` 2) ' ' ++ s ++ replicate ((n + 1) `div` 2) ' '
-      alignR w s = replicate (w - length s) ' ' ++ s
-  in unlines (intercalate " " (alignC implLen "(N,d)" : zipWith alignC colLen inputs)
-              : [intercalate " "
-                   (alignL implLen impl : [alignC w (alignR valW (fromMaybe "" (Map.lookup (impl, inp) mp)))
-                                          | (w, valW, inp) <- zip3 colLen colValLen inputs])
-                | impl <- impls])
-
-formatSecs :: Double -> String
-formatSecs time = showFFloat (Just 4) time "s"
 
 -- Given N d M, check whether M is valid for the (N, d) pair as the tuning parameter for Flash_alg1.
 validMparam :: Int -> Int -> Int -> Bool

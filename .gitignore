@@ -15,7 +15,7 @@ __pycache__/
 nbody-naive/accelerate/nbody-naive/dist-newstyle/*
 MG/accelerate/dist-newstyle/*
 quickhull/accelerate/dist-newstyle/*
-FlashAttention/accelerate/.stack-work/*
+FlashAttention/accelerate/dist-newstyle/*
 LocVolCalib/accelerate/.stack-work/*
 
 *.o
