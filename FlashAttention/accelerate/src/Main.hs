@@ -10,14 +10,14 @@ import Control.Concurrent (getNumCapabilities, threadDelay)
 import Control.Exception (evaluate)
 import Control.Monad (forM, forM_, when, replicateM)
 import Criterion.Measurement
-import Criterion.Measurement.Types (Measured(measTime), nf)
+import Criterion.Measurement.Types (Benchmarkable, Measured(measTime), nf)
 import Data.List (intercalate, nub)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Numeric (showFFloat)
 import System.Environment (getArgs)
 import System.IO (hFlush, stdout, hPutStrLn, stderr)
-import System.Mem (performGC)
+import Numeric
 
 import Prelude hiding ((^))
 import qualified Prelude ((^))
@@ -73,15 +73,8 @@ main = do
 
       case mode of
         "bench" -> do
-          ncpu <- getNumCapabilities
-          -- Increase number of runs for configurations that have more variance
-          let runs
-                | backend == "gpu" = 10
-                | ncpu == 1 = 15
-                | otherwise = 50
           hPutStrLn stderr $ "Benchmark " ++ backend ++ " " ++ inputName
-          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM (runs + 1) (measure (nf (runN alg) input) 1)
-          mapM_ print $ tail times
+          bench (nf (runN alg) input)
         "compiletime" -> do
           hPutStrLn stderr $ "Compilation time on " ++ backend
           time <- measTime . Prelude.fst <$> measure (nf runN alg) 1
@@ -140,3 +133,32 @@ ascalar x = A.fromList A.Z [x]
 
 replace :: Eq a => a -> a -> [a] -> [a]
 replace needle repl = map (\x -> if x == needle then repl else x)
+
+bench :: Benchmarkable -> IO ()
+bench b = do
+  -- Warm-up
+  _ <- measure b 1
+  go []
+  where
+    go :: [Double] -> IO ()
+    go results
+      | n >= 10 && e < 0.03 = do
+        hPutStrLn stderr $ show (sum results / fromIntegral n) ++
+          "s (" ++ show n ++ " runs, stderr " ++ showFFloat (Just 2) (e * 100) "%)"
+        return ()
+      | otherwise = do
+        result <- measTime . Prelude.fst <$> measure b 1
+        print result
+        go (result : results)
+      where
+        n = length results
+        -- Measure standard error of *throughput* (gigaflops), not of execution
+        -- time, as we report throughput.
+        e = stderrRatio (map (1/) results)
+
+    -- stderr / mu = stddev / sqrt n / mu, where mu is average of measurements
+    stderrRatio :: [Double] -> Double
+    stderrRatio results = sqrt (sum [(x - mu) * (x - mu) | x <- results] / (n - 1)) / sqrt n / mu
+      where
+        n = fromIntegral (length results) :: Double
+        mu = sum results / n

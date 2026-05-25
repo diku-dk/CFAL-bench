@@ -4,10 +4,11 @@ import Data.Array.Accelerate (fromList, Z(..))
 import Data.Array.Accelerate.LLVM.Native as CPU
 import Data.Array.Accelerate.LLVM.PTX    as GPU
 import Criterion.Measurement
-import Criterion.Measurement.Types (Measured(measTime), nf)
+import Criterion.Measurement.Types (Benchmarkable, Measured(measTime), nf)
 import Control.Monad (replicateM)
 import System.Environment (getArgs)
 import System.IO (hPutStrLn, stderr)
+import Numeric
 
 -- read input, run accelerate, benchmark
 main :: IO ()
@@ -30,8 +31,7 @@ main = do
       case mode of
         "bench" -> do
           hPutStrLn stderr $ "Benchmark " ++ backend ++ " " ++ show (n, t)
-          times <- Prelude.map (measTime . Prelude.fst) Prelude.<$> replicateM 11 (measure (nf (runN nbody (fromList Z [0.1]) (fromList Z [n])) (fromList Z [t])) 1)
-          mapM_ print $ tail times -- First run is warm-up run
+          bench (nf (runN nbody (fromList Z [0.1]) (fromList Z [n])) (fromList Z [t]))
         "compiletime" -> do
           hPutStrLn stderr $ "Compilation time on " ++ backend
           time <- measTime . Prelude.fst <$> measure (nf runN nbody) 1
@@ -49,3 +49,32 @@ main = do
       hPutStrLn stderr "input: n1000, n10000 or n100000"
       hPutStrLn stderr ""
       hPutStrLn stderr "Alternatively, run `sh run.sh` to run all measurements on all backends"
+
+bench :: Benchmarkable -> IO ()
+bench b = do
+  -- Warm-up
+  _ <- measure b 1
+  go []
+  where
+    go :: [Double] -> IO ()
+    go results
+      | n >= 10 && e < 0.03 = do
+        hPutStrLn stderr $ show (sum results / fromIntegral n) ++
+          "s (" ++ show n ++ " runs, stderr " ++ showFFloat (Just 2) (e * 100) "%)"
+        return ()
+      | otherwise = do
+        result <- measTime . Prelude.fst <$> measure b 1
+        print result
+        go (result : results)
+      where
+        n = length results
+        -- Measure standard error of *throughput* (gigaflops), not of execution
+        -- time, as we report throughput.
+        e = stderrRatio (map (1/) results)
+
+    -- stderr / mu = stddev / sqrt n / mu, where mu is average of measurements
+    stderrRatio :: [Double] -> Double
+    stderrRatio results = sqrt (sum [(x - mu) * (x - mu) | x <- results] / (n - 1)) / sqrt n / mu
+      where
+        n = fromIntegral (length results) :: Double
+        mu = sum results / n
