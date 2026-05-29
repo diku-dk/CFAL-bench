@@ -257,7 +257,7 @@ int main(int argc, char **argv)
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < d; j++) {
                 if (j > 0) putchar(' ');
-                printf("%f", O[d * i + j]);
+                fprintf(stderr, "%f", O[d * i + j]);
             }
             putchar('\n');
         }
@@ -266,35 +266,15 @@ int main(int argc, char **argv)
     }
 
     struct timeval tv1, tv2;
-    double runtimes[10];
+    fprintf(stderr, "Printing runtimes to stdout\n");
     for (int r = 0; r < 10; r++) {
         gettimeofday(&tv1, NULL);
         FlashAttention(Q, K, V, O, d, N, M);
         gettimeofday(&tv2, NULL);
-        runtimes[r] = (double)(tv2.tv_usec - tv1.tv_usec) / 1e6 +
-                      (double)(tv2.tv_sec - tv1.tv_sec);
+        printf("%f\n",
+               (double)(tv2.tv_usec - tv1.tv_usec) / 1e6 +
+               (double)(tv2.tv_sec - tv1.tv_sec));
     }
-    double mean = 0.0;
-    for (int r = 0; r < 10; r++) {
-        mean += runtimes[r];
-    }
-    mean /= 10;
-    double std = 0.0;
-    for (int r = 0; r < 10; r++) {
-        std += (runtimes[r] - mean) * (runtimes[r] - mean);
-    }
-    std = sqrt(std / 10);
-    double percent = 100.0 * std / mean;
-
-    /* QK^t is 2N^2d flops, so is PV. softmax(S) (row-wise)
-     * exp(S[i]) / sum_j exp(P[i, j] - max(P[i])) 
-     * is N * (N + 4N) = 5 N^2 flops, but exp is more expensive. */
-    fprintf(stderr,
-            "Runtime: %lf s (%lf stdev - %.2lf%%)\n",
-            mean, std, percent);
-    fprintf(stderr,
-            "Compute rate: %lf Gflops/s\n", 
-            (4.0 * d + 5.0) * N * N / mean / 1e9);
 
     free(Q);
     free(K);

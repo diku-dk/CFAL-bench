@@ -18,4 +18,4 @@ bin/flash_attention_cpu: flash_attention_cpu.c bin/matmul.o
 	$(CC) $(FLAGS) $^ -o $@ $(LFLAGS) -fopenmp
 
 clean:
-	$(RM) bin/*
+	$(RM) bin/* *.runtimes

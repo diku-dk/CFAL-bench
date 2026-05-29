@@ -435,6 +435,13 @@ int main(int argc, char **argv)
 
     fprintf(stderr, "done.\n");
 
+    fprintf(stderr, "To allocate: %d\n", (int)(cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               cnt*sizeof(float) +
+                                               N*sizeof(float) +
+                                               N*sizeof(float)));
+
     {
         float *Q_d, *K_d, *V_d, *O_d, *m_d, *l_d;
 
@@ -462,21 +469,19 @@ int main(int argc, char **argv)
         fprintf(stderr, "done.\n");
         fprintf(stderr, "Running s2mm...");
 
-        gettimeofday(&ts, NULL);
+        fprintf(stderr, "Printing runtimes to stdout\n");
 
         for(int i=0; i<GPU_RUNS; i++) {
+            gettimeofday(&ts, NULL);
             s2mm(m_d, l_d, O_d, Q_d, K_d, V_d, N, d);
+            cudaDeviceSynchronize();
+            gettimeofday(&te, NULL);
+            gpuAssert( cudaPeekAtLastError() );
+            dur = (double)(te.tv_usec - ts.tv_usec) / 1e6 +
+                  (double)(te.tv_sec - ts.tv_sec);
+            printf("%f\n", dur);
         }
-        cudaDeviceSynchronize();
-        gpuAssert( cudaPeekAtLastError() );
 
-        gettimeofday(&te, NULL);
-
-        fprintf(stderr, "done.\n");
-
-        dur = (double)(te.tv_usec - ts.tv_usec) / 1e6 +
-                          (double)(te.tv_sec - ts.tv_sec);
-        dur = dur / GPU_RUNS;
 
         cudaMemcpy(O, O_d, cnt*sizeof(float), cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();

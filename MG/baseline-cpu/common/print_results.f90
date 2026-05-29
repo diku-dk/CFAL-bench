@@ -60,7 +60,7 @@
  5       format(' Iterations      = ', 12x, i12)
          
          write (*, 6) t
- 6       format(' Time in seconds = ',12x, f12.2)
+ 6       format(' Time in seconds = ',12x, f12.8)
 
          if (num_threads .gt. 0) write (*,7) num_threads
  7       format(' Total threads   = ', 12x, i12)

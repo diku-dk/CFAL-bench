@@ -209,6 +209,11 @@ int main(int argc, char **argv)
           n, steps, runs);
   fprintf(stderr, "Block size %d\n", block_size);
 
+  fprintf(stderr, "Peak bytes to allocate: %d\n",
+          (int)(n * sizeof(double4) +
+                n * sizeof(double3) +
+                n * sizeof(double3)));
+
   cudaSetDevice(0);
 
   double4* positions = (double4*)malloc(n * sizeof(double4));  // includes masses
@@ -221,6 +226,8 @@ int main(int argc, char **argv)
   init(positions, velocities, n);
 
   double* runtimes = (double*)calloc(runs,sizeof(double));
+
+  fprintf(stderr, "Printing runtimes in seconds to stdout\n");
 
   // Intentional - we discard first run.
   for (int r = 0; r <= runs; r++) {
@@ -240,15 +247,7 @@ int main(int argc, char **argv)
     double duration =
       (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
       (double) (tv2.tv_sec - tv1.tv_sec);
-
-    if (r != 0) {
-      runtimes[r-1] = duration;
-    }
-  }
-
-  for (int r = 0; r < runs; r++) {
-      double gflops = 1e-9 * (19 * n * n + 12 * n) * steps;
-    printf("Baseline (GPU),n=%d,%f\n", n, gflops / (double)runtimes[r]);
+    printf("%f\n", duration);
   }
 
   cudaFree(pos_dev);
