@@ -1,7 +1,10 @@
-# CFAL-bench
+# Benchmark suite for *Comparing Functional Array Languages: Programming and GPU Performance*
 
-This is the repository containing the benchmark work related to the upcoming collaborative paper "Comparing Functional Array Languages: Programming and GPU Performance"
+This is the repository containing the benchmark work related to the upcoming
+collaborative paper "Comparing Functional Array Languages: Programming and GPU
+Performance".
 
+[![DOI](https://zenodo.org/badge/680249871.svg)](https://doi.org/10.5281/zenodo.20715488)
 
 ## Benchmark Collection
 
